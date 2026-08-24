@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&family=Instrument+Sans:ital,wght@0,400..700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #FAF9F5; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #123D2F; }
+  a { color: #16794A; text-decoration: none; }
+  a:hover { color: #123D2F; }
+  input, button, textarea { font-family: inherit; }
+  [data-noscroll]::-webkit-scrollbar { display: none; }
+  @keyframes saIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes saFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes saPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+</style>
+</helmet>
+
+<sc-if value="{{ impersonando }}">
+  <div style="position:fixed;top:0;left:0;right:0;z-index:300;background:#A8352C;color:#FFFFFF;display:flex;align-items:center;gap:12px;padding:9px 18px;animation:saFade .25s ease both">
+    <span style="width:8px;height:8px;border-radius:50%;background:#FFFFFF;animation:saPulse 1.6s ease-in-out infinite;flex-shrink:0"></span>
+    <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Estás viendo la cuenta de {{ impNombre }} como soporte · toda acción queda en auditoría</span>
+    <button onClick="{{ salirImp }}" type="button" style="flex-shrink:0;background:#FFFFFF;border:none;color:#A8352C;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer">Salir de impersonación</button>
+  </div>
+</sc-if>
+
+<div style="display:flex;min-height:100vh;padding-top:{{ padTop }}">
+
+  <aside style="width:230px;flex-shrink:0;background:#0C2318;color:#DDEBE2;display:flex;flex-direction:column;position:sticky;top:{{ padTop }};height:calc(100vh - {{ padTop }});overflow-y:auto" data-noscroll="1">
+    <div style="padding:22px 20px 18px;border-bottom:1px solid rgba(221,235,226,.1)">
+      <div style="font-family:'Familjen Grotesk',sans-serif;font-size:18px;font-weight:700;letter-spacing:-.02em;color:#FFFFFF">Factuchat<span style="font-size:11px;vertical-align:super">®</span></div>
+      <div style="display:inline-flex;align-items:center;gap:6px;margin-top:7px;background:rgba(92,230,143,.14);border:1px solid rgba(92,230,143,.3);border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;letter-spacing:.1em;color:#5CE68F">SUPERADMIN</div>
+    </div>
+    <nav style="flex:1;padding:10px 10px 14px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="11">
+        <button onClick="{{ it.ir }}" type="button" disabled="{{ it.off }}" style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:{{ it.bg }};border:none;border-radius:10px;padding:10px 12px;font-size:13.5px;font-weight:{{ it.peso }};color:{{ it.color }};cursor:{{ it.cursor }};transition:background .18s">
+          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.label }}</span>
+          <sc-if value="{{ it.pronto }}"><span style="flex-shrink:0;font-size:9.5px;font-weight:700;letter-spacing:.07em;color:#7FA391;background:rgba(221,235,226,.08);border-radius:999px;padding:2px 7px">FASE {{ it.fase }}</span></sc-if>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="padding:14px 20px 18px;border-top:1px solid rgba(221,235,226,.1);display:flex;align-items:center;gap:10px">
+      <span style="width:32px;height:32px;border-radius:50%;background:#22C55E;color:#0A2A1F;display:grid;place-items:center;font-size:12.5px;font-weight:700;flex-shrink:0">L</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:600;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Libio Pareja</div>
+        <div style="font-size:11px;color:#7FA391">{{ rolLabel }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;padding:26px 30px 60px;max-width:1180px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <div>
+        <h1 style="font-family:'Familjen Grotesk',sans-serif;font-size:25px;letter-spacing:-.03em;font-weight:700;margin:0 0 4px">{{ titulo }}</h1>
+        <div style="font-size:13.5px;color:#3E5A4E">{{ subtitulo }}</div>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #E4E9E2;border-radius:999px;padding:8px 15px 8px 12px">
+        <span style="width:7px;height:7px;border-radius:50%;background:#22C55E;animation:saPulse 2.2s ease-in-out infinite;flex-shrink:0"></span>
+        <span style="font-size:12px;font-weight:600;color:#3E5A4E;white-space:nowrap">America/Guayaquil · {{ hoy }}</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ esClientes }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <div style="position:relative;flex:1;min-width:240px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A7267" stroke-width="2" stroke-linecap="round" style="position:absolute;left:13px;top:50%;margin-top:-7px;pointer-events:none"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+          <input value="{{ busca }}" onChange="{{ onBusca }}" placeholder="Buscar por RUC o nombre" autoComplete="off" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:12px;padding:11px 14px 11px 36px;font-size:14px;color:#123D2F;outline:none;transition:border-color .2s" style-focus="border-color:#22C55E">
+        </div>
+        <button onClick="{{ exportar }}" type="button" style="flex-shrink:0;background:none;border:1px solid #D6DED6;color:#123D2F;padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .22s,background .22s" style-hover="border-color:#123D2F;background:#F4F6F3">Exportar CSV</button>
+        <sc-if value="{{ puedeActuar }}">
+          <button onClick="{{ abrirAlta }}" type="button" style="flex-shrink:0;display:inline-flex;align-items:center;gap:8px;background:#123D2F;border:none;color:#FAF9F5;padding:10px 19px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;transition:background .22s" style-hover="background:#16794A">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Nuevo cliente
+          </button>
+        </sc-if>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">
+        <sc-for list="{{ chipsEstado }}" as="c" hint-placeholder-count="6">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .18s">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">
+        <sc-for list="{{ chipsPlan }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .18s">{{ c.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;overflow:hidden">
+        <div data-noscroll="1" style="overflow-x:auto">
+          <div style="min-width:960px">
+            <div style="display:grid;grid-template-columns:128px 1.5fr 118px 116px 150px 92px 110px;gap:12px;padding:11px 18px;background:#FBFCFA;border-bottom:1px solid #EFF2EE">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">RUC</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cliente</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Plan</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Estado</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cupo del mes</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Alta</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Último comp.</div>
+            </div>
+            <sc-for list="{{ filas }}" as="f" hint-placeholder-count="8">
+              <button onClick="{{ f.abrir }}" type="button" style="display:grid;grid-template-columns:128px 1.5fr 118px 116px 150px 92px 110px;gap:12px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #EFF2EE;padding:13px 18px;cursor:pointer;font-family:inherit;align-items:center;transition:background .15s" style-hover="background:rgba(34,197,94,.05)">
+                <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:11.5px;color:#5A7267;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.ruc }}</div>
+                <div style="font-size:13.5px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.nombre }}</div>
+                <div style="font-size:12.5px;color:#3E5A4E">{{ f.plan }}</div>
+                <div><span style="display:inline-block;background:{{ f.pillBg }};border:1px solid {{ f.pillBorde }};color:{{ f.pillColor }};border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">{{ f.estado }}</span></div>
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:#123D2F;margin-bottom:4px">{{ f.consumo }}</div>
+                  <div style="height:4px;background:#EFF2EE;border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ f.pctW }};background:{{ f.pctColor }}"></div></div>
+                </div>
+                <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ f.alta }}</div>
+                <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ f.ultimo }}</div>
+              </button>
+            </sc-for>
+            <sc-if value="{{ sinFilas }}"><div style="padding:36px;text-align:center;font-size:13.5px;color:#5A7267">Sin resultados con esos filtros.</div></sc-if>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 18px;background:#FBFCFA;font-size:12px;color:#5A7267">
+          <span>{{ totalFilas }} clientes · página 1 de 1</span><span>25 por página</span>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esFicha }}">
+    <div style="animation:saIn .3s ease-out both">
+      <button onClick="{{ volverClientes }}" type="button" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;padding:0 0 16px;font-size:13.5px;font-weight:600;color:#3E5A4E;cursor:pointer" style-hover="color:#123D2F">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        Volver a clientes
+      </button>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px">
+            <h2 style="font-family:'Familjen Grotesk',sans-serif;font-size:22px;letter-spacing:-.025em;font-weight:700;margin:0">{{ fNombre }}</h2>
+            <span style="display:inline-block;background:{{ fPillBg }};border:1px solid {{ fPillBorde }};color:{{ fPillColor }};border-radius:999px;padding:3px 11px;font-size:11px;font-weight:700">{{ fEstado }}</span>
+          </div>
+          <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:#5A7267">RUC {{ fRuc }} · alta {{ fAlta }} · origen: {{ fOrigen }}</div>
+        </div>
+        <sc-if value="{{ puedeActuar }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onClick="{{ togSuspender }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s" style-hover="border-color:#123D2F">{{ suspLabel }}</button>
+          <button onClick="{{ abrirAccionPlan }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s" style-hover="border-color:#123D2F">Cambiar plan</button>
+          <button onClick="{{ abrirAccionRegalar }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s" style-hover="border-color:#123D2F">Regalar comprobantes</button>
+          <button onClick="{{ impersonar }}" type="button" style="background:none;border:1px solid rgba(168,53,44,.45);color:#A8352C;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s" style-hover="background:rgba(168,53,44,.07)">Impersonar</button>
+        </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ accionPlanOn }}">
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:16px;padding:16px 18px;margin-bottom:14px;animation:saIn .25s ease-out both">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Cambiar de plan</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+          <sc-for list="{{ planesPick }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.pick }}" type="button" style="background:{{ p.bg }};border:1px solid {{ p.borde }};color:{{ p.color }};border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">{{ p.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3E5A4E;cursor:pointer"><input type="radio" checked="{{ planAhora }}" onChange="{{ pickAhora }}">Efecto inmediato</label>
+          <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3E5A4E;cursor:pointer"><input type="radio" checked="{{ planCiclo }}" onChange="{{ pickCiclo }}">Al siguiente ciclo</label>
+          <button onClick="{{ aplicarPlan }}" type="button" style="margin-left:auto;background:#123D2F;border:none;color:#FAF9F5;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#16794A">Aplicar</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ accionRegalarOn }}">
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:16px;padding:16px 18px;margin-bottom:14px;animation:saIn .25s ease-out both">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Regalar comprobantes</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div style="width:110px">
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Cantidad</label>
+            <input value="{{ regaloQty }}" onChange="{{ onRegaloQty }}" type="number" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:14px;outline:none" style-focus="border-color:#22C55E">
+          </div>
+          <div style="flex:1;min-width:220px">
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Motivo (obligatorio, va a auditoría)</label>
+            <input value="{{ regaloMotivo }}" onChange="{{ onRegaloMotivo }}" placeholder="Ej: compensación por caída del SRI del 18 ago" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:14px;outline:none" style-focus="border-color:#22C55E">
+          </div>
+          <button onClick="{{ confirmarRegalo }}" disabled="{{ regaloOff }}" type="button" style="background:{{ regaloBtnBg }};border:none;color:#0A2A1F;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer">Confirmar</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:12px">Datos y contacto</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:13.5px">
+              <div><span style="color:#5A7267">Correo:</span> {{ fCorreo }}</div>
+              <div><span style="color:#5A7267">WhatsApp:</span> {{ fTel }}</div>
+              <div><span style="color:#5A7267">Plan:</span> <strong style="font-weight:600">{{ fPlan }}</strong></div>
+              <div><span style="color:#5A7267">Canal:</span> {{ fCanal }}</div>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid {{ firmaBorde }};border-radius:18px;padding:18px 20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267">Firma electrónica</div>
+              <sc-if value="{{ firmaAlerta }}"><span style="background:rgba(168,53,44,.08);border:1px solid rgba(168,53,44,.3);color:#A8352C;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700">Vence en {{ firmaDias }} días</span></sc-if>
+              <sc-if value="{{ firmaSin }}"><span style="background:#FFF8E8;border:1px solid #F2E4C0;color:#8A6410;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">Sin firma cargada</span></sc-if>
+            </div>
+            <sc-if value="{{ firmaConDatos }}"><div style="font-size:13.5px;color:#3E5A4E">{{ fFirmaEntidad }} · vence el <strong style="color:#123D2F;font-weight:600">{{ fFirmaVence }}</strong></div></sc-if>
+            <sc-if value="{{ firmaSin }}"><div style="font-size:13.5px;color:#3E5A4E;text-wrap:pretty">Aún no sube su .p12 — se lo está guiando por WhatsApp para obtenerla.</div></sc-if>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:12px">Notas internas</div>
+            <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:12px">
+              <sc-for list="{{ fNotas }}" as="nt" hint-placeholder-count="2">
+                <div style="background:#FBFCFA;border:1px solid #EFF2EE;border-radius:12px;padding:10px 13px">
+                  <div style="font-size:13px;line-height:1.5;color:#123D2F;margin-bottom:4px">{{ nt.texto }}</div>
+                  <div style="font-size:11px;color:#8A9A91">{{ nt.autor }} · {{ nt.fecha }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ puedeActuar }}">
+            <div style="display:flex;gap:8px">
+              <input value="{{ notaNueva }}" onChange="{{ onNotaNueva }}" placeholder="Agregar nota del equipo" style="flex:1;min-width:0;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 13px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+              <button onClick="{{ agregarNota }}" type="button" style="flex-shrink:0;background:#123D2F;border:none;color:#FAF9F5;padding:10px 16px;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#16794A">Guardar</button>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#123D2F;border-radius:18px;padding:18px 20px;color:#F1F5F0">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FC7A4;margin-bottom:12px">Consumo del mes</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <span style="font-family:'Familjen Grotesk',sans-serif;font-size:32px;font-weight:700;letter-spacing:-.04em;color:#FFFFFF">{{ fUsados }}</span>
+              <span style="font-size:13.5px;color:#A6BFB2">de {{ fCupo }} comprobantes</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,.14);border-radius:6px;overflow:hidden;margin-bottom:14px"><div style="height:100%;width:{{ fPctW }};background:#22C55E"></div></div>
+            <div style="font-size:12.5px;color:#A6BFB2;line-height:1.55">Análisis IA: <strong style="color:#FFFFFF;font-weight:600">{{ fIa }}</strong> · Emisión: {{ fCanal }}</div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:12px">Historial de pagos</div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ fPagos }}" as="pg" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #EFF2EE;font-size:13px">
+                  <span style="color:#3E5A4E">{{ pg.fecha }}</span>
+                  <span style="color:#5A7267;flex:1;text-align:center">{{ pg.metodo }}</span>
+                  <strong style="font-weight:600;font-variant-numeric:tabular-nums">{{ pg.monto }}</strong>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:12px">Establecimientos y usuarios</div>
+            <div style="font-size:13.5px;line-height:1.7;color:#3E5A4E">{{ fEst }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esComp }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <div style="position:relative;flex:1;min-width:260px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A7267" stroke-width="2" stroke-linecap="round" style="position:absolute;left:13px;top:50%;margin-top:-7px;pointer-events:none"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+          <input value="{{ buscaComp }}" onChange="{{ onBuscaComp }}" placeholder="Buscar por clave de acceso (49 dígitos) o RUC del emisor" autoComplete="off" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:12px;padding:11px 14px 11px 36px;font-size:14px;color:#123D2F;outline:none;transition:border-color .2s" style-focus="border-color:#22C55E">
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#5A7267;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:#22C55E;animation:saPulse 2s ease-in-out infinite"></span>Actualización automática cada 30 s</span>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">
+        <sc-for list="{{ chipsComp }}" as="c" hint-placeholder-count="7">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;overflow:hidden">
+        <div data-noscroll="1" style="overflow-x:auto">
+          <div style="min-width:900px">
+            <div style="display:grid;grid-template-columns:128px 130px 1.3fr 1fr 70px 190px;gap:12px;padding:11px 18px;background:#FBFCFA;border-bottom:1px solid #EFF2EE">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Estado</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Tipo</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Emisor</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Clave de acceso</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Hora</div>
+              <div></div>
+            </div>
+            <sc-for list="{{ colaVista }}" as="d" hint-placeholder-count="8">
+              <div style="border-bottom:1px solid #EFF2EE">
+                <div style="display:grid;grid-template-columns:128px 130px 1.3fr 1fr 70px 190px;gap:12px;padding:12px 18px;align-items:center;transition:background .15s" style-hover="background:rgba(34,197,94,.04)">
+                  <div><span style="display:inline-block;background:{{ d.pillBg }};border:1px solid {{ d.pillBorde }};color:{{ d.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;white-space:nowrap">{{ d.estado }}</span></div>
+                  <div style="font-size:12.5px;color:#3E5A4E;white-space:nowrap">{{ d.tipo }}</div>
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.emisor }}</div>
+                    <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:10.5px;color:#8A9A91">{{ d.ruc }}</div>
+                  </div>
+                  <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:#5A7267;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.clave }}</div>
+                  <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ d.hora }}</div>
+                  <div style="display:flex;gap:6px;justify-content:flex-end">
+                    <button onClick="{{ d.verXml }}" type="button" style="background:none;border:1px solid #E4E9E2;color:#3E5A4E;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer" style-hover="border-color:#123D2F;color:#123D2F">XML</button>
+                    <button onClick="{{ d.verPdf }}" type="button" style="background:none;border:1px solid #E4E9E2;color:#3E5A4E;padding:5px 11px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer" style-hover="border-color:#123D2F;color:#123D2F">RIDE</button>
+                  </div>
+                </div>
+                <sc-if value="{{ d.esRechazado }}">
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(168,53,44,.05);border-top:1px dashed rgba(168,53,44,.25);padding:10px 18px">
+                    <div style="flex:1;min-width:260px;font-size:12.5px;line-height:1.5;color:#7A2A23"><strong style="font-weight:700">Motivo del SRI:</strong> {{ d.motivo }} · Reintentos: {{ d.reintentos }}</div>
+                    <sc-if value="{{ puedeActuar }}">
+                    <div style="display:flex;gap:8px">
+                      <button onClick="{{ d.reintentar }}" type="button" style="background:#A8352C;border:none;color:#FFFFFF;padding:7px 15px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer" style-hover="background:#8C2B24">Reintentar</button>
+                      <button onClick="{{ d.resolver }}" type="button" style="background:none;border:1px solid #D6DED6;color:#3E5A4E;padding:7px 15px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:#123D2F;color:#123D2F">Marcar resuelto</button>
+                    </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ sinCola }}"><div style="padding:36px;text-align:center;font-size:13.5px;color:#5A7267">Nada en la cola con esos filtros.</div></sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esMkt }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px">
+        <sc-for list="{{ embudo }}" as="e" hint-placeholder-count="3">
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:10px">{{ e.label }}</div>
+            <div style="display:flex;align-items:baseline;gap:9px">
+              <span style="font-family:'Familjen Grotesk',sans-serif;font-size:34px;font-weight:700;letter-spacing:-.04em;color:#123D2F">{{ e.n }}</span>
+              <sc-if value="{{ e.tasaOn }}"><span style="font-size:12.5px;font-weight:700;color:#16794A">{{ e.tasa }}</span></sc-if>
+            </div>
+            <div style="font-size:12px;color:#8A9A91;margin-top:4px">{{ e.nota }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:-.02em">Códigos promocionales</div>
+          <sc-if value="{{ puedeActuar }}"><button onClick="{{ togNuevoCodigo }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#16794A">{{ nuevoCodigoLabel }}</button></sc-if>
+        </div>
+
+        <sc-if value="{{ nuevoCodigoOn }}">
+        <div style="background:#FBFCFA;border:1px solid #E4E9E2;border-radius:14px;padding:16px;margin-bottom:16px;animation:saIn .25s ease-out both">
+          <div style="display:grid;grid-template-columns:150px 1fr 110px 130px;gap:10px;margin-bottom:12px">
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Código</label>
+              <input value="{{ pcNombre }}" onChange="{{ onPcNombre }}" placeholder="LANZA99" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none;text-transform:uppercase" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Tipo</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ pcTipos }}" as="t" hint-placeholder-count="3">
+                  <button onClick="{{ t.pick }}" type="button" style="background:{{ t.bg }};border:1px solid {{ t.borde }};color:{{ t.color }};border-radius:999px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ t.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">{{ pcValorLabel }}</label>
+              <input value="{{ pcValor }}" onChange="{{ onPcValor }}" type="number" step="0.01" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Cupo de usos</label>
+              <input value="{{ pcCupo }}" onChange="{{ onPcCupo }}" type="number" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:220px">
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Planes donde aplica</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ pcPlanes }}" as="p" hint-placeholder-count="4">
+                  <button onClick="{{ p.pick }}" type="button" style="background:{{ p.bg }};border:1px solid {{ p.borde }};color:{{ p.color }};border-radius:999px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer">{{ p.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <button onClick="{{ crearCodigo }}" disabled="{{ pcOff }}" type="button" style="background:{{ pcBtnBg }};border:none;color:#0A2A1F;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer">Crear código</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <div style="display:grid;grid-template-columns:130px 1.4fr 110px 120px 110px 90px;gap:12px;padding:10px 4px;border-bottom:1px solid #EFF2EE">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Código</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Beneficio</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Vigencia</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Usos / cupo</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Retención m2</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Estado</div>
+        </div>
+        <sc-for list="{{ promos }}" as="pr" hint-placeholder-count="2">
+          <div style="display:grid;grid-template-columns:130px 1.4fr 110px 120px 110px 90px;gap:12px;padding:12px 4px;border-bottom:1px solid #EFF2EE;align-items:center">
+            <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:12.5px;font-weight:700;color:#123D2F">{{ pr.codigo }}</div>
+            <div style="font-size:12.5px;color:#3E5A4E">{{ pr.beneficio }}</div>
+            <div style="font-size:12px;color:#5A7267">{{ pr.vigencia }}</div>
+            <div style="font-size:12.5px;font-weight:600">{{ pr.usos }}</div>
+            <div style="font-size:12.5px;font-weight:700;color:#16794A">{{ pr.retencion }}</div>
+            <div><span style="display:inline-block;background:{{ pr.pillBg }};border:1px solid {{ pr.pillBorde }};color:{{ pr.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700">{{ pr.estado }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px">Usos de LANZA99</div>
+          <div style="font-size:12px;color:#8A9A91;margin-bottom:14px">La columna Retenido marca si siguió pagando al mes 2 — la métrica clave de la campaña.</div>
+          <div style="display:grid;grid-template-columns:1.4fr 90px 130px 100px;gap:12px;padding:9px 2px;border-bottom:1px solid #EFF2EE">
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cliente</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Fecha</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Plan tomado</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Retenido</div>
+          </div>
+          <sc-for list="{{ usos }}" as="u" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1.4fr 90px 130px 100px;gap:12px;padding:11px 2px;border-bottom:1px solid #EFF2EE;align-items:center">
+              <div style="font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.cliente }}</div>
+              <div style="font-size:12px;color:#5A7267">{{ u.fecha }}</div>
+              <div style="font-size:12.5px;color:#3E5A4E">{{ u.plan }}</div>
+              <div><span style="display:inline-block;background:{{ u.pillBg }};border:1px solid {{ u.pillBorde }};color:{{ u.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700">{{ u.ret }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Altas por origen · agosto</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ origenes }}" as="o" hint-placeholder-count="4">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span style="color:#3E5A4E">{{ o.label }}</span><strong style="font-weight:700">{{ o.n }}</strong></div>
+                <div style="height:6px;background:#EFF2EE;border-radius:6px;overflow:hidden"><div style="height:100%;width:{{ o.w }};background:#22C55E"></div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esDash }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px">
+        <div style="background:#123D2F;border-radius:18px;padding:18px 20px;color:#F1F5F0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FC7A4;margin-bottom:10px">MRR</div>
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:30px;font-weight:700;letter-spacing:-.04em;color:#FFFFFF">{{ mrr }}</div>
+          <div style="font-size:12px;color:#A6BFB2;margin-top:4px"><strong style="color:#5CE68F;font-weight:700">+12%</strong> vs julio</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:10px">Altas del mes</div>
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:30px;font-weight:700;letter-spacing:-.04em">{{ altasMes }}</div>
+          <div style="font-size:12px;color:#8A9A91;margin-top:4px">4 con código LANZA99</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:10px">Bajas del mes</div>
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:30px;font-weight:700;letter-spacing:-.04em">{{ bajasMes }}</div>
+          <div style="font-size:12px;color:#8A9A91;margin-top:4px">1 cancelación · 1 suspensión</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267;margin-bottom:10px">Clientes activos</div>
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:30px;font-weight:700;letter-spacing:-.04em">{{ activosTotal }}</div>
+          <div style="font-size:11.5px;color:#8A9A91;margin-top:4px;line-height:1.4">{{ activosDesglose }}</div>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:22px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Comprobantes emitidos</div>
+          <div style="font-size:13px;color:#3E5A4E">Hoy <strong style="font-weight:700;color:#123D2F">{{ compHoy }}</strong></div>
+          <div style="font-size:13px;color:#3E5A4E">Semana <strong style="font-weight:700;color:#123D2F">{{ compSemana }}</strong></div>
+          <div style="font-size:13px;color:#3E5A4E">Mes <strong style="font-weight:700;color:#123D2F">{{ compMes }}</strong></div>
+          <span style="margin-left:auto;font-size:11.5px;color:#8A9A91">Últimos 30 días</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:92px">
+          <sc-for list="{{ barras30 }}" as="b" hint-placeholder-count="30">
+            <div style="flex:1;height:{{ b.h }};background:#22C55E;border-radius:3px 3px 0 0;opacity:.85;transition:opacity .15s" style-hover="opacity:1"></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1.1fr;gap:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Salud de servicios</div>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ servicios }}" as="sv" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid #EFF2EE">
+                <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex-shrink:0;animation:saPulse 2.4s ease-in-out infinite"></span>
+                <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sv.nombre }}</span>
+                <span style="font-size:12px;color:#5A7267;white-space:nowrap">{{ sv.detalle }}</span>
+                <span style="font-size:11px;color:#A9B5AD;white-space:nowrap">{{ sv.hace }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Alertas críticas</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ alertas }}" as="al" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:11px;background:#FBFCFA;border:1px solid #EFF2EE;border-radius:12px;padding:11px 13px">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ al.sev }};flex-shrink:0"></span>
+                <span style="flex:1;min-width:0;font-size:13px;line-height:1.45;color:#123D2F">{{ al.texto }}</span>
+                <button onClick="{{ al.ir }}" type="button" style="flex-shrink:0;background:none;border:1px solid #D6DED6;color:#123D2F;padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;transition:border-color .2s" style-hover="border-color:#123D2F">Ver</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esConsumo }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:grid;grid-template-columns:1.35fr .65fr;gap:14px;margin-bottom:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:18px 20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Tarifas de costo</div>
+            <sc-if value="{{ puedeActuar }}"><button onClick="{{ guardarTarifas }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">Guardar con vigencia</button></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Meta $/conversación</label>
+              <input value="{{ tarifaWa }}" onChange="{{ onTarifaWa }}" type="number" step="0.001" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:9px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">IA $/análisis</label>
+              <input value="{{ tarifaIa }}" onChange="{{ onTarifaIa }}" type="number" step="0.001" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:9px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Infra $/comprobante</label>
+              <input value="{{ tarifaInfra }}" onChange="{{ onTarifaInfra }}" type="number" step="0.001" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:9px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+          </div>
+          <div style="font-size:12px;color:#8A9A91;line-height:1.5">Histórico: $0.05 vigente desde 01 ago 2026 · alza de Meta programada a $0.062 en oct 2026. La tabla se recalcula al instante.</div>
+        </div>
+        <div style="background:#123D2F;border-radius:18px;padding:18px 20px;color:#F1F5F0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FC7A4;margin-bottom:12px">Total agosto</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13.5px">
+            <div style="display:flex;justify-content:space-between"><span style="color:#A6BFB2">Ingreso</span><strong style="font-weight:700;color:#FFFFFF">{{ ingresoTotal }}</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#A6BFB2">Costo real</span><strong style="font-weight:700;color:#FFFFFF">{{ costoTotal }}</strong></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.14);padding-top:8px"><span style="color:#A6BFB2">Margen global</span><strong style="font-weight:700;color:#5CE68F">{{ margenGlobal }} · {{ margenGlobalPct }}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;overflow:hidden;margin-bottom:14px">
+        <div data-noscroll="1" style="overflow-x:auto">
+          <div style="min-width:940px">
+            <div style="display:grid;grid-template-columns:1.4fr 130px 110px 90px 90px 90px 120px;gap:12px;padding:11px 18px;background:#FBFCFA;border-bottom:1px solid #EFF2EE">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cliente</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cupo</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Canal</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">IA</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267;text-align:right">Costo</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267;text-align:right">Paga</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267;text-align:right">Margen</div>
+            </div>
+            <sc-for list="{{ consumoRows }}" as="r" hint-placeholder-count="8">
+              <div style="display:grid;grid-template-columns:1.4fr 130px 110px 90px 90px 90px 120px;gap:12px;padding:12px 18px;border-bottom:1px solid #EFF2EE;align-items:center">
+                <div style="min-width:0">
+                  <div style="font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.nombre }}</div>
+                  <div style="font-size:11px;color:#8A9A91">{{ r.plan }}</div>
+                </div>
+                <div>
+                  <div style="font-size:11.5px;font-weight:600;margin-bottom:4px">{{ r.consumo }}</div>
+                  <div style="height:4px;background:#EFF2EE;border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ r.pctW }};background:#22C55E"></div></div>
+                </div>
+                <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ r.canal }}</div>
+                <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ r.ia }}</div>
+                <div style="font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums">{{ r.costo }}</div>
+                <div style="font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums">{{ r.paga }}</div>
+                <div style="font-size:12.5px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;color:{{ r.mColor }}">{{ r.margen }} · {{ r.margenPct }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ hayRanking }}">
+      <div style="background:#FFFFFF;border:1px solid rgba(168,53,44,.3);border-radius:18px;padding:18px 20px">
+        <div style="font-family:'Familjen Grotesk',sans-serif;font-size:15.5px;font-weight:700;letter-spacing:-.02em;color:#A8352C;margin-bottom:4px">Margen bajo o negativo</div>
+        <div style="font-size:12px;color:#8A9A91;margin-bottom:12px">Clientes que cuestan más del 80% de lo que pagan. Los del mes promocional LANZA99 se normalizan al renovar a precio pleno.</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ rankingRojo }}" as="r" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;background:rgba(168,53,44,.04);border:1px solid rgba(168,53,44,.14);border-radius:11px;padding:10px 14px">
+              <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.nombre }}</span>
+              <span style="font-size:11.5px;color:#8A9A91;white-space:nowrap">{{ r.plan }}</span>
+              <strong style="font-size:13px;font-weight:700;color:{{ r.mColor }};white-space:nowrap;font-variant-numeric:tabular-nums">{{ r.margen }} · {{ r.margenPct }}</strong>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esPagos }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-bottom:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;min-width:0">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Próximos vencimientos · 7 días</div>
+          <div data-noscroll="1" style="overflow-x:auto"><div style="min-width:520px">
+          <div style="display:grid;grid-template-columns:1.4fr 80px 130px 110px;gap:12px;padding:9px 2px;border-bottom:1px solid #EFF2EE">
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cliente</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Vence</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Método</div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Estado</div>
+          </div>
+          <sc-for list="{{ vencimientos }}" as="v" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:1.4fr 80px 130px 110px;gap:12px;padding:11px 2px;border-bottom:1px solid #EFF2EE;align-items:center">
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.cliente }}</div>
+                <div style="font-size:11px;color:#8A9A91">{{ v.plan }}</div>
+              </div>
+              <div style="font-size:12.5px;color:#3E5A4E">{{ v.vence }}</div>
+              <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ v.metodo }}</div>
+              <div><span style="display:inline-block;background:{{ v.pillBg }};border:1px solid {{ v.pillBorde }};color:{{ v.pillColor }};border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:700;white-space:nowrap">{{ v.estado }}</span></div>
+            </div>
+          </sc-for>
+          </div></div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(168,53,44,.3);border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;color:#A8352C;margin-bottom:14px">Morosos</div>
+          <div style="background:rgba(168,53,44,.04);border:1px solid rgba(168,53,44,.16);border-radius:13px;padding:14px 16px">
+            <div style="font-size:13.5px;font-weight:600;color:#123D2F;margin-bottom:3px">Panadería Doña Andrade</div>
+            <div style="font-size:12px;color:#5A7267;margin-bottom:12px">Independiente · pago vencido hace <strong style="color:#A8352C;font-weight:700">9 días</strong> · $5.99</div>
+            <sc-if value="{{ puedeActuar }}">
+            <button onClick="{{ suspenderMoroso }}" type="button" style="background:#A8352C;border:none;color:#FFFFFF;padding:9px 16px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer" style-hover="background:#8C2B24">Suspender con aviso previo</button>
+            </sc-if>
+            <div style="font-size:11.5px;color:#8A9A91;margin-top:10px;line-height:1.5">Primero se envía el aviso por WhatsApp; la suspensión corre 48 h después si no paga.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:.9fr 1.1fr;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Recargas compradas</div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ recargas }}" as="rc" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EFF2EE;font-size:13px">
+                  <span style="color:#8A9A91;flex-shrink:0">{{ rc.fecha }}</span>
+                  <span style="flex:1;min-width:0;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rc.cliente }}</span>
+                  <span style="color:#5A7267;white-space:nowrap">{{ rc.paquete }}</span>
+                  <strong style="font-weight:700;font-variant-numeric:tabular-nums">{{ rc.monto }}</strong>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px">Facturas propias de Factuchat</div>
+            <div style="font-size:12px;color:#8A9A91;margin-bottom:12px">Emitidas con el RUC propio por el mismo motor del sistema.</div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ facturasPropias }}" as="fp" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #EFF2EE;font-size:12.5px">
+                  <span style="font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:#5A7267;flex-shrink:0">{{ fp.num }}</span>
+                  <span style="flex:1;min-width:0;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fp.cliente }}</span>
+                  <strong style="font-weight:700;font-variant-numeric:tabular-nums">{{ fp.monto }}</strong>
+                  <span style="background:rgba(34,197,94,.1);border:1px solid rgba(22,121,74,.28);color:#16794A;border-radius:999px;padding:2px 8px;font-size:9.5px;font-weight:700">{{ fp.estado }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Ingresos por mes</div>
+            <button onClick="{{ exportarIngresos }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:7px 15px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:#123D2F">Exportar CSV</button>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:18px;height:170px;padding:0 8px">
+            <sc-for list="{{ ingresosMeses }}" as="im" hint-placeholder-count="4">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+                <div style="font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums">{{ im.v }}</div>
+                <div style="width:100%;max-width:64px;height:{{ im.h }};background:#22C55E;border-radius:8px 8px 0 0;opacity:.9"></div>
+                <div style="font-size:11.5px;color:#8A9A91">{{ im.mes }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:11.5px;color:#8A9A91;margin-top:12px">Incluye suscripciones, recargas y planes Inicial. Agosto en curso.</div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esWa }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div style="background:#123D2F;border-radius:18px;padding:18px 20px;color:#F1F5F0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FC7A4;margin-bottom:12px">Estado de la línea</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="font-family:'SF Mono',ui-monospace,monospace;font-size:16px;font-weight:700;color:#FFFFFF">+593 96 411 2233</span>
+            <span style="background:rgba(92,230,143,.16);border:1px solid rgba(92,230,143,.35);color:#5CE68F;border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700">VERIFICADA</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#A6BFB2">
+            <div>Calidad según Meta: <strong style="color:#5CE68F;font-weight:700">GREEN</strong></div>
+            <div>Límite vigente: <strong style="color:#FFFFFF;font-weight:600">1,000 conversaciones/día</strong> (nivel 2)</div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid {{ waBarColor }};border-radius:18px;padding:18px 20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7267">Consumo de agosto</div>
+            <sc-if value="{{ waAlerta }}"><span style="background:rgba(168,53,44,.08);border:1px solid rgba(168,53,44,.3);color:#A8352C;border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700">SUPERA EL PRESUPUESTO</span></sc-if>
+          </div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:#3E5A4E;margin-bottom:12px">
+            <div>Por empresa <strong style="font-weight:700;color:#123D2F">{{ waConvEmpresa }}</strong></div>
+            <div>Por usuario <strong style="font-weight:700;color:#123D2F">{{ waConvUsuario }}</strong></div>
+            <div>Acumulado <strong style="font-weight:700;color:#123D2F">{{ waCosto }}</strong></div>
+            <div>Proyección <strong style="font-weight:700;color:#123D2F">{{ waProyeccion }}</strong> de {{ waPresupuestoTxt }}</div>
+          </div>
+          <div style="height:6px;background:#EFF2EE;border-radius:6px;overflow:hidden"><div style="height:100%;width:{{ waBarW }};background:{{ waBarColor }}"></div></div>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Plantillas</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ plantillas }}" as="tp" hint-placeholder-count="6">
+            <div style="border-bottom:1px solid #EFF2EE">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 2px">
+                <span style="font-family:'SF Mono',ui-monospace,monospace;font-size:12.5px;font-weight:700;color:#123D2F;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tp.nombre }}</span>
+                <span style="font-size:11.5px;color:#8A9A91;white-space:nowrap">{{ tp.cat }}</span>
+                <span style="display:inline-block;background:{{ tp.pillBg }};border:1px solid {{ tp.pillBorde }};color:{{ tp.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;white-space:nowrap">{{ tp.estado }}</span>
+                <button onClick="{{ tp.ver }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:border-color .2s" style-hover="border-color:#123D2F">{{ tp.verLabel }}</button>
+              </div>
+              <sc-if value="{{ tp.abierta }}">
+                <div style="background:#FBFCFA;border:1px solid #EFF2EE;border-radius:12px;padding:12px 14px;margin:0 2px 12px;animation:saIn .2s ease-out both">
+                  <div style="font-size:13px;line-height:1.55;color:#123D2F;text-wrap:pretty">{{ tp.body }}</div>
+                  <sc-if value="{{ tp.tieneMotivo }}"><div style="font-size:12px;color:#A8352C;margin-top:8px"><strong style="font-weight:700">Motivo de Meta:</strong> {{ tp.motivo }}</div></sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+        <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Mensajes fallidos</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ fallidos }}" as="fl" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #EFF2EE">
+              <span style="font-family:'SF Mono',ui-monospace,monospace;font-size:12px;color:#123D2F;flex-shrink:0">{{ fl.tel }}</span>
+              <span style="flex:1;min-width:0;font-size:12.5px;color:#A8352C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fl.error }}</span>
+              <span style="font-size:11.5px;color:#8A9A91;white-space:nowrap">{{ fl.hora }}</span>
+              <sc-if value="{{ puedeActuar }}"><button onClick="{{ fl.go }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:5px 13px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:border-color .2s" style-hover="border-color:#123D2F">{{ fl.accion }}</button></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esSoporte }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px">Piden atención humana</div>
+        <div style="font-size:12px;color:#8A9A91;margin-bottom:14px">Marcadas desde el bot con «hablar con un asesor».</div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ sopConvs }}" as="sc" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;background:#FBFCFA;border:1px solid #EFF2EE;border-radius:13px;padding:12px 14px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sc.cliente }}</div>
+                <div style="font-size:12.5px;color:#5A7267;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">“{{ sc.msj }}” · {{ sc.hace }}</div>
+              </div>
+              <span style="display:inline-block;background:{{ sc.pillBg }};border:1px solid {{ sc.pillBorde }};color:{{ sc.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;white-space:nowrap">{{ sc.estado }}</span>
+              <sc-if value="{{ puedeActuar }}"><button onClick="{{ sc.abrir }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:7px 15px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">Abrir chat</button></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.05fr .95fr;gap:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px">Señales de abandono</div>
+          <div style="font-size:12px;color:#8A9A91;margin-bottom:14px">Sin emitir en 15 días (ámbar) o 30 días (rojo).</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ abandono }}" as="ab" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;background:#FBFCFA;border:1px solid #EFF2EE;border-radius:13px;padding:12px 14px">
+                <span style="width:9px;height:9px;border-radius:50%;background:{{ ab.sev }};flex-shrink:0"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ab.cliente }}</div>
+                  <div style="font-size:12px;color:#5A7267">{{ ab.detalle }}</div>
+                </div>
+                <sc-if value="{{ puedeActuar }}"><button onClick="{{ ab.enviar }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:border-color .2s" style-hover="border-color:#123D2F">Enviar reactivación</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px">Notas internas recientes</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-for list="{{ notasTrans }}" as="nt" hint-placeholder-count="4">
+              <div style="background:#FBFCFA;border:1px solid #EFF2EE;border-radius:12px;padding:10px 13px">
+                <div style="font-size:12px;font-weight:700;color:#16794A;margin-bottom:3px">{{ nt.cliente }}</div>
+                <div style="font-size:12.5px;line-height:1.5;color:#123D2F;margin-bottom:4px">{{ nt.texto }}</div>
+                <div style="font-size:11px;color:#8A9A91">{{ nt.meta }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esConfigLock }}">
+    <div style="animation:saIn .3s ease-out both;background:#FFFFFF;border:1px solid #E4E9E2;border-radius:20px;padding:40px;max-width:560px">
+      <h2 style="font-family:'Familjen Grotesk',sans-serif;font-size:21px;letter-spacing:-.025em;font-weight:700;margin:0 0 10px">Solo para el rol SUPERADMIN</h2>
+      <p style="font-size:14px;line-height:1.6;color:#3E5A4E;margin:0;text-wrap:pretty">Tu rol actual ({{ rolLabel }}) no puede ver planes, precios ni parámetros del sistema. Pide acceso al dueño de la cuenta.</p>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esConfig }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <div>
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Planes y precios</div>
+            <div style="font-size:12px;color:#8A9A91;margin-top:2px">Los cambios rigen desde la fecha de vigencia, sin tocar código.</div>
+          </div>
+          <button onClick="{{ guardarPlanes }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">Guardar · vigencia 01 sep</button>
+        </div>
+        <div style="display:grid;grid-template-columns:130px 1fr 1fr 1fr;gap:10px;padding:8px 2px;border-bottom:1px solid #EFF2EE">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Plan</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Precio $</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Comprobantes</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Análisis IA</div>
+        </div>
+        <sc-for list="{{ planesCfg }}" as="pl" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:130px 1fr 1fr 1fr;gap:10px;padding:9px 2px;border-bottom:1px solid #EFF2EE;align-items:center">
+            <div style="font-size:13px;font-weight:700;color:#123D2F">{{ pl.nombre }}<sc-if value="{{ pl.esUnico }}"><span style="display:block;font-size:10.5px;font-weight:600;color:#8A9A91">pago único</span></sc-if></div>
+            <input value="{{ pl.precio }}" onChange="{{ pl.onPrecio }}" type="number" step="0.01" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:10px;padding:8px 11px;font-size:13px;outline:none" style-focus="border-color:#22C55E">
+            <input value="{{ pl.cupo }}" onChange="{{ pl.onCupo }}" type="number" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:10px;padding:8px 11px;font-size:13px;outline:none" style-focus="border-color:#22C55E">
+            <input value="{{ pl.ia }}" onChange="{{ pl.onIa }}" type="number" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:10px;padding:8px 11px;font-size:13px;outline:none" style-focus="border-color:#22C55E">
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Avisos automáticos</div>
+          <button onClick="{{ guardarAvisos }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:8px 16px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">Guardar textos</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Pre-declaración (noveno dígito)</label>
+            <textarea value="{{ avisoPre }}" onChange="{{ onAvisoPre }}" rows="5" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#22C55E"></textarea>
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Cupo agotado</label>
+            <textarea value="{{ avisoCupo }}" onChange="{{ onAvisoCupo }}" rows="5" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#22C55E"></textarea>
+          </div>
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Pago vencido</label>
+            <textarea value="{{ avisoPago }}" onChange="{{ onAvisoPago }}" rows="5" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.5;outline:none;resize:vertical" style-focus="border-color:#22C55E"></textarea>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:#8A9A91;margin-top:10px">Variables disponibles: {nombre}, {plan}, {fecha}, {digito}, {enlace}. Se envían con plantillas aprobadas por Meta.</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:14px">
+        <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em">Administradores</div>
+            <button onClick="{{ nuevoAdmin }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:7px 15px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .2s" style-hover="border-color:#123D2F">Nuevo administrador</button>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ admins }}" as="ad" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #EFF2EE">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13.5px;font-weight:600;color:#123D2F">{{ ad.nombre }}<sc-if value="{{ ad.esTu }}"><span style="font-size:11px;color:#8A9A91;font-weight:500"> · tú</span></sc-if></div>
+                  <div style="font-size:11.5px;color:#8A9A91">{{ ad.rol }} · {{ ad.dfa }}</div>
+                </div>
+                <sc-if value="{{ ad.dfaOff }}"><button onClick="{{ ad.forzar }}" type="button" style="background:none;border:1px solid #F2E4C0;color:#8A6410;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Forzar 2FA</button></sc-if>
+                <sc-if value="{{ ad.borrable }}"><button onClick="{{ ad.desactivar }}" type="button" style="background:none;border:1px solid #D6DED6;color:#3E5A4E;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:border-color .2s,color .2s" style-hover="border-color:#A8352C;color:#A8352C">Desactivar</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px">Parámetros SRI</div>
+            <div style="font-size:12px;color:#5A7267;margin-bottom:9px">Ambiente para inquilinos nuevos</div>
+            <div style="display:flex;gap:7px;margin-bottom:14px">
+              <button onClick="{{ pickSriPruebas }}" type="button" style="flex:1;background:{{ sriPruebasBg }};border:1px solid {{ sriPruebasBorde }};color:{{ sriPruebasColor }};border-radius:999px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer">PRUEBAS</button>
+              <button onClick="{{ pickSriProd }}" type="button" style="flex:1;background:{{ sriProdBg }};border:1px solid {{ sriProdBorde }};color:{{ sriProdColor }};border-radius:999px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer">PRODUCCIÓN</button>
+            </div>
+            <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:10.5px;line-height:1.7;color:#8A9A91;word-break:break-all">cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline<br>cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline</div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;padding:20px">
+            <div style="font-family:'Familjen Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px">Presupuesto de WhatsApp</div>
+            <div style="display:flex;gap:10px;align-items:flex-end">
+              <div style="flex:1">
+                <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Tope mensual $</label>
+                <input value="{{ waPresupuesto }}" onChange="{{ onWaPresupuesto }}" type="number" step="1" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:9px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+              </div>
+              <button onClick="{{ guardarPresupuesto }}" type="button" style="background:#123D2F;border:none;color:#FAF9F5;padding:10px 18px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">Guardar</button>
+            </div>
+            <div style="font-size:11.5px;color:#8A9A91;margin-top:9px;line-height:1.5">Alimenta la alerta de la pantalla WhatsApp: si la proyección lo supera, se marca en rojo.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esBuzon }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#FFFFFF;border:1px solid {{ buzonFlagBorde }};border-radius:16px;padding:15px 18px;margin-bottom:14px">
+        <span style="display:inline-block;background:{{ buzonFlagBg }};border:1px solid {{ buzonFlagBorde }};color:{{ buzonFlagColor }};border-radius:999px;padding:5px 13px;font-family:'SF Mono',ui-monospace,monospace;font-size:11.5px;font-weight:700">{{ buzonFlagLabel }}</span>
+        <div style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#3E5A4E;text-wrap:pretty">Estructura preparada. Mientras el flag esté apagado, los clientes no ven nada y los correos solo se registran para depurar.</div>
+        <sc-if value="{{ rolEsSuper }}"><button onClick="{{ togBuzon }}" type="button" style="flex-shrink:0;background:#123D2F;border:none;color:#FAF9F5;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">{{ buzonTogLabel }}</button></sc-if>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;overflow:hidden;margin-bottom:14px;opacity:{{ buzonOpacidad }};transition:opacity .3s">
+        <div data-noscroll="1" style="overflow-x:auto">
+          <div style="min-width:920px">
+            <div style="display:grid;grid-template-columns:104px 1.2fr 1.2fr 150px 120px 120px;gap:12px;padding:11px 18px;background:#FBFCFA;border-bottom:1px solid #EFF2EE">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Recibido</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Inquilino · buzón</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Remitente</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Contenido</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Parseo</div>
+              <div></div>
+            </div>
+            <sc-for list="{{ correosBuzon }}" as="cb" hint-placeholder-count="5">
+              <div style="border-bottom:1px solid #EFF2EE">
+                <div style="display:grid;grid-template-columns:104px 1.2fr 1.2fr 150px 120px 120px;gap:12px;padding:12px 18px;align-items:center">
+                  <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ cb.hora }}</div>
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cb.inquilino }}</div>
+                    <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:10.5px;color:#8A9A91;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cb.buzon }}</div>
+                  </div>
+                  <div style="font-size:12px;color:#5A7267;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cb.remitente }}</div>
+                  <div style="font-size:12.5px;color:#3E5A4E;white-space:nowrap">{{ cb.tipo }}</div>
+                  <div><span style="display:inline-block;background:{{ cb.pillBg }};border:1px solid {{ cb.pillBorde }};color:{{ cb.pillColor }};border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700">{{ cb.estado }}</span></div>
+                  <div style="text-align:right">
+                    <sc-if value="{{ cb.esError }}"><button onClick="{{ cb.verXml }}" type="button" style="background:none;border:1px solid rgba(168,53,44,.35);color:#A8352C;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">{{ cb.xmlLabel }}</button></sc-if>
+                  </div>
+                </div>
+                <sc-if value="{{ cb.xmlAbierto }}">
+                  <div style="background:#0C2318;padding:13px 18px;animation:saIn .2s ease-out both">
+                    <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:11px;line-height:1.7;color:#8FCCA9;word-break:break-all">{{ cb.xml }}</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;background:#FFFFFF;border:1px solid #F2E4C0;border-radius:16px;padding:14px 18px">
+        <span style="width:9px;height:9px;border-radius:50%;background:#D9A62E;flex-shrink:0"></span>
+        <div style="flex:1;min-width:0;font-size:13px;color:#123D2F"><strong style="font-weight:700">Andrade Cedeño Pablo</strong> no recibe correos en su buzón desde su alta (13 días). Si llega a 30, se le recuerda configurar el reenvío desde el SRI.</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esAudit }}">
+    <div style="animation:saIn .35s ease-out both">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <div style="position:relative;flex:1;min-width:240px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A7267" stroke-width="2" stroke-linecap="round" style="position:absolute;left:13px;top:50%;margin-top:-7px;pointer-events:none"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5L21 21"></path></svg>
+          <input value="{{ audBusca }}" onChange="{{ onAudBusca }}" placeholder="Buscar por cliente o acción" autoComplete="off" style="width:100%;background:#FFFFFF;border:1px solid #D6DED6;border-radius:12px;padding:11px 14px 11px 36px;font-size:14px;color:#123D2F;outline:none;transition:border-color .2s" style-focus="border-color:#22C55E">
+        </div>
+        <button onClick="{{ exportarAudit }}" type="button" style="flex-shrink:0;background:none;border:1px solid #D6DED6;color:#123D2F;padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .22s" style-hover="border-color:#123D2F">Exportar CSV</button>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">
+        <sc-for list="{{ audChipsAdmin }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+        </sc-for>
+        <span style="width:1px;background:#E4E9E2;margin:2px 4px"></span>
+        <sc-for list="{{ audChipsFecha }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">
+        <sc-for list="{{ audChipsTipo }}" as="c" hint-placeholder-count="9">
+          <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="background:#FFFFFF;border:1px solid #E4E9E2;border-radius:18px;overflow:hidden">
+        <div data-noscroll="1" style="overflow-x:auto">
+          <div style="min-width:960px">
+            <div style="display:grid;grid-template-columns:100px 150px 1.3fr 1fr 1.1fr 110px;gap:12px;padding:11px 18px;background:#FBFCFA;border-bottom:1px solid #EFF2EE">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Fecha</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Admin · rol</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Acción</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Cliente</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">Antes → después</div>
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5A7267">IP</div>
+            </div>
+            <sc-for list="{{ audRows }}" as="r" hint-placeholder-count="8">
+              <div style="display:grid;grid-template-columns:100px 150px 1.3fr 1fr 1.1fr 110px;gap:12px;padding:12px 18px;border-bottom:1px solid #EFF2EE;align-items:center">
+                <div style="font-size:12px;color:#5A7267;white-space:nowrap">{{ r.fecha }}</div>
+                <div style="min-width:0">
+                  <div style="font-size:12.5px;font-weight:600;color:#123D2F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.admin }}</div>
+                  <div style="font-size:10.5px;color:#8A9A91">{{ r.rol }}</div>
+                </div>
+                <div style="font-size:13px;color:#123D2F;line-height:1.4">{{ r.accion }}</div>
+                <div style="font-size:12.5px;color:#3E5A4E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.cliente }}</div>
+                <div style="min-width:0"><sc-if value="{{ r.hayCambio }}"><span style="font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:#5A7267;word-break:break-word">{{ r.cambio }}</span></sc-if></div>
+                <div style="font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:#8A9A91;white-space:nowrap">{{ r.ip }}</div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ sinAud }}"><div style="padding:36px;text-align:center;font-size:13.5px;color:#5A7267">Sin registros con esos filtros.</div></sc-if>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 18px;background:#FBFCFA;font-size:11.5px;color:#8A9A91;flex-wrap:wrap">
+          <span>{{ totalAud }} registros · solo lectura, nadie puede editarlos ni borrarlos</span>
+          <span>Incluye todo acceso a datos personales · cumplimiento LOPDP</span>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ esPronto }}">
+    <div style="animation:saIn .3s ease-out both;background:#FFFFFF;border:1px solid #E4E9E2;border-radius:20px;padding:40px;max-width:560px">
+      <h2 style="font-family:'Familjen Grotesk',sans-serif;font-size:21px;letter-spacing:-.025em;font-weight:700;margin:0 0 10px">Esta sección llega en la {{ prontoFase }}</h2>
+      <p style="font-size:14px;line-height:1.6;color:#3E5A4E;margin:0;text-wrap:pretty">El orden de construcción prioriza Clientes, Comprobantes y Marketing. Esta pantalla ya está en el plan y se habilitará cuando la fase anterior esté verificada de punta a punta.</p>
+    </div>
+    </sc-if>
+
+  </main>
+</div>
+
+<sc-if value="{{ altaOn }}">
+  <div style="position:fixed;inset:0;z-index:500;background:rgba(12,35,24,.5);backdrop-filter:blur(3px);display:grid;place-items:center;padding:20px;animation:saFade .2s ease both">
+    <div style="width:640px;max-width:100%;max-height:90vh;overflow-y:auto;background:#FFFFFF;border-radius:22px;box-shadow:0 40px 90px -30px rgba(12,35,24,.6);animation:saIn .28s ease-out both">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px 0">
+        <h2 style="font-family:'Familjen Grotesk',sans-serif;font-size:20px;letter-spacing:-.025em;font-weight:700;margin:0">Nuevo cliente</h2>
+        <button onClick="{{ cerrarAlta }}" type="button" aria-label="Cerrar" style="width:34px;height:34px;border:1px solid #E4E9E2;background:#FFFFFF;border-radius:999px;cursor:pointer;display:grid;place-items:center;color:#3E5A4E;transition:border-color .2s" style-hover="border-color:#123D2F"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"></path></svg></button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding:16px 24px 18px;flex-wrap:wrap">
+        <sc-for list="{{ altaPasos }}" as="ps" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="width:24px;height:24px;border-radius:50%;background:{{ ps.bg }};border:1px solid {{ ps.borde }};color:{{ ps.color }};display:grid;place-items:center;font-size:11.5px;font-weight:700;flex-shrink:0">{{ ps.num }}</span>
+            <span style="font-size:12px;font-weight:{{ ps.peso }};color:{{ ps.labelColor }};white-space:nowrap">{{ ps.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ altaPaso1 }}">
+        <div style="padding:0 24px;animation:saIn .2s ease-out both">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">RUC (13 dígitos)</label>
+              <input value="{{ altaRuc }}" onChange="{{ onAltaRuc }}" placeholder="1712345678001" maxLength="13" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-family:'SF Mono',ui-monospace,monospace;font-size:13px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">WhatsApp</label>
+              <input value="{{ altaTel }}" onChange="{{ onAltaTel }}" placeholder="+593 99 000 0000" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Razón social</label>
+            <input value="{{ altaRazon }}" onChange="{{ onAltaRazon }}" placeholder="Como consta en el RUC" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Nombre comercial <span style="font-weight:500;color:#8A9A91">(opcional)</span></label>
+              <input value="{{ altaComercial }}" onChange="{{ onAltaComercial }}" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <div>
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Correo</label>
+              <input value="{{ altaCorreo }}" onChange="{{ onAltaCorreo }}" type="email" placeholder="correo@negocio.ec" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11.5px;font-weight:600;margin-bottom:7px;color:#3E5A4E">Plan</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <sc-for list="{{ altaChipsPlan }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11.5px;font-weight:600;margin-bottom:7px;color:#3E5A4E">Origen del alta</div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <sc-for list="{{ altaChipsOrigen }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.pick }}" type="button" style="background:{{ c.bg }};border:1px solid {{ c.borde }};color:{{ c.color }};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ altaPaso2 }}">
+        <div style="padding:0 24px;animation:saIn .2s ease-out both">
+          <div style="font-size:13px;line-height:1.55;color:#3E5A4E;margin-bottom:14px;text-wrap:pretty">El archivo .p12 es el certificado de firma electrónica del cliente. Se sube una sola vez, se guarda con encriptación de grado bancario y con él se firman todos sus comprobantes.</div>
+          <label style="display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px dashed #A9C4B4;background:#FBFCFA;border-radius:14px;padding:22px;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:12px" style-hover="border-color:#22C55E;background:rgba(34,197,94,.05)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16794A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>
+            <span style="font-size:13.5px;font-weight:600;color:#123D2F">Seleccionar archivo .p12</span>
+            <span style="font-size:12px;color:#8A9A91">o .pfx</span>
+            <input type="file" accept=".p12,.pfx" onChange="{{ onAltaP12 }}" style="display:none">
+          </label>
+          <sc-if value="{{ altaTieneP12 }}">
+            <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.08);border:1px solid rgba(22,121,74,.24);border-radius:999px;padding:6px 13px;margin-bottom:12px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16794A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"></path></svg>
+              <span style="font-family:'SF Mono',ui-monospace,monospace;font-size:11.5px;color:#123D2F">{{ altaP12 }}</span>
+            </div>
+          </sc-if>
+          <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px">
+            <div style="flex:1">
+              <label style="display:block;font-size:11.5px;font-weight:600;margin-bottom:6px;color:#3E5A4E">Clave del certificado</label>
+              <input value="{{ altaClave }}" onChange="{{ onAltaClave }}" type="password" placeholder="La entrega la entidad certificadora" autoComplete="off" style="width:100%;background:#FBFCFA;border:1px solid #D6DED6;border-radius:11px;padding:10px 12px;font-size:13.5px;outline:none" style-focus="border-color:#22C55E">
+            </div>
+            <button onClick="{{ validarFirma }}" type="button" style="flex-shrink:0;background:#123D2F;border:none;color:#FAF9F5;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#16794A">{{ altaValLabel }}</button>
+          </div>
+          <sc-if value="{{ altaFirmaOk }}">
+            <div style="display:flex;gap:11px;background:rgba(34,197,94,.07);border:1px solid rgba(22,121,74,.24);border-radius:13px;padding:13px 15px;margin-bottom:14px;animation:saIn .25s ease-out both">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16794A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M4 12.5l5.5 5.5L20 7"></path></svg>
+              <div style="font-size:13px;line-height:1.55;color:#123D2F"><strong style="font-weight:700">Firma válida.</strong> Emitida por Security Data · vigente hasta el 24 ago 2028 (730 días). Quedará encriptada y el sistema avisará 30 días antes de su vencimiento.</div>
+            </div>
+          </sc-if>
+          <button onClick="{{ altaSinFirmaTog }}" type="button" style="display:flex;align-items:flex-start;gap:10px;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="width:18px;height:18px;border-radius:5px;background:{{ altaSinFirmaBg }};border:1.5px solid {{ altaSinFirmaBorde }};display:grid;place-items:center;flex-shrink:0;margin-top:1px;transition:background .18s"><sc-if value="{{ altaSinFirma }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FAF9F5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"></path></svg></sc-if></span>
+            <span style="font-size:13px;line-height:1.5;color:#3E5A4E;text-wrap:pretty">El cliente aún no tiene firma electrónica. Crear la cuenta igual y guiarlo por WhatsApp para obtenerla (se consigue en horas).</span>
+          </button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ altaPaso3 }}">
+        <div style="padding:0 24px;animation:saIn .2s ease-out both">
+          <div style="border:1px solid #E4E9E2;border-radius:14px;overflow:hidden;margin-bottom:12px">
+            <sc-for list="{{ altaResumen }}" as="r" hint-placeholder-count="9">
+              <div style="display:grid;grid-template-columns:170px 1fr;gap:12px;padding:10px 15px;border-bottom:1px solid #EFF2EE">
+                <div style="font-size:11.5px;font-weight:700;color:#5A7267;letter-spacing:.02em">{{ r.k }}</div>
+                <div style="font-size:13px;color:#123D2F;line-height:1.45;word-break:break-word">{{ r.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:12.5px;line-height:1.55;color:#8A9A91;text-wrap:pretty">El cliente arranca en estado EN_PRUEBA y pasa a ACTIVO con su primer pago. El alta completa queda registrada en auditoría.</div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 24px 22px">
+        <span style="font-size:12px;color:#8A9A91">{{ altaPasoTxt }}</span>
+        <div style="display:flex;gap:9px">
+          <sc-if value="{{ altaHayAtras }}"><button onClick="{{ altaAtras }}" type="button" style="background:none;border:1px solid #D6DED6;color:#123D2F;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s" style-hover="border-color:#123D2F">Atrás</button></sc-if>
+          <button onClick="{{ altaSeguir }}" type="button" style="background:#22C55E;border:none;color:#0A2A1F;padding:10px 22px;border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px -6px rgba(34,197,94,.6);transition:background .2s" style-hover="background:#16A34A">{{ altaSeguirLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ aviso }}">
+  <div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:400;background:#123D2F;color:#FAF9F5;border-radius:999px;padding:11px 22px;font-size:13.5px;font-weight:600;box-shadow:0 18px 40px -14px rgba(18,61,47,.6);animation:saIn .25s ease-out both;max-width:86vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ aviso }}</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rol&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;SUPERADMIN&quot;, &quot;SOPORTE&quot;, &quot;LECTURA&quot;], &quot;default&quot;: &quot;SUPERADMIN&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Acceso&quot;}}">
+class Component extends DCLogic {
+  state = {
+    pantalla: 'dash', busca: '', filtroEstado: 'Todos', filtroPlan: 'Todos',
+    tarifaWa: '0.05', tarifaIa: '0.02', tarifaInfra: '0.003',
+    plantillaOpen: null, waPresupuesto: '30', sriAmbiente: 'PRODUCCIÓN',
+    buzonOn: false, buzonXmlOpen: null,
+    audAdmin: 'Todos', audTipo: 'Todas', audFecha: 'Todo', audBusca: '', auditExtra: [],
+    altaOn: false, altaPaso: 1, altaRuc: '', altaRazon: '', altaComercial: '', altaCorreo: '', altaTel: '',
+    altaPlan: 'Independiente', altaOrigen: 'Orgánico', altaP12: '', altaClave: '', altaFirmaOk: false, altaValidando: false, altaSinFirma: false,
+    clientesAlta: [],
+    avisoPre: 'Hola {nombre} 👋 Tu declaración de IVA vence el {fecha} (noveno dígito {digito}). Tu resumen ya está listo: escríbeme «reporte» y te lo mando.',
+    avisoCupo: 'Te quedan 0 comprobantes de tu plan {plan}. Puedes recargar 10 por $2.99 o subir de plan pagando la diferencia. Nada se cobra automáticamente.',
+    avisoPago: 'Tu pago del plan {plan} venció el {fecha}. Para no pausar tu facturación, ponte al día aquí: {enlace}.',
+    planCfg: { Inicial: { precio: '2.99', cupo: '10', ia: '0' }, Independiente: { precio: '5.99', cupo: '30', ia: '20' }, Emprendedor: { precio: '9.99', cupo: '80', ia: '40' }, Empresario: { precio: '24.99', cupo: '250', ia: '100' } },
+    ficha: null, accion: null, planPick: null, planCuando: 'ahora',
+    regaloQty: '10', regaloMotivo: '', notaNueva: '', notasExtra: {},
+    impersonando: null, aviso: '',
+    buscaComp: '', filtroComp: 'Todos', cola: null,
+    nuevoCodigoOn: false, pcNombre: '', pcTipo: 'Precio fijo 1er mes', pcValor: '0.99', pcCupo: '200', pcPlanesSel: ['Independiente', 'Emprendedor', 'Empresario'], promosExtra: []
+  };
+
+  clientesBase() {
+    return [
+      { id: 'c1', ruc: '1791234567001', nombre: 'Comercial Andrade S.A.', plan: 'Emprendedor', estado: 'ACTIVO', usados: 62, cupo: 80, alta: '12 mar 2026', ultimo: 'Hoy 10:42', correo: 'gerencia@comandrade.ec', tel: '+593 99 512 3344', origen: 'Campaña Meta', canal: '82% WhatsApp · 18% panel', ia: '31 de 40', firmaEntidad: 'UANATACA', firmaVence: '08 sep 2026', firmaDias: 15, est: '001 Matriz (Quito) · 002 Local Sur · 3 usuarios', pagos: [{ fecha: '01 ago', metodo: 'Payphone · Visa', monto: '$9.99' }, { fecha: '01 jul', metodo: 'Payphone · Visa', monto: '$9.99' }, { fecha: '01 jun', metodo: 'Transferencia', monto: '$9.99' }], notas: [{ texto: 'Pidió factura masiva por Excel, se le explicó que es del plan Empresario.', autor: 'Soporte · María', fecha: '14 ago' }] },
+      { id: 'c2', ruc: '1712345678001', nombre: 'Ferretería El Tornillo Cía. Ltda.', plan: 'Empresario', estado: 'ACTIVO', usados: 148, cupo: 250, alta: '02 feb 2026', ultimo: 'Hoy 09:50', correo: 'ventas@eltornillo.ec', tel: '+593 98 700 1122', origen: 'Referido', canal: '54% WhatsApp · 46% panel', ia: '67 de 100', firmaEntidad: 'Security Data', firmaVence: '20 ene 2027', firmaDias: 149, est: '001 Matriz (Quito) · 002 Guayaquil · 003 Cuenca · 3 usuarios', pagos: [{ fecha: '02 ago', metodo: 'Payphone · Mastercard', monto: '$24.99' }, { fecha: '02 jul', metodo: 'Payphone · Mastercard', monto: '$24.99' }], notas: [] },
+      { id: 'c3', ruc: '1104567890001', nombre: 'Panadería Doña Andrade', plan: 'Independiente', estado: 'MOROSO', usados: 30, cupo: 30, alta: '02 ago 2026', ultimo: '19 ago 16:03', correo: 'donaandrade@gmail.com', tel: '+593 96 233 4455', origen: 'Código LANZA99', canal: '100% WhatsApp', ia: '20 de 20', firmaEntidad: 'UANATACA', firmaVence: '02 ago 2027', firmaDias: 343, est: '001 Matriz (Loja) · 1 usuario', pagos: [{ fecha: '02 ago', metodo: 'LANZA99', monto: '$0.99' }], notas: [{ texto: 'Pago del mes 2 vencido hace 9 días. Se envió recordatorio el 22 ago.', autor: 'Sistema', fecha: '22 ago' }] },
+      { id: 'c4', ruc: '0993456712001', nombre: 'Transporte Andrade Express', plan: 'Emprendedor', estado: 'ACTIVO', usados: 71, cupo: 80, alta: '19 ago 2026', ultimo: 'Hoy 08:47', correo: 'despachos@andradexpress.ec', tel: '+593 99 811 2233', origen: 'Código LANZA99', canal: '91% WhatsApp · 9% panel', ia: '12 de 40', firmaEntidad: 'Security Data', firmaVence: '19 ago 2027', firmaDias: 360, est: '001 Matriz (Guayaquil) · 2 usuarios', pagos: [{ fecha: '19 ago', metodo: 'LANZA99', monto: '$0.99' }], notas: [] },
+      { id: 'c5', ruc: '1798765432001', nombre: 'Clínica San Rafael', plan: 'Empresario', estado: 'ACTIVO', usados: 92, cupo: 250, alta: '10 ene 2026', ultimo: 'Hoy 10:31', correo: 'admin@clinicasanrafael.ec', tel: '+593 98 445 6677', origen: 'Orgánico', canal: '35% WhatsApp · 65% panel', ia: '48 de 100', firmaEntidad: 'ANF AC', firmaVence: '10 ene 2027', firmaDias: 139, est: '001 Matriz (Quito) · 3 usuarios', pagos: [{ fecha: '10 ago', metodo: 'Transferencia', monto: '$24.99' }, { fecha: '10 jul', metodo: 'Transferencia', monto: '$24.99' }], notas: [] },
+      { id: 'c6', ruc: '0992745103001', nombre: 'Textiles del Litoral S.A.', plan: 'Emprendedor', estado: 'SUSPENDIDO', usados: 55, cupo: 80, alta: '22 abr 2026', ultimo: '11 ago 12:20', correo: 'contabilidad@textileslitoral.ec', tel: '+593 97 320 9988', origen: 'Campaña Meta', canal: '68% WhatsApp · 32% panel', ia: '40 de 40', firmaEntidad: 'UANATACA', firmaVence: '22 abr 2027', firmaDias: 241, est: '001 Matriz (Guayaquil) · 2 usuarios', pagos: [{ fecha: '22 jul', metodo: 'Payphone · Visa', monto: '$9.99' }], notas: [{ texto: 'Suspendido a pedido del cliente por viaje, reactivar el 01 sep.', autor: 'Soporte · María', fecha: '10 ago' }] },
+      { id: 'c7', ruc: '0912345670001', nombre: 'Andrade Cedeño Pablo', plan: 'Inicial', estado: 'EN_PRUEBA', usados: 4, cupo: 10, alta: '11 ago 2026', ultimo: '21 ago 18:40', correo: 'pandrade@hotmail.com', tel: '+593 99 604 5566', origen: 'TikTok', canal: '100% WhatsApp', ia: '0 de 0', firmaEntidad: 'UANATACA', firmaVence: '11 ago 2027', firmaDias: 352, est: '001 Matriz (Quito) · 1 usuario', pagos: [{ fecha: '11 ago', metodo: 'Payphone · Visa', monto: '$2.99' }], notas: [] },
+      { id: 'c8', ruc: '1790012345001', nombre: 'Distribuidora Sur', plan: 'Independiente', estado: 'ACTIVO', usados: 27, cupo: 30, alta: '08 ago 2026', ultimo: 'Hoy 10:41', correo: 'pedidos@distrisur.ec', tel: '+593 96 118 7700', origen: 'Código LANZA99', canal: '88% WhatsApp · 12% panel', ia: '17 de 20', firmaEntidad: 'Security Data', firmaVence: '08 ago 2027', firmaDias: 349, est: '001 Matriz (Machala) · 1 usuario', pagos: [{ fecha: '08 ago', metodo: 'LANZA99', monto: '$0.99' }], notas: [] },
+      { id: 'c9', ruc: '1717654321001', nombre: 'Andrade Salazar Lucía', plan: 'Inicial', estado: 'CANCELADO', usados: 10, cupo: 10, alta: '05 ago 2026', ultimo: '16 ago 09:12', correo: 'lu.andrade@gmail.com', tel: '+593 98 900 3311', origen: 'Código LANZA99', canal: '100% WhatsApp', ia: '0 de 0', firmaEntidad: 'UANATACA', firmaVence: '05 ago 2027', firmaDias: 346, est: '001 Matriz (Ambato) · 1 usuario', pagos: [{ fecha: '05 ago', metodo: 'Payphone · Visa', monto: '$0.99' }], notas: [{ texto: 'No renovó al mes 2. Motivo: factura muy poco, volverá "cuando tenga más clientes".', autor: 'Soporte · María', fecha: '18 ago' }] },
+      { id: 'c10', ruc: '0991822345001', nombre: 'Ferretería Andrade e Hijos', plan: 'Independiente', estado: 'ACTIVO', usados: 18, cupo: 30, alta: '30 may 2026', ultimo: 'Ayer 15:27', correo: 'ventas@ferreandrade.ec', tel: '+593 99 240 8866', origen: 'Referido', canal: '76% WhatsApp · 24% panel', ia: '9 de 20', firmaEntidad: 'ANF AC', firmaVence: '30 may 2027', firmaDias: 279, est: '001 Matriz (Portoviejo) · 1 usuario', pagos: [{ fecha: '30 jul', metodo: 'Transferencia', monto: '$5.99' }], notas: [] }
+    ];
+  }
+
+  colaBase() {
+    return [
+      { id: 'd1', estado: 'AUTORIZADO', tipo: 'Factura', emisor: 'Comercial Andrade S.A.', ruc: '1791234567001', clave: '2408202601179123456700110010010000012341234567819', hora: '10:42' },
+      { id: 'd2', estado: 'ENVIADO_SRI', tipo: 'Factura', emisor: 'Ferretería El Tornillo Cía. Ltda.', ruc: '1712345678001', clave: '2408202601171234567800110010010000098761234567814', hora: '10:41' },
+      { id: 'd3', estado: 'PENDIENTE', tipo: 'Nota de crédito', emisor: 'Distribuidora Sur', ruc: '1790012345001', clave: '2408202604179001234500110010010000004411234567810', hora: '10:41' },
+      { id: 'd4', estado: 'FIRMADO', tipo: 'Factura', emisor: 'Transporte Andrade Express', ruc: '0993456712001', clave: '2408202601099345671200110010010000015521234567816', hora: '10:40' },
+      { id: 'd5', estado: 'RECHAZADO', tipo: 'Factura', emisor: 'Panadería Doña Andrade', ruc: '1104567890001', clave: '2408202601110456789000110010010000003091234567812', hora: '10:37', motivo: 'Identificación del comprador no existe (error 45). Revisa la cédula del cliente final.', reintentos: 2 },
+      { id: 'd6', estado: 'AUTORIZADO', tipo: 'Retención', emisor: 'Clínica San Rafael', ruc: '1798765432001', clave: '2408202607179876543200110010010000007781234567811', hora: '10:31' },
+      { id: 'd7', estado: 'RECHAZADO', tipo: 'Guía de remisión', emisor: 'Textiles del Litoral S.A.', ruc: '0992745103001', clave: '2408202606099274510300110010010000002211234567818', hora: '09:58', motivo: 'Clave de acceso registrada (error 43). Ya existe un comprobante con esta clave: genera un nuevo secuencial.', reintentos: 1 },
+      { id: 'd8', estado: 'AUTORIZADO', tipo: 'Factura', emisor: 'Ferretería El Tornillo Cía. Ltda.', ruc: '1712345678001', clave: '2408202601171234567800110010010000098751234567813', hora: '09:50' },
+      { id: 'd9', estado: 'DEVUELTO', tipo: 'Liquidación de compra', emisor: 'Distribuidora Sur', ruc: '1790012345001', clave: '2408202603179001234500110010010000001151234567817', hora: '09:12' },
+      { id: 'd10', estado: 'AUTORIZADO', tipo: 'Nota de débito', emisor: 'Comercial Andrade S.A.', ruc: '1791234567001', clave: '2408202605179123456700110010010000000981234567815', hora: '08:47' }
+    ];
+  }
+
+  pillCli(e) {
+    return {
+      ACTIVO: { pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      EN_PRUEBA: { pillBg: 'rgba(18,61,47,.06)', pillBorde: '#D6DED6', pillColor: '#123D2F' },
+      SUSPENDIDO: { pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+      MOROSO: { pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' },
+      CANCELADO: { pillBg: '#F4F6F3', pillBorde: '#E4E9E2', pillColor: '#8A9A91' }
+    }[e] || {};
+  }
+
+  pillDoc(e) {
+    return {
+      PENDIENTE: { pillBg: '#F4F6F3', pillBorde: '#E4E9E2', pillColor: '#5A7267' },
+      FIRMADO: { pillBg: 'rgba(18,61,47,.06)', pillBorde: '#D6DED6', pillColor: '#123D2F' },
+      ENVIADO_SRI: { pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+      AUTORIZADO: { pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      RECHAZADO: { pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' },
+      DEVUELTO: { pillBg: 'rgba(168,53,44,.05)', pillBorde: 'rgba(168,53,44,.2)', pillColor: '#8C4A2B' }
+    }[e] || {};
+  }
+
+  flash(t) {
+    this.setState({ aviso: t });
+    if (this.avisoT) clearTimeout(this.avisoT);
+    this.avisoT = setTimeout(() => this.setState({ aviso: '' }), 3200);
+  }
+
+  audit(t) {
+    this.flash(t + ' · registrado en auditoría');
+    this.setState(st => ({ auditExtra: [{ fecha: 'Ahora', dia: 'hoy', admin: 'Libio Pareja', rol: this.props.rol ?? 'SUPERADMIN', accion: t, tipo: 'Sesión actual', cliente: '—', cambio: '', ip: '190.152.1.44' }, ...st.auditExtra] }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const rol = this.props.rol ?? 'SUPERADMIN';
+    const puedeActuar = rol !== 'LECTURA';
+    const clientes = (s.clientesAlta || []).concat(this.clientesBase()).map(c => {
+      const extra = s.notasExtra[c.id] || {};
+      return Object.assign({}, c, extra.estado ? { estado: extra.estado } : {}, extra.plan ? { plan: extra.plan } : {}, { notas: (extra.notas || []).concat(c.notas) });
+    });
+    const cola = s.cola || this.colaBase();
+
+    const NAV = [
+      { id: 'dash', label: 'Dashboard general', on: true },
+      { id: 'clientes', label: 'Clientes', on: true },
+      { id: 'consumo', label: 'Consumo y costos', on: true },
+      { id: 'pagos', label: 'Facturación y pagos', on: true },
+      { id: 'comp', label: 'Comprobantes', on: true },
+      { id: 'wa', label: 'WhatsApp', on: true },
+      { id: 'buzon', label: 'Buzón SRI', on: true },
+      { id: 'soporte', label: 'Soporte', on: true },
+      { id: 'mkt', label: 'Marketing', on: true },
+      { id: 'config', label: 'Configuración', on: true },
+      { id: 'audit', label: 'Auditoría', on: true }
+    ];
+    const pantAct = s.ficha ? 'clientes' : s.pantalla;
+    const navItems = NAV.map(it => {
+      const act = pantAct === it.id;
+      return {
+        label: it.label, pronto: !it.on, fase: it.fase || '', off: false,
+        bg: act ? 'rgba(92,230,143,.13)' : 'transparent',
+        color: it.on ? (act ? '#5CE68F' : '#DDEBE2') : '#5F7A6C',
+        peso: act ? 700 : 500, cursor: 'pointer',
+        ir: () => it.on
+          ? this.setState({ pantalla: it.id, ficha: null, accion: null })
+          : this.setState({ pantalla: 'pronto:' + it.fase, ficha: null, accion: null })
+      };
+    });
+
+    const q = s.busca.toLowerCase();
+    const filtradas = clientes
+      .filter(c => s.filtroEstado === 'Todos' || c.estado === s.filtroEstado)
+      .filter(c => s.filtroPlan === 'Todos' || c.plan === s.filtroPlan)
+      .filter(c => !q || c.nombre.toLowerCase().includes(q) || c.ruc.includes(q));
+    const filas = filtradas.map(c => {
+      const pct = Math.round(c.usados / c.cupo * 100);
+      return Object.assign({ ruc: c.ruc, nombre: c.nombre, plan: c.plan, estado: c.estado.replace('_', ' '), consumo: c.usados + ' / ' + c.cupo, pctW: Math.min(100, pct) + '%', pctColor: pct >= 100 ? '#A8352C' : (pct >= 85 ? '#D9A62E' : '#22C55E'), alta: c.alta, ultimo: c.ultimo, abrir: () => this.setState({ ficha: c.id, accion: null }) }, this.pillCli(c.estado));
+    });
+
+    const mkChips = (lista, cur, campo) => lista.map(x => ({
+      label: x, pick: () => this.setState({ [campo]: x }),
+      bg: cur === x ? '#123D2F' : '#FFFFFF', borde: cur === x ? '#123D2F' : '#E4E9E2', color: cur === x ? '#FAF9F5' : '#3E5A4E'
+    }));
+
+    const fc = clientes.find(c => c.id === s.ficha);
+    const fichaVals = fc ? Object.assign({
+      fNombre: fc.nombre, fRuc: fc.ruc, fAlta: fc.alta, fOrigen: fc.origen, fEstado: fc.estado.replace('_', ' '),
+      fPillBg: this.pillCli(fc.estado).pillBg, fPillBorde: this.pillCli(fc.estado).pillBorde, fPillColor: this.pillCli(fc.estado).pillColor,
+      fCorreo: fc.correo, fTel: fc.tel, fPlan: fc.plan, fCanal: fc.canal,
+      fUsados: fc.usados, fCupo: fc.cupo, fPctW: Math.min(100, Math.round(fc.usados / fc.cupo * 100)) + '%', fIa: fc.ia,
+      fFirmaEntidad: fc.firmaEntidad, fFirmaVence: fc.firmaVence, firmaDias: fc.firmaDias,
+      firmaSin: fc.firmaEntidad === 'Pendiente',
+      firmaConDatos: fc.firmaEntidad !== 'Pendiente',
+      firmaAlerta: fc.firmaEntidad !== 'Pendiente' && fc.firmaDias < 30,
+      firmaBorde: fc.firmaEntidad === 'Pendiente' ? '#F2E4C0' : (fc.firmaDias < 30 ? 'rgba(168,53,44,.35)' : '#E4E9E2'),
+      fEst: fc.est, fPagos: fc.pagos, fNotas: fc.notas,
+      suspLabel: fc.estado === 'SUSPENDIDO' ? 'Reactivar' : 'Suspender',
+      togSuspender: () => {
+        const nuevo = fc.estado === 'SUSPENDIDO' ? 'ACTIVO' : 'SUSPENDIDO';
+        this.setState(st => ({ notasExtra: Object.assign({}, st.notasExtra, { [fc.id]: Object.assign({}, st.notasExtra[fc.id], { estado: nuevo }) }) }));
+        this.audit((nuevo === 'ACTIVO' ? 'Reactivado' : 'Suspendido') + ': ' + fc.nombre);
+      },
+      impersonar: () => { this.setState({ impersonando: fc.id }); this.audit('Impersonación iniciada sobre ' + fc.nombre); },
+      abrirAccionPlan: () => this.setState({ accion: s.accion === 'plan' ? null : 'plan', planPick: fc.plan }),
+      abrirAccionRegalar: () => this.setState({ accion: s.accion === 'regalar' ? null : 'regalar' }),
+      aplicarPlan: () => {
+        this.setState(st => ({ accion: null, notasExtra: Object.assign({}, st.notasExtra, { [fc.id]: Object.assign({}, st.notasExtra[fc.id], { plan: st.planPick }) }) }));
+        this.audit('Plan de ' + fc.nombre + ' → ' + s.planPick + (s.planCuando === 'ahora' ? ' (inmediato)' : ' (siguiente ciclo)'));
+      },
+      confirmarRegalo: () => {
+        this.setState({ accion: null, regaloMotivo: '' });
+        this.audit('Regalados ' + s.regaloQty + ' comprobantes a ' + fc.nombre);
+      },
+      agregarNota: () => {
+        const txt = s.notaNueva.trim();
+        if (!txt) return;
+        this.setState(st => {
+          const prev = st.notasExtra[fc.id] || {};
+          return { notaNueva: '', notasExtra: Object.assign({}, st.notasExtra, { [fc.id]: Object.assign({}, prev, { notas: [{ texto: txt, autor: 'Superadmin · Libio', fecha: 'Hoy' }].concat(prev.notas || []) }) }) };
+        });
+        this.audit('Nota agregada a ' + fc.nombre);
+      }
+    }) : {};
+
+    const impC = clientes.find(c => c.id === s.impersonando);
+
+    const qc = s.buscaComp.replace(/\s/g, '');
+    const colaVista = cola
+      .filter(d => s.filtroComp === 'Todos' || d.estado === s.filtroComp)
+      .filter(d => !qc || d.clave.includes(qc) || d.ruc.includes(qc))
+      .map(d => Object.assign({
+        estado: d.estado.replace('_', ' '), tipo: d.tipo, emisor: d.emisor, ruc: d.ruc,
+        clave: d.clave.slice(0, 10) + '…' + d.clave.slice(-8), hora: d.hora,
+        esRechazado: d.estado === 'RECHAZADO', motivo: d.motivo || '', reintentos: d.reintentos || 0,
+        verXml: () => this.flash('Descargando XML firmado de ' + d.emisor),
+        verPdf: () => this.flash('Descargando RIDE en PDF de ' + d.emisor),
+        reintentar: () => {
+          this.setState(st => ({ cola: (st.cola || this.colaBase()).map(x => x.id === d.id ? Object.assign({}, x, { estado: 'ENVIADO_SRI', reintentos: (x.reintentos || 0) + 1 }) : x) }));
+          this.audit('Reintento: re-firmado y re-enviado al SRI (' + d.emisor + ')');
+        },
+        resolver: () => {
+          this.setState(st => ({ cola: (st.cola || this.colaBase()).filter(x => x.id !== d.id) }));
+          this.audit('Rechazado marcado como resuelto (' + d.emisor + ')');
+        }
+      }, this.pillDoc(d.estado)));
+
+    // ---- FASE B ----
+    const tWa = Number(s.tarifaWa) || 0, tIa = Number(s.tarifaIa) || 0, tInfra = Number(s.tarifaInfra) || 0;
+    const CONSUMO = [
+      { id: 'c1', conv: 58, promo: false }, { id: 'c2', conv: 82, promo: false }, { id: 'c3', conv: 34, promo: true },
+      { id: 'c4', conv: 66, promo: true }, { id: 'c5', conv: 30, promo: false }, { id: 'c7', conv: 6, promo: false },
+      { id: 'c8', conv: 25, promo: true }, { id: 'c10', conv: 15, promo: false }
+    ];
+    const PAGA = { c1: 9.99, c2: 24.99, c3: 0.99, c4: 0.99, c5: 24.99, c7: 2.99, c8: 0.99, c10: 5.99 };
+    const fmt$ = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toFixed(2);
+    const consumoRows = CONSUMO.map(x => {
+      const c = clientes.find(k => k.id === x.id);
+      const ia = Number(c.ia.split(' ')[0]) || 0;
+      const costo = x.conv * tWa + c.usados * tInfra + ia * tIa;
+      const paga = PAGA[x.id];
+      const m = paga - costo, mp = paga > 0 ? (m / paga * 100) : 0;
+      return {
+        nombre: c.nombre, plan: c.plan + (x.promo ? ' · LANZA99' : ''), consumo: c.usados + ' / ' + c.cupo,
+        pctW: Math.min(100, Math.round(c.usados / c.cupo * 100)) + '%',
+        canal: c.canal.split(' · ')[0], ia: c.ia,
+        costo: fmt$(costo), paga: fmt$(paga), margen: fmt$(m), margenPct: mp.toFixed(0) + '%',
+        mColor: mp < 0 ? '#A8352C' : (mp < 20 ? '#8A6410' : '#16794A'), _mp: mp, promo: x.promo
+      };
+    }).sort((a, b) => a._mp - b._mp);
+    const rankingRojo = consumoRows.filter(r => r._mp < 20);
+    const costoTotal = CONSUMO.reduce((a, x) => {
+      const c = clientes.find(k => k.id === x.id);
+      return a + x.conv * tWa + c.usados * tInfra + (Number(c.ia.split(' ')[0]) || 0) * tIa;
+    }, 0);
+    const ingresoTotal = 196.40;
+    const margenGlobal = ingresoTotal - costoTotal;
+
+    const barras30 = [34, 41, 38, 52, 47, 55, 22, 18, 49, 58, 61, 44, 53, 66, 30, 24, 57, 63, 70, 59, 65, 41, 28, 72, 68, 75, 62, 58, 81, 46].map(v => ({ h: Math.round(v / 81 * 100) + '%' }));
+    const servicios = [
+      { nombre: 'SRI · recepción', detalle: '142 ms', dot: '#22C55E', hace: 'hace 1 min' },
+      { nombre: 'SRI · autorización', detalle: '210 ms', dot: '#22C55E', hace: 'hace 1 min' },
+      { nombre: 'WhatsApp API', detalle: 'Calidad GREEN · límite 1K/día', dot: '#22C55E', hace: 'hace 2 min' },
+      { nombre: 'Firma electrónica', detalle: 'Operativo', dot: '#22C55E', hace: 'hace 2 min' },
+      { nombre: 'Correo saliente', detalle: 'Latencia alta, 3.8 s', dot: '#D9A62E', hace: 'hace 4 min' }
+    ];
+    const alertas = [
+      { sev: '#A8352C', texto: '2 comprobantes rechazados por el SRI en las últimas 24 h', ir: () => this.setState({ pantalla: 'comp', filtroComp: 'RECHAZADO', ficha: null }) },
+      { sev: '#A8352C', texto: 'Firma de Comercial Andrade S.A. vence en 15 días', ir: () => this.setState({ pantalla: 'clientes', ficha: 'c1', accion: null }) },
+      { sev: '#D9A62E', texto: 'Panadería Doña Andrade con pago vencido hace 9 días', ir: () => this.setState({ pantalla: 'pagos', ficha: null }) },
+      { sev: '#D9A62E', texto: 'Correo saliente con latencia alta desde las 10:12', ir: () => this.flash('Detalle del servicio de correo: cola de 46 mensajes') }
+    ];
+
+    const vencimientos = [
+      { cliente: 'Ferretería Andrade e Hijos', plan: 'Independiente', vence: '30 ago', metodo: 'Transferencia', estado: 'VENCE PRONTO', pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+      { cliente: 'Comercial Andrade S.A.', plan: 'Emprendedor', vence: '01 sep', metodo: 'Payphone · Visa', estado: 'AL DÍA', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      { cliente: 'Ferretería El Tornillo', plan: 'Empresario', vence: '02 sep', metodo: 'Payphone · MC', estado: 'AL DÍA', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      { cliente: 'Distribuidora Sur', plan: 'Independiente', vence: '08 sep', metodo: 'Payphone · Visa', estado: 'AL DÍA', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' }
+    ];
+    const recargas = [
+      { fecha: '21 ago', cliente: 'Comercial Andrade S.A.', paquete: '10 comprobantes', monto: '$2.99' },
+      { fecha: '18 ago', cliente: 'Ferretería El Tornillo', paquete: '100 comprobantes', monto: '$10.00' },
+      { fecha: '12 ago', cliente: 'Distribuidora Sur', paquete: '10 comprobantes', monto: '$2.99' }
+    ];
+    const ingresosMeses = [
+      { mes: 'May', v: '$118', h: '56%' }, { mes: 'Jun', v: '$142', h: '68%' },
+      { mes: 'Jul', v: '$167', h: '80%' }, { mes: 'Ago', v: '$196', h: '94%' }
+    ];
+    const facturasPropias = [
+      { num: '001-001-000000412', cliente: 'Ferretería El Tornillo', monto: '$24.99', estado: 'AUTORIZADO' },
+      { num: '001-001-000000411', cliente: 'Comercial Andrade S.A.', monto: '$9.99', estado: 'AUTORIZADO' },
+      { num: '001-001-000000410', cliente: 'Clínica San Rafael', monto: '$24.99', estado: 'AUTORIZADO' }
+    ];
+
+    // ---- FASE C ----
+    const rolEsSuper = rol === 'SUPERADMIN';
+    const PILL_TPL = {
+      APROBADA: { pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      PENDIENTE: { pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+      RECHAZADA: { pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' }
+    };
+    const plantillas = [
+      { id: 't1', nombre: 'aviso_predeclaracion', cat: 'Utilidad', estado: 'APROBADA', body: s.avisoPre },
+      { id: 't2', nombre: 'cupo_agotado', cat: 'Utilidad', estado: 'APROBADA', body: s.avisoCupo },
+      { id: 't3', nombre: 'pago_vencido', cat: 'Utilidad', estado: 'APROBADA', body: s.avisoPago },
+      { id: 't4', nombre: 'reactivacion_15d', cat: 'Marketing', estado: 'APROBADA', body: 'Hola {nombre}, hace dos semanas no emites comprobantes. ¿Todo bien con tu negocio? Escríbeme «hola» y seguimos donde quedaste.' },
+      { id: 't5', nombre: 'nueva_tienda_online', cat: 'Marketing', estado: 'PENDIENTE', body: 'Tu plan ahora incluye tienda online 🛍 Actívala desde tu panel y comparte el enlace con tus clientes.' },
+      { id: 't6', nombre: 'promo_lanza99', cat: 'Marketing', estado: 'RECHAZADA', motivo: 'Categoría incorrecta: contenido promocional enviado como Utilidad. Reenviar como Marketing.', body: 'Estrena Factuchat: tu primer mes por $0.99 con el código LANZA99.' }
+    ].map(t => Object.assign({}, t, PILL_TPL[t.estado], {
+      abierta: s.plantillaOpen === t.id,
+      verLabel: s.plantillaOpen === t.id ? 'Cerrar' : 'Ver',
+      ver: () => this.setState(st => ({ plantillaOpen: st.plantillaOpen === t.id ? null : t.id })),
+      tieneMotivo: !!t.motivo, motivo: t.motivo || ''
+    }));
+    const proyeccionWa = 25.70;
+    const presupuestoWa = Number(s.waPresupuesto) || 0;
+    const fallidos = [
+      { tel: '+593 99 604 5566', error: '131026 · El teléfono no tiene WhatsApp', hora: 'Hoy 10:22', accion: 'Reintentar' },
+      { tel: '+593 98 900 3311', error: '470 · Fuera de la ventana de 24 h, requiere plantilla', hora: 'Hoy 09:48', accion: 'Enviar plantilla' },
+      { tel: '+593 96 233 4455', error: '131049 · Límite de marketing alcanzado para este usuario', hora: 'Ayer 19:10', accion: 'Reintentar' }
+    ].map(x => Object.assign({}, x, { go: () => this.audit(x.accion + ' a ' + x.tel) }));
+
+    const PILL_SOP = {
+      'ESPERANDO': { pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' },
+      'EN ATENCIÓN': { pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+      'RESUELTO': { pillBg: '#F4F6F3', pillBorde: '#E4E9E2', pillColor: '#8A9A91' }
+    };
+    const sopConvs = [
+      { cliente: 'Panadería Doña Andrade', msj: 'No entiendo por qué mi factura fue rechazada 😕', hace: 'hace 12 min', estado: 'ESPERANDO' },
+      { cliente: 'Andrade Cedeño Pablo', msj: 'Quiero cambiar el correo de mi cuenta', hace: 'hace 1 h · atiende María', estado: 'EN ATENCIÓN' },
+      { cliente: 'Textiles del Litoral S.A.', msj: '¿Cómo reactivo mi cuenta en septiembre?', hace: 'ayer 16:40', estado: 'RESUELTO' }
+    ].map(c => Object.assign({}, c, PILL_SOP[c.estado], { abrir: () => this.flash('Abriendo la conversación con ' + c.cliente) }));
+    const abandono = [
+      { cliente: 'Ferretería Andrade e Hijos', detalle: 'Último comprobante hace 15 días (09 ago)', sev: '#D9A62E', nivel: '15 días' },
+      { cliente: 'Andrade Salazar Lucía', detalle: 'Canceló al mes 2 · sin emitir hace 30+ días', sev: '#A8352C', nivel: '30 días' }
+    ].map(a => Object.assign({}, a, { enviar: () => this.audit('Reactivación (plantilla reactivacion_15d) enviada a ' + a.cliente) }));
+    const notasTrans = [];
+    clientes.forEach(c => c.notas.forEach(nt => notasTrans.push({ cliente: c.nombre, texto: nt.texto, meta: nt.autor + ' · ' + nt.fecha })));
+
+    const setPlanCfg = (plan, campo) => (e) => this.setState(st => ({ planCfg: Object.assign({}, st.planCfg, { [plan]: Object.assign({}, st.planCfg[plan], { [campo]: e.target.value }) }) }));
+    const planesCfg = ['Inicial', 'Independiente', 'Emprendedor', 'Empresario'].map(p => ({
+      nombre: p, esUnico: p === 'Inicial',
+      precio: s.planCfg[p].precio, onPrecio: setPlanCfg(p, 'precio'),
+      cupo: s.planCfg[p].cupo, onCupo: setPlanCfg(p, 'cupo'),
+      ia: s.planCfg[p].ia, onIa: setPlanCfg(p, 'ia')
+    }));
+    const admins = [
+      { nombre: 'Libio Pareja', rol: 'SUPERADMIN', dfa: '2FA activo', dfaOk: true, esTu: true },
+      { nombre: 'María Sánchez', rol: 'SOPORTE', dfa: '2FA activo', dfaOk: true, esTu: false },
+      { nombre: 'Carlos Vera', rol: 'LECTURA', dfa: '2FA pendiente', dfaOk: false, esTu: false }
+    ].map(a => Object.assign({}, a, {
+      dfaOff: !a.dfaOk, borrable: !a.esTu,
+      forzar: () => this.audit('2FA forzado para ' + a.nombre),
+      desactivar: () => this.audit('Administrador desactivado: ' + a.nombre)
+    }));
+    const segSri = (act) => act
+      ? { bg: '#123D2F', borde: '#123D2F', color: '#FAF9F5' }
+      : { bg: '#FFFFFF', borde: '#D6DED6', color: '#3E5A4E' };
+
+    // ---- FASE D ----
+    const PILL_BUZ = {
+      PROCESADO: { pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+      ERROR: { pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' },
+      DUPLICADO: { pillBg: '#F4F6F3', pillBorde: '#E4E9E2', pillColor: '#8A9A91' }
+    };
+    const correosBuzon = [
+      { id: 'b1', hora: 'Hoy 10:18', buzon: '1791234567001@factuchat.com', inquilino: 'Comercial Andrade S.A.', remitente: 'facturacion@claro.com.ec', tipo: 'Retención recibida', estado: 'PROCESADO' },
+      { id: 'b2', hora: 'Hoy 09:51', buzon: '1712345678001@factuchat.com', inquilino: 'Ferretería El Tornillo', remitente: 'comprobantes@corporacionfavorita.com', tipo: 'Factura recibida', estado: 'PROCESADO' },
+      { id: 'b3', hora: 'Hoy 09:22', buzon: '1104567890001@factuchat.com', inquilino: 'Panadería Doña Andrade', remitente: 'no-reply@proveedorx.ec', tipo: 'XML adjunto', estado: 'ERROR', xml: '<?xml version="1.0"?><autorizacion><estado>AUTORIZADO</estado><comprobante><![CDATA[<factura id="comprobante" version="1.1... [etiqueta <infoTributaria> sin cerrar: parseo abortado en línea 14]' },
+      { id: 'b4', hora: 'Ayer 18:40', buzon: '1791234567001@factuchat.com', inquilino: 'Comercial Andrade S.A.', remitente: 'facturacion@claro.com.ec', tipo: 'Retención recibida', estado: 'DUPLICADO' },
+      { id: 'b5', hora: 'Ayer 15:07', buzon: '1798765432001@factuchat.com', inquilino: 'Clínica San Rafael', remitente: 'sri-comprobantes@movistar.com.ec', tipo: 'Factura recibida', estado: 'PROCESADO' }
+    ].map(c => Object.assign({}, c, PILL_BUZ[c.estado], {
+      esError: c.estado === 'ERROR',
+      xmlAbierto: s.buzonXmlOpen === c.id, xml: c.xml || '',
+      verXml: () => this.setState(st => ({ buzonXmlOpen: st.buzonXmlOpen === c.id ? null : c.id })),
+      xmlLabel: s.buzonXmlOpen === c.id ? 'Cerrar XML' : 'Ver XML crudo'
+    }));
+    const togBuzon = () => {
+      const nuevo = !s.buzonOn;
+      this.setState({ buzonOn: nuevo });
+      this.audit('Feature flag BUZON_ACTIVO → ' + (nuevo ? 'true' : 'false'));
+    };
+
+    const auditBase = [
+      { fecha: 'Hoy 10:14', dia: 'hoy', admin: 'Libio Pareja', rol: 'SUPERADMIN', accion: 'Impersonación finalizada', tipo: 'Impersonación', cliente: 'Comercial Andrade S.A.', cambio: '', ip: '190.152.1.44' },
+      { fecha: 'Hoy 10:12', dia: 'hoy', admin: 'Libio Pareja', rol: 'SUPERADMIN', accion: 'Impersonación iniciada', tipo: 'Impersonación', cliente: 'Comercial Andrade S.A.', cambio: '', ip: '190.152.1.44' },
+      { fecha: 'Hoy 09:58', dia: 'hoy', admin: 'María Sánchez', rol: 'SOPORTE', accion: 'Reintento de comprobante rechazado', tipo: 'Comprobantes', cliente: 'Textiles del Litoral S.A.', cambio: 'reintentos: 1 → 2', ip: '186.42.190.12' },
+      { fecha: 'Hoy 09:40', dia: 'hoy', admin: 'Libio Pareja', rol: 'SUPERADMIN', accion: 'Cambio de plan', tipo: 'Plan', cliente: 'Distribuidora Sur', cambio: 'Independiente → Emprendedor · siguiente ciclo', ip: '190.152.1.44' },
+      { fecha: 'Ayer 17:22', dia: 'sem', admin: 'Libio Pareja', rol: 'SUPERADMIN', accion: 'Regalo de cupo: +10 comprobantes', tipo: 'Cupo', cliente: 'Panadería Doña Andrade', cambio: 'motivo: compensación caída SRI 18 ago', ip: '190.152.1.44' },
+      { fecha: 'Ayer 16:05', dia: 'sem', admin: 'Carlos Vera', rol: 'LECTURA', accion: 'Inicio de sesión', tipo: 'Sesión', cliente: '—', cambio: '', ip: '181.39.24.101' },
+      { fecha: '22 ago 11:30', dia: 'sem', admin: 'Libio Pareja', rol: 'SUPERADMIN', accion: 'Cambio de precio con vigencia 01 sep', tipo: 'Precios', cliente: '— (global)', cambio: 'Independiente: $5.49 → $5.99', ip: '190.152.1.44' },
+      { fecha: '21 ago 09:02', dia: 'mes', admin: 'María Sánchez', rol: 'SOPORTE', accion: 'Suspensión a pedido del cliente', tipo: 'Suspensión', cliente: 'Textiles del Litoral S.A.', cambio: 'estado: ACTIVO → SUSPENDIDO', ip: '186.42.190.12' }
+    ];
+    const qa = s.audBusca.toLowerCase();
+    const audRows = s.auditExtra.concat(auditBase)
+      .filter(r => s.audAdmin === 'Todos' || r.admin.startsWith(s.audAdmin))
+      .filter(r => s.audTipo === 'Todas' || r.tipo === s.audTipo)
+      .filter(r => s.audFecha === 'Todo' || (s.audFecha === 'Hoy' ? r.dia === 'hoy' : (s.audFecha === '7 días' ? (r.dia === 'hoy' || r.dia === 'sem') : true)))
+      .filter(r => !qa || r.cliente.toLowerCase().includes(qa) || r.accion.toLowerCase().includes(qa))
+      .map(r => Object.assign({}, r, { hayCambio: !!r.cambio }));
+    const mkChipsA = (lista, cur, campo) => lista.map(x => ({
+      label: x, pick: () => this.setState({ [campo]: x }),
+      bg: cur === x ? '#123D2F' : '#FFFFFF', borde: cur === x ? '#123D2F' : '#E4E9E2', color: cur === x ? '#FAF9F5' : '#3E5A4E'
+    }));
+
+    const promosTodas = [
+      { codigo: 'LANZA99', beneficio: 'Primer mes a $0.99 en planes mensuales', vigencia: '01–31 ago', usos: '38 / 200', retencion: '75%', estado: 'ACTIVO', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' }
+    ].concat(s.promosExtra);
+
+    const pcTipos = ['Precio fijo 1er mes', '% de descuento', 'Comprobantes extra'].map(t => ({
+      label: t, pick: () => this.setState({ pcTipo: t }),
+      bg: s.pcTipo === t ? '#123D2F' : '#FFFFFF', borde: s.pcTipo === t ? '#123D2F' : '#D6DED6', color: s.pcTipo === t ? '#FAF9F5' : '#3E5A4E'
+    }));
+    const pcPlanes = ['Inicial', 'Independiente', 'Emprendedor', 'Empresario'].map(p => {
+      const sel = s.pcPlanesSel.includes(p);
+      return { label: p, pick: () => this.setState(st => ({ pcPlanesSel: sel ? st.pcPlanesSel.filter(x => x !== p) : [...st.pcPlanesSel, p] })), bg: sel ? 'rgba(34,197,94,.12)' : '#FFFFFF', borde: sel ? 'rgba(22,121,74,.4)' : '#D6DED6', color: sel ? '#16794A' : '#3E5A4E' };
+    });
+    const pcOk = s.pcNombre.trim().length >= 3 && s.pcValor !== '' && s.pcPlanesSel.length > 0;
+
+    const titulos = {
+      dash: ['Dashboard general', 'Agosto 2026 · KPIs, actividad, salud de servicios y alertas'],
+      consumo: ['Consumo y costos', 'Costo real por cliente contra lo que paga su plan · tarifas editables'],
+      pagos: ['Facturación y pagos', 'Vencimientos, morosos, recargas e ingresos'],
+      wa: ['WhatsApp', 'Estado de la línea, plantillas, consumo y mensajes fallidos'],
+      soporte: ['Soporte', 'Conversaciones que piden humano y señales de abandono'],
+      config: ['Configuración', 'Planes, avisos automáticos, administradores y parámetros SRI'],
+      buzon: ['Buzón SRI', 'Correos recibidos por inquilino y estado del parseo de XML'],
+      audit: ['Auditoría', 'Registro inmutable de acciones · solo lectura · cumplimiento LOPDP'],
+      clientes: ['Clientes', filtradas.length + ' inquilinos · búsqueda, filtros y ficha con acciones de soporte'],
+      comp: ['Comprobantes del sistema', 'Cola de emisión en tiempo real · los rechazados del SRI piden acción'],
+      mkt: ['Marketing', 'Códigos promocionales, origen de altas y embudo del mes']
+    };
+    const tit = s.ficha ? ['Ficha del cliente', 'Consumo, firma, pagos y acciones con registro de auditoría'] : (titulos[s.pantalla] || ['Próximamente', 'Sección planificada']);
+
+    return Object.assign({}, fichaVals, {
+      padTop: impC ? '38px' : '0px',
+      impersonando: !!impC, impNombre: impC ? impC.nombre : '',
+      salirImp: () => { const nom = impC ? impC.nombre : ''; this.setState({ impersonando: null }); this.audit('Impersonación finalizada (' + nom + ')'); },
+      navItems, rolLabel: rol,
+      titulo: tit[0], subtitulo: tit[1], hoy: '24 ago 2026',
+      puedeActuar,
+      aviso: s.aviso,
+
+      esDash: s.pantalla === 'dash',
+      esConsumo: s.pantalla === 'consumo',
+      esPagos: s.pantalla === 'pagos',
+      mrr: '$81.94', altasMes: 5, bajasMes: 2,
+      activosTotal: 6, activosDesglose: '2 Independiente · 2 Emprendedor · 2 Empresario · 1 en prueba',
+      compHoy: 46, compSemana: 291, compMes: '1,208',
+      barras30, servicios, alertas,
+      tarifaWa: s.tarifaWa, onTarifaWa: (e) => this.setState({ tarifaWa: e.target.value }),
+      tarifaIa: s.tarifaIa, onTarifaIa: (e) => this.setState({ tarifaIa: e.target.value }),
+      tarifaInfra: s.tarifaInfra, onTarifaInfra: (e) => this.setState({ tarifaInfra: e.target.value }),
+      guardarTarifas: () => this.audit('Tarifas de costo guardadas con vigencia desde hoy'),
+      consumoRows, rankingRojo, hayRanking: rankingRojo.length > 0,
+      costoTotal: fmt$(costoTotal), ingresoTotal: fmt$(ingresoTotal),
+      margenGlobal: fmt$(margenGlobal), margenGlobalPct: (margenGlobal / ingresoTotal * 100).toFixed(0) + '%',
+      vencimientos, recargas, ingresosMeses, facturasPropias,
+      suspenderMoroso: () => this.audit('Aviso previo enviado por WhatsApp a Panadería Doña Andrade; suspensión programada en 48 h'),
+      exportarIngresos: () => this.flash('Exportando ingresos de agosto a CSV'),
+      esWa: s.pantalla === 'wa',
+      esSoporte: s.pantalla === 'soporte',
+      esConfig: s.pantalla === 'config' && rolEsSuper,
+      esConfigLock: s.pantalla === 'config' && !rolEsSuper,
+      plantillas, fallidos,
+      waConvEmpresa: 412, waConvUsuario: 386,
+      waCosto: '$19.86', waProyeccion: '$' + proyeccionWa.toFixed(2),
+      waPresupuestoTxt: '$' + presupuestoWa.toFixed(2),
+      waAlerta: proyeccionWa > presupuestoWa,
+      waBarW: Math.min(100, Math.round(proyeccionWa / (presupuestoWa || 1) * 100)) + '%',
+      waBarColor: proyeccionWa > presupuestoWa ? '#A8352C' : '#22C55E',
+      sopConvs, abandono, notasTrans,
+      planesCfg,
+      avisoPre: s.avisoPre, onAvisoPre: (e) => this.setState({ avisoPre: e.target.value }),
+      avisoCupo: s.avisoCupo, onAvisoCupo: (e) => this.setState({ avisoCupo: e.target.value }),
+      avisoPago: s.avisoPago, onAvisoPago: (e) => this.setState({ avisoPago: e.target.value }),
+      guardarPlanes: () => this.audit('Planes y precios guardados con vigencia desde el 01 sep 2026'),
+      guardarAvisos: () => this.audit('Textos de avisos automáticos guardados'),
+      admins,
+      nuevoAdmin: () => this.flash('Formulario de nuevo administrador (rol + 2FA obligatorio)'),
+      sriProdBg: segSri(s.sriAmbiente === 'PRODUCCIÓN').bg, sriProdBorde: segSri(s.sriAmbiente === 'PRODUCCIÓN').borde, sriProdColor: segSri(s.sriAmbiente === 'PRODUCCIÓN').color,
+      sriPruebasBg: segSri(s.sriAmbiente === 'PRUEBAS').bg, sriPruebasBorde: segSri(s.sriAmbiente === 'PRUEBAS').borde, sriPruebasColor: segSri(s.sriAmbiente === 'PRUEBAS').color,
+      pickSriProd: () => { this.setState({ sriAmbiente: 'PRODUCCIÓN' }); this.audit('Ambiente SRI para inquilinos nuevos: PRODUCCIÓN'); },
+      pickSriPruebas: () => { this.setState({ sriAmbiente: 'PRUEBAS' }); this.audit('Ambiente SRI para inquilinos nuevos: PRUEBAS'); },
+      waPresupuesto: s.waPresupuesto, onWaPresupuesto: (e) => this.setState({ waPresupuesto: e.target.value }),
+      guardarPresupuesto: () => this.audit('Presupuesto mensual de WhatsApp: $' + s.waPresupuesto),
+      esBuzon: s.pantalla === 'buzon',
+      esAudit: s.pantalla === 'audit',
+      buzonOn: s.buzonOn, buzonOff: !s.buzonOn, togBuzon, rolEsSuper,
+      buzonFlagLabel: s.buzonOn ? 'BUZON_ACTIVO = true' : 'BUZON_ACTIVO = false',
+      buzonFlagBg: s.buzonOn ? 'rgba(34,197,94,.1)' : '#FFF8E8',
+      buzonFlagBorde: s.buzonOn ? 'rgba(22,121,74,.28)' : '#F2E4C0',
+      buzonFlagColor: s.buzonOn ? '#16794A' : '#8A6410',
+      buzonTogLabel: s.buzonOn ? 'Apagar el módulo' : 'Encender el módulo',
+      buzonOpacidad: s.buzonOn ? '1' : '.55',
+      correosBuzon,
+      audChipsAdmin: mkChipsA(['Todos', 'Libio', 'María', 'Carlos'], s.audAdmin, 'audAdmin'),
+      audChipsTipo: mkChipsA(['Todas', 'Sesión', 'Sesión actual', 'Impersonación', 'Plan', 'Cupo', 'Suspensión', 'Precios', 'Comprobantes'], s.audTipo, 'audTipo'),
+      audChipsFecha: mkChipsA(['Todo', 'Hoy', '7 días', '30 días'], s.audFecha, 'audFecha'),
+      audBusca: s.audBusca, onAudBusca: (e) => this.setState({ audBusca: e.target.value }),
+      audRows, sinAud: audRows.length === 0, totalAud: audRows.length,
+      exportarAudit: () => this.flash('Exportando ' + audRows.length + ' registros de auditoría a CSV'),
+      // ---- Alta de cliente (wizard) ----
+      altaOn: s.altaOn,
+      abrirAlta: () => this.setState({ altaOn: true, altaPaso: 1, altaRuc: '', altaRazon: '', altaComercial: '', altaCorreo: '', altaTel: '', altaPlan: 'Independiente', altaOrigen: 'Orgánico', altaP12: '', altaClave: '', altaFirmaOk: false, altaValidando: false, altaSinFirma: false }),
+      cerrarAlta: () => this.setState({ altaOn: false }),
+      altaPaso1: s.altaPaso === 1, altaPaso2: s.altaPaso === 2, altaPaso3: s.altaPaso === 3,
+      altaPasoTxt: 'Paso ' + s.altaPaso + ' de 3',
+      altaPasos: ['Datos del contribuyente', 'Firma electrónica', 'Confirmación'].map((t, i) => ({
+        num: i + 1, label: t,
+        bg: s.altaPaso > i ? '#123D2F' : '#FFFFFF',
+        color: s.altaPaso > i ? '#FAF9F5' : '#8A9A91',
+        borde: s.altaPaso > i ? '#123D2F' : '#D6DED6',
+        labelColor: s.altaPaso === i + 1 ? '#123D2F' : '#8A9A91',
+        peso: s.altaPaso === i + 1 ? 700 : 500
+      })),
+      altaRuc: s.altaRuc, onAltaRuc: (e) => this.setState({ altaRuc: e.target.value }),
+      altaRazon: s.altaRazon, onAltaRazon: (e) => this.setState({ altaRazon: e.target.value }),
+      altaComercial: s.altaComercial, onAltaComercial: (e) => this.setState({ altaComercial: e.target.value }),
+      altaCorreo: s.altaCorreo, onAltaCorreo: (e) => this.setState({ altaCorreo: e.target.value }),
+      altaTel: s.altaTel, onAltaTel: (e) => this.setState({ altaTel: e.target.value }),
+      altaChipsPlan: mkChipsA(['Inicial', 'Independiente', 'Emprendedor', 'Empresario'], s.altaPlan, 'altaPlan'),
+      altaChipsOrigen: mkChipsA(['Campaña Meta', 'Referido', 'Orgánico', 'TikTok'], s.altaOrigen, 'altaOrigen'),
+      altaP12: s.altaP12, altaTieneP12: !!s.altaP12,
+      onAltaP12: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ altaP12: f.name, altaFirmaOk: false }); },
+      altaClave: s.altaClave, onAltaClave: (e) => this.setState({ altaClave: e.target.value, altaFirmaOk: false }),
+      altaValidando: s.altaValidando, altaFirmaOk: s.altaFirmaOk,
+      altaValLabel: s.altaValidando ? 'Validando…' : 'Validar firma',
+      validarFirma: () => {
+        if (!s.altaP12) return this.flash('Selecciona primero el archivo .p12');
+        if (s.altaClave.length < 4) return this.flash('Escribe la clave del certificado');
+        this.setState({ altaValidando: true });
+        setTimeout(() => this.setState({ altaValidando: false, altaFirmaOk: true, altaSinFirma: false }), 900);
+      },
+      altaSinFirma: s.altaSinFirma,
+      altaSinFirmaTog: () => this.setState(st => ({ altaSinFirma: !st.altaSinFirma })),
+      altaSinFirmaBg: s.altaSinFirma ? '#123D2F' : '#FFFFFF',
+      altaSinFirmaBorde: s.altaSinFirma ? '#123D2F' : '#D6DED6',
+      altaResumen: [
+        { k: 'RUC', v: s.altaRuc || '—' },
+        { k: 'Razón social', v: s.altaRazon || '—' },
+        { k: 'Nombre comercial', v: s.altaComercial || s.altaRazon || '—' },
+        { k: 'Correo · WhatsApp', v: (s.altaCorreo || '—') + ' · ' + (s.altaTel || '—') },
+        { k: 'Plan', v: s.altaPlan + ' · $' + (s.planCfg[s.altaPlan] || {}).precio + (s.altaPlan === 'Inicial' ? ' pago único' : '/mes') + ' · ' + (s.planCfg[s.altaPlan] || {}).cupo + ' comprobantes' },
+        { k: 'Origen del alta', v: s.altaOrigen },
+        { k: 'Firma electrónica', v: s.altaSinFirma ? 'Pendiente — se lo guiará por WhatsApp' : (s.altaFirmaOk ? s.altaP12 + ' · Security Data · vigente hasta 24 ago 2028' : '—') },
+        { k: 'Establecimiento', v: '001 Matriz · secuencial propio · 1 usuario (se crea automático)' },
+        { k: 'Ambiente SRI', v: s.sriAmbiente + ' (parámetro de Configuración)' }
+      ],
+      altaAtras: () => this.setState(st => ({ altaPaso: Math.max(1, st.altaPaso - 1) })),
+      altaHayAtras: s.altaPaso > 1,
+      altaSeguirLabel: s.altaPaso === 3 ? 'Crear cliente' : 'Continuar',
+      altaSeguir: () => {
+        if (s.altaPaso === 1) {
+          if (!/^\d{13}$/.test(s.altaRuc.trim())) return this.flash('El RUC debe tener 13 dígitos');
+          if (!s.altaRazon.trim()) return this.flash('Falta la razón social');
+          if (!s.altaCorreo.includes('@')) return this.flash('Revisa el correo');
+          if (!s.altaTel.trim()) return this.flash('Falta el número de WhatsApp');
+          return this.setState({ altaPaso: 2 });
+        }
+        if (s.altaPaso === 2) {
+          if (!s.altaFirmaOk && !s.altaSinFirma) return this.flash('Valida el .p12 o marca que aún no tiene firma');
+          return this.setState({ altaPaso: 3 });
+        }
+        const cfg = s.planCfg[s.altaPlan] || { cupo: '30', ia: '20' };
+        const id = 'n' + Date.now();
+        const nuevo = {
+          id, ruc: s.altaRuc.trim(), nombre: s.altaRazon.trim(), plan: s.altaPlan, estado: 'EN_PRUEBA',
+          usados: 0, cupo: Number(cfg.cupo), alta: 'Hoy', ultimo: '—',
+          correo: s.altaCorreo.trim(), tel: s.altaTel.trim(), origen: s.altaOrigen,
+          canal: 'Sin emisiones aún', ia: '0 de ' + cfg.ia,
+          firmaEntidad: s.altaSinFirma ? 'Pendiente' : 'Security Data',
+          firmaVence: s.altaSinFirma ? 'Sin firma cargada' : '24 ago 2028',
+          firmaDias: s.altaSinFirma ? 0 : 730,
+          est: '001 Matriz · 1 usuario', pagos: [],
+          notas: s.altaSinFirma ? [{ texto: 'Alta sin firma electrónica: guiarlo por WhatsApp para obtenerla (se consigue en horas).', autor: 'Sistema', fecha: 'Hoy' }] : []
+        };
+        this.setState(st => ({ clientesAlta: [nuevo].concat(st.clientesAlta), altaOn: false, pantalla: 'clientes', ficha: id, accion: null }));
+        this.audit('Alta de cliente: ' + nuevo.nombre + ' · plan ' + s.altaPlan);
+      },
+      esClientes: s.pantalla === 'clientes' && !s.ficha,
+      esFicha: !!s.ficha && !!fc,
+      esComp: s.pantalla === 'comp',
+      esMkt: s.pantalla === 'mkt',
+      esPronto: s.pantalla.startsWith('pronto:'),
+      prontoFase: s.pantalla.startsWith('pronto:') ? 'FASE ' + s.pantalla.split(':')[1] : '',
+
+      busca: s.busca, onBusca: (e) => this.setState({ busca: e.target.value }),
+      chipsEstado: mkChips(['Todos', 'ACTIVO', 'EN_PRUEBA', 'SUSPENDIDO', 'MOROSO', 'CANCELADO'], s.filtroEstado, 'filtroEstado'),
+      chipsPlan: mkChips(['Todos', 'Inicial', 'Independiente', 'Emprendedor', 'Empresario'], s.filtroPlan, 'filtroPlan'),
+      filas, sinFilas: filas.length === 0, totalFilas: filas.length,
+      exportar: () => this.flash('Exportando ' + filas.length + ' clientes a CSV'),
+      volverClientes: () => this.setState({ ficha: null, accion: null }),
+
+      accionPlanOn: s.accion === 'plan', accionRegalarOn: s.accion === 'regalar',
+      planesPick: ['Inicial', 'Independiente', 'Emprendedor', 'Empresario'].map(p => ({ label: p, pick: () => this.setState({ planPick: p }), bg: s.planPick === p ? '#123D2F' : '#FFFFFF', borde: s.planPick === p ? '#123D2F' : '#D6DED6', color: s.planPick === p ? '#FAF9F5' : '#3E5A4E' })),
+      planAhora: s.planCuando === 'ahora', planCiclo: s.planCuando === 'ciclo',
+      pickAhora: () => this.setState({ planCuando: 'ahora' }), pickCiclo: () => this.setState({ planCuando: 'ciclo' }),
+      regaloQty: s.regaloQty, onRegaloQty: (e) => this.setState({ regaloQty: e.target.value }),
+      regaloMotivo: s.regaloMotivo, onRegaloMotivo: (e) => this.setState({ regaloMotivo: e.target.value }),
+      regaloOff: !s.regaloMotivo.trim(), regaloBtnBg: s.regaloMotivo.trim() ? '#22C55E' : '#C8D1CD',
+      notaNueva: s.notaNueva, onNotaNueva: (e) => this.setState({ notaNueva: e.target.value }),
+
+      buscaComp: s.buscaComp, onBuscaComp: (e) => this.setState({ buscaComp: e.target.value }),
+      chipsComp: mkChips(['Todos', 'PENDIENTE', 'FIRMADO', 'ENVIADO_SRI', 'AUTORIZADO', 'RECHAZADO', 'DEVUELTO'], s.filtroComp, 'filtroComp'),
+      colaVista, sinCola: colaVista.length === 0,
+
+      embudo: [
+        { label: 'Registros del mes', n: 128, tasaOn: false, tasa: '', nota: 'Altas nuevas en agosto' },
+        { label: 'Emitieron su primer comprobante', n: 74, tasaOn: true, tasa: '58%', nota: 'Sobre los registros' },
+        { label: 'Pagaron', n: 41, tasaOn: true, tasa: '55%', nota: 'Sobre los que emitieron' }
+      ],
+      promos: promosTodas,
+      nuevoCodigoOn: s.nuevoCodigoOn, nuevoCodigoLabel: s.nuevoCodigoOn ? 'Cerrar' : 'Crear código',
+      togNuevoCodigo: () => this.setState({ nuevoCodigoOn: !s.nuevoCodigoOn }),
+      pcNombre: s.pcNombre, onPcNombre: (e) => this.setState({ pcNombre: e.target.value.toUpperCase() }),
+      pcTipos, pcPlanes,
+      pcValorLabel: s.pcTipo === '% de descuento' ? 'Descuento %' : (s.pcTipo === 'Comprobantes extra' ? 'Comprobantes' : 'Precio $'),
+      pcValor: s.pcValor, onPcValor: (e) => this.setState({ pcValor: e.target.value }),
+      pcCupo: s.pcCupo, onPcCupo: (e) => this.setState({ pcCupo: e.target.value }),
+      pcOff: !pcOk, pcBtnBg: pcOk ? '#22C55E' : '#C8D1CD',
+      crearCodigo: () => {
+        const beneficio = s.pcTipo === 'Precio fijo 1er mes' ? 'Primer mes a $' + Number(s.pcValor).toFixed(2) : (s.pcTipo === '% de descuento' ? s.pcValor + '% de descuento primer mes' : '+' + s.pcValor + ' comprobantes extra');
+        this.setState(st => ({
+          nuevoCodigoOn: false, pcNombre: '',
+          promosExtra: [...st.promosExtra, { codigo: s.pcNombre.trim(), beneficio: beneficio + ' · ' + s.pcPlanesSel.join(', '), vigencia: 'Desde hoy', usos: '0 / ' + s.pcCupo, retencion: '—', estado: 'ACTIVO', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' }]
+        }));
+        this.audit('Código ' + s.pcNombre.trim() + ' creado');
+      },
+      usos: [
+        { cliente: 'Panadería Doña Andrade', fecha: '02 ago', plan: 'Independiente', ret: 'SÍ', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+        { cliente: 'Andrade Salazar Lucía', fecha: '05 ago', plan: 'Independiente', ret: 'NO', pillBg: 'rgba(168,53,44,.08)', pillBorde: 'rgba(168,53,44,.3)', pillColor: '#A8352C' },
+        { cliente: 'Distribuidora Sur', fecha: '08 ago', plan: 'Emprendedor', ret: 'SÍ', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' },
+        { cliente: 'Andrade Cedeño Pablo', fecha: '11 ago', plan: 'Independiente', ret: 'EN CURSO', pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+        { cliente: 'Ferretería El Tornillo', fecha: '15 ago', plan: 'Empresario', ret: 'EN CURSO', pillBg: '#FFF8E8', pillBorde: '#F2E4C0', pillColor: '#8A6410' },
+        { cliente: 'Transporte Andrade Express', fecha: '19 ago', plan: 'Emprendedor', ret: 'SÍ', pillBg: 'rgba(34,197,94,.1)', pillBorde: 'rgba(22,121,74,.28)', pillColor: '#16794A' }
+      ],
+      origenes: [
+        { label: 'Campaña Meta', n: 52, w: '100%' },
+        { label: 'Referidos', n: 31, w: '60%' },
+        { label: 'Orgánico', n: 28, w: '54%' },
+        { label: 'TikTok', n: 17, w: '33%' }
+      ]
+    });
+  }
+}
+</script>
+</body>
+</html>
