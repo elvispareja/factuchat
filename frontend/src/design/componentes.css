@@ -1,0 +1,374 @@
+/* Componentes reutilizables del panel, con los valores exactos de la maqueta.
+   Ver docs/spec-dashboard.json → "tokens" para el detalle de cada patrón. */
+
+/* --- Botones ------------------------------------------------------------ */
+.fc-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radio-pildora);
+  padding: 11px 20px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.25s, box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s, color 0.25s;
+}
+.fc-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.fc-btn--primario {
+  background: var(--verde-acento);
+  color: #0a2a1f;
+}
+.fc-btn--primario:hover:not(:disabled) {
+  background: var(--verde-claro);
+  box-shadow: var(--sombra-acento);
+}
+
+.fc-btn--oscuro {
+  background: var(--verde-marca);
+  color: var(--fondo);
+}
+.fc-btn--oscuro:hover:not(:disabled) {
+  background: var(--verde-medio);
+}
+
+.fc-btn--contorno {
+  background: none;
+  border: 1px solid var(--borde-campo);
+  color: var(--texto);
+}
+.fc-btn--contorno:hover:not(:disabled) {
+  border-color: var(--verde-acento);
+  background: rgba(34, 197, 94, 0.07);
+}
+
+.fc-btn--texto {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--verde-medio);
+}
+.fc-btn--texto:hover:not(:disabled) {
+  color: var(--texto);
+}
+
+.fc-btn--bloqueado {
+  background: var(--superficie-tenue);
+  border: 1px solid var(--borde);
+  color: var(--texto-tenue);
+  cursor: not-allowed;
+}
+
+.fc-btn-icono {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  border-radius: var(--radio-icono);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color 0.22s, background 0.22s;
+}
+.fc-btn-icono:hover {
+  border-color: var(--verde-acento);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+/* --- Tarjetas ----------------------------------------------------------- */
+.fc-tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-tarjeta);
+  padding: 24px 26px 26px;
+}
+.fc-tarjeta--tabla {
+  padding: 0;
+  overflow: hidden;
+}
+.fc-tarjeta--oscura {
+  background: var(--verde-marca);
+  border-radius: var(--radio-tarjeta);
+  padding: 24px 28px;
+  color: var(--texto-sobre-oscuro);
+  position: relative;
+  overflow: hidden;
+}
+.fc-halo {
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(37, 211, 102, 0.2);
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+/* --- Chips de filtro ---------------------------------------------------- */
+.fc-chip {
+  border-radius: var(--radio-pildora);
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  color: var(--texto-suave);
+  transition: border-color 0.22s, background 0.22s, color 0.22s;
+}
+.fc-chip:hover {
+  border-color: var(--verde-acento);
+  color: var(--texto);
+}
+.fc-chip[aria-pressed="true"] {
+  background: var(--verde-marca);
+  border-color: var(--verde-marca);
+  color: var(--fondo);
+}
+.fc-chip__contador {
+  border-radius: var(--radio-pildora);
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 7px;
+  background: rgba(0, 0, 0, 0.07);
+}
+
+/* --- Píldoras de estado -------------------------------------------------- */
+.fc-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radio-pildora);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fc-estado__punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+}
+.fc-estado--exito {
+  background: var(--exito-bg);
+  border: 1px solid var(--exito-borde);
+  color: var(--exito-texto);
+}
+.fc-estado--exito .fc-estado__punto { background: var(--exito-punto); }
+.fc-estado--aviso {
+  background: var(--aviso-bg);
+  border: 1px solid var(--aviso-borde);
+  color: var(--aviso-texto);
+}
+.fc-estado--aviso .fc-estado__punto { background: var(--aviso-punto); }
+.fc-estado--error {
+  background: var(--error-bg);
+  border: 1px solid var(--error-borde);
+  color: var(--error-texto);
+}
+.fc-estado--error .fc-estado__punto { background: var(--error-punto); }
+.fc-estado--neutro {
+  background: var(--superficie-tenue);
+  border: 1px solid var(--borde);
+  color: var(--texto-tenue);
+}
+.fc-estado--neutro .fc-estado__punto { background: var(--texto-tenue); }
+
+/* --- Formularios --------------------------------------------------------- */
+.fc-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto);
+  margin-bottom: 7px;
+}
+.fc-campo {
+  width: 100%;
+  background: var(--superficie-suave);
+  border: 1px solid var(--borde-campo);
+  border-radius: var(--radio-campo);
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.fc-campo:focus {
+  border-color: var(--verde-acento);
+  background: var(--superficie);
+}
+.fc-campo[aria-invalid="true"] {
+  border-color: var(--error-punto);
+  background: #fef4f3;
+}
+.fc-campo:read-only {
+  background: var(--superficie-tenue);
+}
+.fc-error {
+  font-size: 12px;
+  color: var(--error-campo);
+  margin-top: 6px;
+}
+
+/* --- Pestañas ------------------------------------------------------------ */
+.fc-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--superficie-tab);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-tab);
+  padding: 5px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.fc-tab {
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: background 0.22s, color 0.22s;
+}
+.fc-tab[aria-selected="true"] {
+  background: var(--superficie);
+  color: var(--texto);
+  box-shadow: 0 2px 8px -3px rgba(18, 61, 47, 0.35);
+}
+
+/* --- Tablas -------------------------------------------------------------- */
+.fc-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fc-tabla th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie-suave);
+}
+.fc-tabla td {
+  padding: 15px 18px;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: middle;
+}
+.fc-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+.fc-tabla td.fc-num,
+.fc-tabla th.fc-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.fc-mono {
+  font-family: var(--fuente-mono);
+  font-size: 12.5px;
+}
+
+/* --- Encabezado de sección ----------------------------------------------- */
+.fc-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  margin: 0 0 6px;
+}
+.fc-titulo {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  font-size: 27px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.fc-cifra {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Estado vacío -------------------------------------------------------- */
+.fc-vacio {
+  padding: 46px 26px;
+  text-align: center;
+}
+.fc-vacio__titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto);
+  margin: 0 0 6px;
+}
+.fc-vacio__ayuda {
+  font-size: 13px;
+  color: var(--texto-tenue);
+  margin: 0;
+}
+
+/* --- Píldora de aviso flotante -------------------------------------------
+   La maqueta saca los avisos como una píldora fija abajo al centro
+   (Superadmin.dc.html, bloque `aviso`; Dashboard.dc.html hace lo mismo).
+
+   Va como clase y no como estilo en línea por un motivo concreto: centrarla
+   pide `transform: translateX(-50%)`, y las animaciones ganan en la cascada a
+   los estilos en línea. Animar con un keyframe que acaba en `transform: none`
+   —como hace `dbIn`— BORRA ese centrado, y con `fill-mode: both` lo borra para
+   siempre: la píldora se queda con su borde izquierdo clavado en el centro de
+   la pantalla. Por eso el keyframe de aquí conserva el translate. */
+
+@keyframes dbToast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.fc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 400;
+  transform: translateX(-50%);
+  background: var(--verde-marca);
+  color: var(--fondo);
+  border-radius: var(--radio-pildora);
+  padding: 11px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 18px 40px -14px rgba(18, 61, 47, 0.6);
+  animation: dbToast 0.25s ease-out both;
+  max-width: 86vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-toast[data-tono="error"] {
+  background: var(--error-texto);
+  color: #fff;
+}

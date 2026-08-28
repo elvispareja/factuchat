@@ -1,0 +1,99 @@
+# Bloques `server` de Factuchat. La imagen de nginx procesa este fichero con
+# envsubst al arrancar y escribe el resultado en /etc/nginx/conf.d/.
+#
+# Variables que hay que definir en el .env:
+#   FACTUCHAT_DOMINIO  — el dominio definitivo (PENDIENTE de confirmar)
+#
+# Antes de que exista el certificado, `docker compose up` fallaría al no
+# encontrar los ficheros de Let's Encrypt. Por eso el despliegue tiene dos
+# tiempos: primero se levanta solo con el bloque 80 para que certbot valide el
+# desafío ACME, y después se emite el certificado y se recarga nginx. El script
+# de instalación lo explica paso a paso.
+
+# --- HTTP: solo para el desafío ACME y para empujar todo a HTTPS ----------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${FACTUCHAT_DOMINIO};
+
+    # Let's Encrypt escribe aquí su prueba de control del dominio. Tiene que
+    # responder por HTTP plano: es el único camino que NO se redirige.
+    location /.well-known/acme-challenge/ {
+        root /var/www/acme;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS: el servicio de verdad ----------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${FACTUCHAT_DOMINIO};
+
+    ssl_certificate     /etc/letsencrypt/live/${FACTUCHAT_DOMINIO}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${FACTUCHAT_DOMINIO}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/${FACTUCHAT_DOMINIO}/chain.pem;
+
+    # HSTS: solo se activa con TLS ya funcionando. Dos años y subdominios.
+    # Ojo: una vez que un navegador lo recibe, deja de aceptar HTTP para este
+    # dominio durante ese plazo. No se enciende hasta que el certificado esté
+    # emitido y renovándose solo.
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Content-Security-Policy $csp always;
+    # El panel no necesita cámara, micrófono ni ubicación: se niegan de plano.
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+
+    client_max_body_size 10m;
+
+    # El certificado .p12 y los comprobantes que suben los clientes
+    location = /api/v1/auth/login {
+        limit_req zone=login burst=3 nodelay;
+        include /etc/nginx/snippets/proxy-api.inc;
+    }
+
+    # Formularios públicos de la landing: checkout, contacto y comprobantes
+    location /api/v1/publico/ {
+        limit_req zone=publico burst=10 nodelay;
+        include /etc/nginx/snippets/proxy-api.inc;
+    }
+
+    # Webhooks entrantes: WhatsApp (Meta) y el buzón de correo. Cuerpos grandes
+    # y verificados por firma HMAC en el backend.
+    location /api/v1/whatsapp/webhook {
+        limit_req zone=webhooks burst=30 nodelay;
+        client_max_body_size 2m;
+        include /etc/nginx/snippets/proxy-api.inc;
+    }
+
+    location /api/v1/buzon/webhook {
+        limit_req zone=webhooks burst=30 nodelay;
+        # Un correo con adjuntos: el backend lo acota en BUZON_MAX_BYTES (15 MB)
+        client_max_body_size 16m;
+        include /etc/nginx/snippets/proxy-api.inc;
+    }
+
+    location /api/ {
+        limit_req zone=general burst=50 nodelay;
+        include /etc/nginx/snippets/proxy-api.inc;
+    }
+
+    # Frontend compilado y assets propios (sin CDNs externos, A03)
+    location /static/ {
+        alias /srv/static/;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        root /srv/static;
+        try_files $uri /index.html;
+    }
+}

@@ -1,0 +1,48 @@
+[project]
+name = "factuchat-backend"
+version = "0.1.0"
+description = "Factuchat — API de facturación electrónica SRI multi-tenant"
+requires-python = ">=3.12,<3.13"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",      # pycodestyle / pyflakes
+    "I",                # isort
+    "B",                # bugbear
+    "UP",               # pyupgrade
+    "S",                # bandit (seguridad)
+    "N",                # naming
+    "C4",               # comprehensions
+    "T20",              # sin prints sueltos
+]
+ignore = [
+    "S101",             # asserts permitidos (pytest)
+    "N818",             # excepciones de control de flujo sin sufijo Error
+    "B008",             # Depends(...) en defaults es el idioma de FastAPI
+    "N811",             # UUID as PgUUID: alias estándar del tipo de PostgreSQL
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S311"]  # contraseñas de prueba y aleatoriedad no criptográfica en tests
+"app/cli.py" = ["T201"]                # la CLI imprime a consola
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+check_untyped_defs = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+ignore_missing_imports = true
+exclude = ["alembic/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --tb=short"
+filterwarnings = ["error::DeprecationWarning:app.*"]

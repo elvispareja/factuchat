@@ -1,0 +1,997 @@
+/* Panel interno: más oscuro que el del cliente, sin decoración y sin
+   breakpoints — es una herramienta de escritorio (Superadmin.dc.html). */
+
+.fc-sa-shell {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.fc-sa-lateral {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #0c2318;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fc-sa-marca {
+  font-family: var(--fuente-titulo);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.fc-sa-badge {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #5ce68f;
+  background: rgba(92, 230, 143, 0.12);
+  border: 1px solid rgba(92, 230, 143, 0.28);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.fc-sa-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 13px;
+  margin-bottom: 2px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8fb3a0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, color 0.2s;
+}
+.fc-sa-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dff3e7;
+}
+.fc-sa-item[data-activa="1"] {
+  background: rgba(92, 230, 143, 0.14);
+  color: #5ce68f;
+}
+
+.fc-sa-main {
+  padding: 26px 30px 70px;
+  min-width: 0;
+  /* La maqueta trae `max-width:1180px` en su <main> (línea 59), pero está
+     pensada para verse a ~1440px. En un monitor ancho ese tope dejaba una
+     franja vacía a la derecha, y aquí el ancho se aprovecha: este panel es
+     todo tablas —comprobantes, auditoría, consumo— que agradecen el sitio.
+     Decisión del dueño del producto, tomada mirando la pantalla real. */
+}
+
+/* Banner de impersonación: rojo, fijo arriba, empuja todo el contenido */
+.fc-sa-imp {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 300;
+  height: 38px;
+  background: #a8352c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 16px;
+}
+.fc-sa-imp button {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fc-sa-imp button:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.fc-sa-shell[data-imp="1"] {
+  padding-top: 38px;
+}
+
+.fc-sa-reloj {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+.fc-sa-reloj span[data-punto] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--exito-punto);
+  animation: dbPulse 2s ease-in-out infinite;
+}
+
+/* --- Dashboard general (Superadmin.dc.html, bloque esDash) ---------------- */
+
+@keyframes saPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Los cuatro KPI. La maqueta los pinta en cuatro columnas fijas; abajo se
+   pliegan a dos y a una para que no se corten en pantallas estrechas. */
+.fc-sa-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.fc-sa-kpi {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  padding: 18px 20px;
+}
+.fc-sa-kpi--oscura {
+  background: var(--verde-marca);
+  border-color: var(--verde-marca);
+  color: var(--texto-sobre-oscuro);
+}
+.fc-sa-kpi__rotulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  margin-bottom: 10px;
+}
+.fc-sa-kpi--oscura .fc-sa-kpi__rotulo {
+  color: #7fc7a4;
+}
+.fc-sa-kpi__cifra {
+  font-family: var(--fuente-titulo);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.fc-sa-kpi--oscura .fc-sa-kpi__cifra {
+  color: #ffffff;
+}
+.fc-sa-kpi__pie {
+  font-size: 12px;
+  color: #8a9a91;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.fc-sa-kpi--oscura .fc-sa-kpi__pie {
+  color: #a6bfb2;
+}
+
+/* --- Panel de comprobantes emitidos ------------------------------------- */
+.fc-sa-panel {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  padding: 20px;
+}
+.fc-sa-panel__titulo {
+  font-family: var(--fuente-titulo);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.fc-sa-emision {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.fc-sa-emision__dato {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+.fc-sa-emision__dato strong {
+  font-weight: 700;
+  color: var(--verde-marca);
+  font-variant-numeric: tabular-nums;
+}
+.fc-sa-barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 92px;
+}
+.fc-sa-barras__b {
+  flex: 1;
+  min-width: 0;
+  background: var(--verde-acento);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.fc-sa-barras__b:hover {
+  opacity: 1;
+}
+/* Un día sin emisión no debe desaparecer: deja una marca de 2px */
+.fc-sa-barras__b[data-cero="1"] {
+  background: var(--borde);
+  opacity: 1;
+}
+
+/* --- Los dos paneles inferiores ----------------------------------------- */
+.fc-sa-abajo {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 14px;
+}
+.fc-sa-servicio {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eff2ee;
+}
+.fc-sa-servicio:last-child {
+  border-bottom: none;
+}
+.fc-sa-servicio__punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: saPulse 2.4s ease-in-out infinite;
+}
+.fc-sa-servicio__punto[data-estado="ok"] { background: var(--exito-punto); }
+.fc-sa-servicio__punto[data-estado="aviso"] { background: var(--aviso-punto); }
+.fc-sa-servicio__punto[data-estado="mal"] { background: var(--error-texto); }
+/* Un canal apagado no parpadea: no está fallando, está sin configurar */
+.fc-sa-servicio__punto[data-estado="apagado"] {
+  background: #c4d2c8;
+  animation: none;
+}
+.fc-sa-servicio__nombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--verde-marca);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-sa-servicio__detalle {
+  font-size: 12px;
+  color: var(--texto-tenue);
+  text-align: right;
+}
+.fc-sa-servicio__hace {
+  font-size: 11px;
+  color: #a9b5ad;
+  white-space: nowrap;
+}
+
+.fc-sa-alerta {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--superficie-suave);
+  border: 1px solid #eff2ee;
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+.fc-sa-alerta__punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fc-sa-alerta__punto[data-sev="alta"] { background: var(--error-texto); }
+.fc-sa-alerta__punto[data-sev="media"] { background: var(--aviso-punto); }
+.fc-sa-alerta__texto {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--verde-marca);
+}
+.fc-sa-alerta__ver {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--borde-campo);
+  color: var(--verde-marca);
+  padding: 5px 13px;
+  border-radius: var(--radio-pildora);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.fc-sa-alerta__ver:hover {
+  border-color: var(--verde-marca);
+}
+
+@media (max-width: 1100px) {
+  .fc-sa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fc-sa-abajo { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .fc-sa-kpis { grid-template-columns: 1fr; }
+  .fc-sa-servicio { flex-wrap: wrap; }
+  .fc-sa-servicio__detalle { text-align: left; }
+}
+
+/* --- Barra de herramientas y chips de filtro (bloque esClientes) ---------- */
+
+.fc-sa-busca {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+.fc-sa-busca svg {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  margin-top: -7px;
+  pointer-events: none;
+}
+.fc-sa-busca input {
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borde-campo);
+  border-radius: var(--radio-campo);
+  padding: 11px 14px 11px 36px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.fc-sa-busca input:focus {
+  border-color: var(--verde-acento);
+}
+
+.fc-sa-chips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.fc-sa-chip {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  color: var(--texto-suave);
+  border-radius: var(--radio-pildora);
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.18s;
+}
+.fc-sa-chip:hover {
+  border-color: var(--borde-campo);
+}
+.fc-sa-chip[aria-pressed="true"] {
+  background: var(--verde-marca);
+  border-color: var(--verde-marca);
+  color: var(--fondo);
+}
+
+/* --- Tabla de clientes ---------------------------------------------------- */
+
+.fc-sa-tabla {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  overflow: hidden;
+}
+.fc-sa-tabla__scroll {
+  overflow-x: auto;
+}
+.fc-sa-tabla__ancho {
+  min-width: 960px;
+}
+.fc-sa-fila {
+  display: grid;
+  grid-template-columns: 128px 1.5fr 118px 116px 150px 92px 110px;
+  gap: 12px;
+  align-items: center;
+}
+.fc-sa-fila--cabecera {
+  padding: 11px 18px;
+  background: var(--superficie-suave);
+  border-bottom: 1px solid #eff2ee;
+}
+.fc-sa-fila--cabecera > div {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+/* La fila entera abre la ficha, como en la maqueta: es un botón para que
+   funcione también con teclado y con lector de pantalla. */
+button.fc-sa-fila {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #eff2ee;
+  padding: 13px 18px;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s;
+}
+button.fc-sa-fila:hover {
+  background: rgba(34, 197, 94, 0.05);
+}
+.fc-sa-fila__ruc {
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+}
+.fc-sa-fila__nombre {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--verde-marca);
+}
+.fc-sa-fila__plan {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+}
+.fc-sa-fila__dato {
+  font-size: 12px;
+  color: var(--texto-tenue);
+  white-space: nowrap;
+}
+.fc-sa-fila__ruc,
+.fc-sa-fila__nombre {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-sa-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  background: var(--superficie-suave);
+  font-size: 12px;
+  color: var(--texto-tenue);
+}
+.fc-sa-pie button {
+  background: none;
+  border: 1px solid var(--borde-campo);
+  color: var(--texto);
+  border-radius: var(--radio-pildora);
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fc-sa-pie button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Píldora de estado con los cinco valores de la maqueta */
+.fc-sa-pill {
+  display: inline-block;
+  border-radius: var(--radio-pildora);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--superficie-tenue);
+  border: 1px solid var(--borde);
+  color: #8a9a91;
+}
+.fc-sa-pill[data-estado="ACTIVO"] {
+  background: var(--exito-bg);
+  border-color: var(--exito-borde);
+  color: var(--exito-texto);
+}
+.fc-sa-pill[data-estado="EN_PRUEBA"] {
+  background: rgba(18, 61, 47, 0.06);
+  border-color: var(--borde-campo);
+  color: var(--verde-marca);
+}
+.fc-sa-pill[data-estado="SUSPENDIDO"] {
+  background: var(--aviso-bg);
+  border-color: var(--aviso-borde);
+  color: var(--aviso-texto);
+}
+.fc-sa-pill[data-estado="MOROSO"] {
+  background: rgba(168, 53, 44, 0.08);
+  border-color: rgba(168, 53, 44, 0.3);
+  color: var(--error-texto);
+}
+
+/* Cupo del mes: cifra y barra de consumo */
+.fc-sa-cupo__cifra {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--verde-marca);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.fc-sa-cupo__carril {
+  height: 4px;
+  background: #eff2ee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.fc-sa-cupo__lleno {
+  height: 100%;
+  background: var(--verde-acento);
+}
+.fc-sa-cupo__lleno[data-tono="aviso"] { background: var(--aviso-punto); }
+.fc-sa-cupo__lleno[data-tono="lleno"] { background: var(--error-texto); }
+
+/* --- Modal «Nuevo cliente» (Superadmin.dc.html, bloque `altaOn`) ----------
+   Estas clases se usaban sin existir: el asistente se pintaba como un bloque
+   suelto dentro de la página, sin velo, sin centrar y sin panel. */
+
+@keyframes saFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes saIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.fc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(12, 35, 24, 0.5);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: saFade 0.2s ease both;
+}
+.fc-modal__panel {
+  width: 640px;
+  max-width: 100%;
+  /* En una pantalla baja el asistente no cabe entero. En vez de dejar que
+     crezca y se salga por arriba —donde no hay forma de volver—, el panel se
+     queda dentro de la ventana y desplaza SOLO su cuerpo: la cabecera con la
+     ✕ y el pie con «Continuar» siguen siempre a la vista. */
+  max-height: min(90vh, 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--superficie);
+  border-radius: 22px;
+  box-shadow: 0 40px 90px -30px rgba(12, 35, 24, 0.6);
+  animation: saIn 0.28s ease-out both;
+}
+.fc-modal__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+.fc-modal__titulo {
+  font-family: var(--fuente-titulo);
+  font-size: 20px;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin: 0;
+}
+.fc-modal__cerrar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  border-radius: var(--radio-pildora);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--texto-suave);
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+.fc-modal__cerrar:hover {
+  border-color: var(--verde-marca);
+}
+.fc-modal__cuerpo {
+  padding: 0 24px;
+  animation: saIn 0.2s ease-out both;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.fc-modal__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 24px 22px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* Raíl de pasos: el círculo se pinta oscuro en el paso actual y en los ya
+   hechos, y el rótulo se resalta solo en el actual (como la maqueta). */
+.fc-pasos {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 16px 24px 18px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.fc-pasos__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.fc-pasos__num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: var(--superficie);
+  border: 1px solid var(--borde-campo);
+  color: #8a9a91;
+}
+.fc-pasos__item[data-alcanzado="1"] .fc-pasos__num {
+  background: var(--verde-marca);
+  border-color: var(--verde-marca);
+  color: var(--fondo);
+}
+.fc-pasos__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #8a9a91;
+  white-space: nowrap;
+}
+.fc-pasos__item[data-actual="1"] .fc-pasos__label {
+  font-weight: 700;
+  color: var(--verde-marca);
+}
+
+/* Campos del formulario del alta */
+.fc-alta-rejilla {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.fc-alta-campo {
+  display: block;
+  margin-bottom: 12px;
+}
+.fc-alta-campo:last-child {
+  margin-bottom: 0;
+}
+.fc-alta-campo > span {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--texto-suave);
+}
+.fc-alta-campo > span em {
+  font-weight: 500;
+  font-style: normal;
+  color: #8a9a91;
+}
+.fc-alta-campo input {
+  width: 100%;
+  background: var(--superficie-suave);
+  border: 1px solid var(--borde-campo);
+  border-radius: 11px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.fc-alta-campo input:focus {
+  border-color: var(--verde-acento);
+}
+.fc-alta-campo input[data-mono="1"] {
+  font-family: var(--fuente-mono);
+  font-size: 13px;
+}
+.fc-alta-rotulo {
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-bottom: 7px;
+  color: var(--texto-suave);
+}
+
+/* Paso 2: zona de carga del .p12 */
+.fc-p12 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed #a9c4b4;
+  background: var(--superficie-suave);
+  border-radius: 14px;
+  padding: 22px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  margin-bottom: 12px;
+  text-align: center;
+  flex-wrap: wrap;
+}
+.fc-p12:hover {
+  border-color: var(--verde-acento);
+  background: rgba(34, 197, 94, 0.05);
+}
+.fc-p12 input[type="file"] {
+  display: none;
+}
+.fc-p12__elegido {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid var(--exito-borde);
+  border-radius: var(--radio-pildora);
+  padding: 6px 13px;
+  margin-bottom: 12px;
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  color: var(--verde-marca);
+}
+.fc-p12__ok {
+  display: flex;
+  gap: 11px;
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid var(--exito-borde);
+  border-radius: 13px;
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--verde-marca);
+  animation: saIn 0.25s ease-out both;
+}
+/* Casilla «aún no tiene firma» */
+.fc-casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.fc-casilla__caja {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--superficie);
+  border: 1.5px solid var(--borde-campo);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: background 0.18s;
+}
+.fc-casilla[aria-pressed="true"] .fc-casilla__caja {
+  background: var(--verde-marca);
+  border-color: var(--verde-marca);
+}
+.fc-casilla__texto {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+/* Paso 3: tabla de confirmación */
+.fc-resumen {
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.fc-resumen__fila {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #eff2ee;
+}
+.fc-resumen__fila:last-child {
+  border-bottom: none;
+}
+.fc-resumen__k {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--texto-tenue);
+  letter-spacing: 0.02em;
+}
+.fc-resumen__v {
+  font-size: 13px;
+  color: var(--verde-marca);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media (max-width: 520px) {
+  .fc-alta-rejilla,
+  .fc-resumen__fila {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Consumo y costos (bloque esConsumo) --------------------------------- */
+
+.fc-consumo-cabecera {
+  display: grid;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.fc-consumo-tarifas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.fc-consumo-total {
+  background: var(--verde-marca);
+  border-radius: var(--radio-panel);
+  padding: 18px 20px;
+  color: var(--texto-sobre-oscuro);
+}
+.fc-consumo-total__filas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.fc-consumo-total__filas > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fc-consumo-total__filas > div[data-borde="1"] {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 8px;
+}
+.fc-consumo-total__filas span {
+  color: #a6bfb2;
+}
+.fc-consumo-total__filas strong {
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-consumo-fila {
+  display: grid;
+  grid-template-columns: 1.4fr 130px 170px 90px 100px 90px 130px;
+  gap: 12px;
+  align-items: center;
+}
+.fc-consumo-fila--dato {
+  padding: 12px 18px;
+  border-bottom: 1px solid #eff2ee;
+}
+.fc-consumo-fila--dato:last-child {
+  border-bottom: none;
+}
+.fc-consumo-num {
+  font-size: 12.5px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fc-consumo-rojo {
+  background: var(--superficie);
+  border: 1px solid rgba(168, 53, 44, 0.3);
+  border-radius: var(--radio-panel);
+  padding: 18px 20px;
+}
+.fc-consumo-rojo__fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(168, 53, 44, 0.04);
+  border: 1px solid rgba(168, 53, 44, 0.14);
+  border-radius: 11px;
+  padding: 10px 14px;
+}
+
+@media (max-width: 1100px) {
+  .fc-consumo-cabecera { grid-template-columns: 1fr; }
+  .fc-consumo-tarifas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .fc-consumo-tarifas { grid-template-columns: 1fr; }
+}
+
+/* --- Avisos automáticos (dentro de Configuración) ------------------------ */
+.fc-avisos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.fc-avisos__texto {
+  width: 100%;
+  background: var(--superficie-suave);
+  border: 1px solid var(--borde-campo);
+  border-radius: 11px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--texto);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.fc-avisos__texto:focus {
+  border-color: var(--verde-acento);
+}
+.fc-avisos__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  font-family: var(--fuente-mono);
+  font-size: 10.5px;
+  color: #8a9a91;
+}
+.fc-avisos__pie button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-family: var(--fuente-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--verde-medio);
+  cursor: pointer;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .fc-avisos { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 12mm; }
+  body { font-family: "DejaVu Sans", sans-serif; font-size: 9pt; color: #111; }
+  .cabecera { display: flex; justify-content: space-between; gap: 6mm; }
+  .caja { border: 1px solid #444; border-radius: 2mm; padding: 3mm; margin-bottom: 3mm; }
+  .titulo { font-size: 12pt; font-weight: bold; }
+  .etiqueta { color: #555; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+  th, td { border: 1px solid #777; padding: 1.5mm; text-align: left; }
+  th { background: #eee; }
+  td.num, th.num { text-align: right; }
+  .totales { width: 60mm; margin-left: auto; }
+  .totales td { border: 1px solid #777; }
+  .barcode svg { width: 100%; height: 14mm; }
+  .clave { font-size: 7.5pt; letter-spacing: 0.3px; word-break: break-all; }
+</style>
+</head>
+<body>
+  <div class="cabecera">
+    <div class="caja" style="flex:1">
+      <div class="titulo">{{ emisor.razon_social }}</div>
+      {% if emisor.nombre_comercial %}<div>{{ emisor.nombre_comercial }}</div>{% endif %}
+      <div><span class="etiqueta">RUC:</span> {{ emisor.ruc }}</div>
+      <div><span class="etiqueta">Matriz:</span> {{ emisor.dir_matriz }}</div>
+      <div><span class="etiqueta">Obligado a llevar contabilidad:</span>
+        {{ "SI" if emisor.obligado_contabilidad else "NO" }}</div>
+    </div>
+    <div class="caja" style="flex:1">
+      <div class="titulo">FACTURA</div>
+      <div>No. {{ establecimiento }}-{{ punto_emision }}-{{ "%09d"|format(secuencial) }}</div>
+      <div><span class="etiqueta">Ambiente:</span>
+        {{ "PRUEBAS" if ambiente == "PRUEBAS" else "PRODUCCIÓN" }}</div>
+      <div><span class="etiqueta">Emisión:</span> NORMAL</div>
+      <div><span class="etiqueta">Fecha autorización:</span> {{ fecha_autorizacion }}</div>
+      <div><span class="etiqueta">No. autorización:</span></div>
+      <div class="clave">{{ numero_autorizacion }}</div>
+      <div class="barcode">{{ barcode_svg | safe }}</div>
+      <div class="clave">{{ clave_acceso }}</div>
+    </div>
+  </div>
+
+  <div class="caja">
+    <div><span class="etiqueta">Razón social:</span> {{ comprador.razon_social }}</div>
+    <div><span class="etiqueta">Identificación:</span> {{ comprador.identificacion }}</div>
+    <div><span class="etiqueta">Fecha de emisión:</span> {{ fecha_emision }}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th><th>Descripción</th>
+        <th class="num">Cant.</th><th class="num">P. unitario</th>
+        <th class="num">Descuento</th><th class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.codigo }}</td>
+        <td>{{ item.descripcion }}</td>
+        <td class="num">{{ item.cantidad }}</td>
+        <td class="num">{{ item.precio_unitario }}</td>
+        <td class="num">{{ item.descuento }}</td>
+        <td class="num">{{ item.total_sin_impuesto }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totales">
+    <tr><td>Subtotal sin impuestos</td><td class="num">{{ totales.total_sin_impuestos }}</td></tr>
+    <tr><td>Descuento</td><td class="num">{{ totales.total_descuento }}</td></tr>
+    {% for imp in totales.impuestos %}
+    <tr><td>IVA {{ imp.tarifa }}%</td><td class="num">{{ imp.valor }}</td></tr>
+    {% endfor %}
+    <tr><td><b>VALOR TOTAL</b></td><td class="num"><b>{{ totales.importe_total }}</b></td></tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,54 @@
+# CI local (fase 1.6): ruff + mypy + pytest + pip-audit + npm audit en pre-commit.
+# Las herramientas de Python corren DENTRO del contenedor api (Python 3.12 de
+# producción): requiere `docker compose -f deploy/docker-compose.dev.yml up -d`.
+# Instalar con: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff (lint backend)
+        entry: docker compose -f deploy/docker-compose.dev.yml exec -T api ruff check app tests
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff (formato backend)
+        entry: docker compose -f deploy/docker-compose.dev.yml exec -T api ruff format --check app tests
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy (tipos backend)
+        entry: docker compose -f deploy/docker-compose.dev.yml exec -T api mypy app
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: pytest
+        name: pytest (suite completa)
+        entry: docker compose -f deploy/docker-compose.dev.yml exec -T api pytest -q
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: pip-audit
+        name: pip-audit (dependencias Python)
+        entry: docker compose -f deploy/docker-compose.dev.yml exec -T api pip-audit -r requirements.txt --disable-pip --no-deps
+        language: system
+        files: ^backend/requirements.*\.txt$
+        pass_filenames: false
+
+      - id: npm-audit
+        name: npm audit (dependencias frontend)
+        entry: npm --prefix frontend audit --audit-level=high
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: no-env-files
+        name: bloquear .env con secretos
+        entry: 'Prohibido: archivos .env no entran al repositorio'
+        language: fail
+        files: '\.env$|\.env\.(?!example)'

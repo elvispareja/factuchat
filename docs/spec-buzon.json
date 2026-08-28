@@ -1,0 +1,1364 @@
+{
+ "especificaciones": [
+  {
+   "key": "buzon-superadmin",
+   "spec": {
+    "seccion": "Buzón SRI (esBuzon) — diseno/Superadmin.dc.html, marcado líneas 898-948; lógica/datos líneas 1150, 1245, 1475-1496, 1541, 1601-1610",
+    "resumen": "Pantalla del panel Superadmin que se renderiza cuando `esBuzon` es verdadero (`s.pantalla === 'buzon'`, línea 1601). Entra con animación `saIn .35s ease-out both` (línea 899) y consta de tres bloques verticales: (1) una banda de feature flag BUZON_ACTIVO con píldora monoespaciada, texto explicativo y botón de alternar visible SOLO para el rol SUPERADMIN; (2) una tabla de correos recibidos con seis columnas y scroll horizontal (min-width 920px), cuya tarjeta baja a opacidad .55 cuando el módulo está apagado, con un visor desplegable de \"XML crudo\" sobre fondo verde muy oscuro disponible únicamente en las filas con estado ERROR; y (3) una tarjeta de aviso ámbar, estática en el marcado, sobre un inquilino que no recibe correos desde su alta. El flag arranca APAGADO (`buzonOn: false`, línea 1150) y alternarlo se registra en auditoría. La dirección de buzón que se muestra por inquilino es su RUC de 13 dígitos seguido de @factuchat.com — dominio que CONTRADICE al resto de las maquetas y que debe confirmarse.",
+    "textos": [
+     {
+      "donde": "Menú lateral, ítem de navegación (línea 1245)",
+      "texto": "Buzón SRI",
+      "condicion": "Siempre. Definido como `{ id: 'buzon', label: 'Buzón SRI', on: true }`: es un ítem ACTIVO, no lleva la marca 'Muy pronto'."
+     },
+     {
+      "donde": "Cabecera de la pantalla, <h1> (líneas 62 y 1541)",
+      "texto": "Buzón SRI",
+      "condicion": "Cuando s.pantalla === 'buzon' y no hay ficha de cliente abierta."
+     },
+     {
+      "donde": "Cabecera de la pantalla, subtítulo (líneas 63 y 1541)",
+      "texto": "Correos recibidos por inquilino y estado del parseo de XML",
+      "condicion": "Igual que el título."
+     },
+     {
+      "donde": "Cabecera, píldora de zona horaria (líneas 67 y 1554)",
+      "texto": "America/Guayaquil · 24 ago 2026",
+      "condicion": "Siempre. `hoy` está fijado literalmente a '24 ago 2026' en la línea 1554 (dato de relleno)."
+     },
+     {
+      "donde": "Banda del flag, píldora monoespaciada — variante ENCENDIDO (líneas 901 y 1604)",
+      "texto": "BUZON_ACTIVO = true",
+      "condicion": "Cuando buzonOn es verdadero. Nótese que la etiqueta se escribe SIN tilde: 'BUZON_ACTIVO', no 'BUZÓN_ACTIVO'."
+     },
+     {
+      "donde": "Banda del flag, píldora monoespaciada — variante APAGADO (líneas 901 y 1604)",
+      "texto": "BUZON_ACTIVO = false",
+      "condicion": "Cuando buzonOn es falso. Es el estado inicial de la maqueta (línea 1150)."
+     },
+     {
+      "donde": "Banda del flag, texto explicativo central (línea 902)",
+      "texto": "Estructura preparada. Mientras el flag esté apagado, los clientes no ven nada y los correos solo se registran para depurar.",
+      "condicion": "Siempre visible, con el mismo texto en ambos estados del flag (no cambia al encender)."
+     },
+     {
+      "donde": "Banda del flag, botón de alternar — variante APAGADO (líneas 903 y 1608)",
+      "texto": "Encender el módulo",
+      "condicion": "Solo si rolEsSuper (rol === 'SUPERADMIN', línea 1410) Y buzonOn es falso."
+     },
+     {
+      "donde": "Banda del flag, botón de alternar — variante ENCENDIDO (líneas 903 y 1608)",
+      "texto": "Apagar el módulo",
+      "condicion": "Solo si rolEsSuper Y buzonOn es verdadero."
+     },
+     {
+      "donde": "Aviso flotante (toast) tras encender el módulo (líneas 1141, 1223-1224, 1495)",
+      "texto": "Feature flag BUZON_ACTIVO → true · registrado en auditoría",
+      "condicion": "Al pulsar el botón cuando estaba apagado. El sufijo ' · registrado en auditoría' lo añade audit() en la línea 1224. Desaparece a los 3200 ms (línea 1220)."
+     },
+     {
+      "donde": "Aviso flotante (toast) tras apagar el módulo (líneas 1141, 1223-1224, 1495)",
+      "texto": "Feature flag BUZON_ACTIVO → false · registrado en auditoría",
+      "condicion": "Al pulsar el botón cuando estaba encendido."
+     },
+     {
+      "donde": "Fila que se inserta en Auditoría al alternar el flag, columna Acción (líneas 1225 y 1495)",
+      "texto": "Feature flag BUZON_ACTIVO → true",
+      "condicion": "Se antepone a auditExtra con fecha 'Ahora', tipo 'Sesión actual', cliente '—', sin 'Antes → después'. La variante con 'false' es idéntica salvo el valor."
+     },
+     {
+      "donde": "Tabla, encabezado columna 1 (línea 910)",
+      "texto": "Recibido",
+      "condicion": "Siempre. Renderizado en mayúsculas por CSS (text-transform:uppercase), pero el texto fuente es 'Recibido'."
+     },
+     {
+      "donde": "Tabla, encabezado columna 2 (línea 911)",
+      "texto": "Inquilino · buzón",
+      "condicion": "Siempre. Separador de punto medio con espacios."
+     },
+     {
+      "donde": "Tabla, encabezado columna 3 (línea 912)",
+      "texto": "Remitente",
+      "condicion": "Siempre."
+     },
+     {
+      "donde": "Tabla, encabezado columna 4 (línea 913)",
+      "texto": "Contenido",
+      "condicion": "Siempre."
+     },
+     {
+      "donde": "Tabla, encabezado columna 5 (línea 914)",
+      "texto": "Parseo",
+      "condicion": "Siempre."
+     },
+     {
+      "donde": "Tabla, encabezado columna 6 (línea 915)",
+      "texto": "",
+      "condicion": "La sexta columna (120px) es un <div></div> VACÍO: no tiene encabezado. Está reservada para el botón de acción."
+     },
+     {
+      "donde": "Tabla, botón de la columna 6 — estado cerrado (líneas 929 y 1490)",
+      "texto": "Ver XML crudo",
+      "condicion": "Solo en filas con cb.esError (estado === 'ERROR') y con el visor cerrado."
+     },
+     {
+      "donde": "Tabla, botón de la columna 6 — estado abierto (líneas 929 y 1490)",
+      "texto": "Cerrar XML",
+      "condicion": "Solo en filas ERROR cuya id coincide con s.buzonXmlOpen."
+     },
+     {
+      "donde": "Píldora de la columna Parseo (líneas 927, 1476)",
+      "texto": "PROCESADO",
+      "condicion": "Filas b1, b2 y b5 del juego de datos."
+     },
+     {
+      "donde": "Píldora de la columna Parseo (líneas 927, 1477)",
+      "texto": "ERROR",
+      "condicion": "Fila b3. Es el único estado que habilita el botón de XML crudo."
+     },
+     {
+      "donde": "Píldora de la columna Parseo (líneas 927, 1478)",
+      "texto": "DUPLICADO",
+      "condicion": "Fila b4."
+     },
+     {
+      "donde": "Visor de XML crudo, contenido del panel oscuro (líneas 934 y 1483)",
+      "texto": "<?xml version=\"1.0\"?><autorizacion><estado>AUTORIZADO</estado><comprobante><![CDATA[<factura id=\"comprobante\" version=\"1.1... [etiqueta <infoTributaria> sin cerrar: parseo abortado en línea 14]",
+      "condicion": "Solo cuando cb.xmlAbierto es verdadero, es decir tras pulsar 'Ver XML crudo' en la fila b3. El mensaje de error de parseo va entre corchetes al final del volcado, en el mismo bloque de texto y con el mismo estilo verde monoespaciado: no es un elemento aparte."
+     },
+     {
+      "donde": "Mensaje de error de parseo, fragmento aislado (línea 1483)",
+      "texto": "[etiqueta <infoTributaria> sin cerrar: parseo abortado en línea 14]",
+      "condicion": "Cola del volcado de XML de la fila b3. Es el único texto de error de parseo de toda la sección."
+     },
+     {
+      "donde": "Tarjeta de aviso inferior, texto en negrita (línea 945)",
+      "texto": "Andrade Cedeño Pablo",
+      "condicion": "Siempre visible. Va dentro de <strong style=\"font-weight:700\">."
+     },
+     {
+      "donde": "Tarjeta de aviso inferior, resto del texto (línea 945)",
+      "texto": " no recibe correos en su buzón desde su alta (13 días). Si llega a 30, se le recuerda configurar el reenvío desde el SRI.",
+      "condicion": "Siempre visible. Está HARDCODEADO en el marcado, no proviene de `correosBuzon` ni de ninguna variable: el nombre, los 13 días y el umbral de 30 son literales."
+     },
+     {
+      "donde": "Tabla, celda Inquilino de la fila b1 y b4 (líneas 1481, 1484)",
+      "texto": "Comercial Andrade S.A.",
+      "condicion": "Datos de ejemplo."
+     },
+     {
+      "donde": "Tabla, celda Inquilino de la fila b2 (línea 1482)",
+      "texto": "Ferretería El Tornillo",
+      "condicion": "Datos de ejemplo. OJO: la razón social completa en clientesBase (línea 1169) es 'Ferretería El Tornillo Cía. Ltda.' — aquí aparece truncada."
+     },
+     {
+      "donde": "Tabla, celda Inquilino de la fila b3 (línea 1483)",
+      "texto": "Panadería Doña Andrade",
+      "condicion": "Datos de ejemplo."
+     },
+     {
+      "donde": "Tabla, celda Inquilino de la fila b5 (línea 1485)",
+      "texto": "Clínica San Rafael",
+      "condicion": "Datos de ejemplo."
+     },
+     {
+      "donde": "Tabla, celda Contenido (líneas 1481-1485)",
+      "texto": "Retención recibida",
+      "condicion": "Filas b1 y b4."
+     },
+     {
+      "donde": "Tabla, celda Contenido (líneas 1482, 1485)",
+      "texto": "Factura recibida",
+      "condicion": "Filas b2 y b5."
+     },
+     {
+      "donde": "Tabla, celda Contenido (línea 1483)",
+      "texto": "XML adjunto",
+      "condicion": "Fila b3, la única con estado ERROR."
+     },
+     {
+      "donde": "Tabla, celda Recibido (líneas 1481-1485)",
+      "texto": "Hoy 10:18 / Hoy 09:51 / Hoy 09:22 / Ayer 18:40 / Ayer 15:07",
+      "condicion": "Un valor por fila, en ese orden (b1 a b5). Formato relativo 'Hoy HH:MM' y 'Ayer HH:MM'."
+     }
+    ],
+    "componentes": [
+     {
+      "nombre": "Contenedor de la sección (esBuzon)",
+      "descripcion": "Envoltura de toda la pantalla, condicionada por <sc-if value=\"{{ esBuzon }}\"> (línea 898). esBuzon = s.pantalla === 'buzon' (línea 1601). Contiene, en orden: banda del flag, tarjeta de tabla y tarjeta de aviso.",
+      "estilos": "animation:saIn .35s ease-out both (línea 899)"
+     },
+     {
+      "nombre": "Banda del feature flag BUZON_ACTIVO",
+      "descripcion": "Tarjeta horizontal en la parte superior (líneas 900-904). Su BORDE cambia de color junto con el flag: usa la misma variable {{ buzonFlagBorde }} que la píldora, de modo que toda la tarjeta se tiñe de ámbar cuando el módulo está apagado y de verde cuando está encendido. Es responsive: envuelve en varias líneas si no cabe.",
+      "estilos": "display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:#FFFFFF; border:1px solid {{ buzonFlagBorde }}; border-radius:16px; padding:15px 18px; margin-bottom:14px"
+     },
+     {
+      "nombre": "Píldora de estado del flag",
+      "descripcion": "Etiqueta monoespaciada que muestra literalmente 'BUZON_ACTIVO = true' o 'BUZON_ACTIVO = false' (línea 901). Es solo informativa, no es clicable.",
+      "estilos": "display:inline-block; background:{{ buzonFlagBg }}; border:1px solid {{ buzonFlagBorde }}; color:{{ buzonFlagColor }}; border-radius:999px; padding:5px 13px; font-family:'SF Mono',ui-monospace,monospace; font-size:11.5px; font-weight:700. ENCENDIDO (línea 1605-1607): bg rgba(34,197,94,.1), borde rgba(22,121,74,.28), color #16794A. APAGADO: bg #FFF8E8, borde #F2E4C0, color #8A6410"
+     },
+     {
+      "nombre": "Texto explicativo de la banda",
+      "descripcion": "Párrafo central que ocupa el espacio sobrante y explica la consecuencia del flag apagado (línea 902). El texto NO cambia entre estados.",
+      "estilos": "flex:1; min-width:240px; font-size:13px; line-height:1.5; color:#3E5A4E; text-wrap:pretty"
+     },
+     {
+      "nombre": "Botón de alternar el módulo",
+      "descripcion": "Único control de la banda (línea 903). Envuelto en <sc-if value=\"{{ rolEsSuper }}\">: SOLO el rol SUPERADMIN lo ve. Los roles SOPORTE y LECTURA ven la banda completa (píldora y texto) pero SIN botón, es decir el flag queda en modo lectura para ellos. Su etiqueta alterna entre 'Encender el módulo' y 'Apagar el módulo'.",
+      "estilos": "flex-shrink:0; background:#123D2F; border:none; color:#FAF9F5; padding:9px 18px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; hover: background:#16794A"
+     },
+     {
+      "nombre": "Tarjeta de la tabla de correos",
+      "descripcion": "Contenedor de la tabla (línea 906). Su opacidad depende del flag mediante {{ buzonOpacidad }}: '1' encendido, '.55' apagado (línea 1609), con transición suave. La tabla NUNCA se oculta ni se bloquea: apagada solo se atenúa, y sigue siendo clicable (el botón 'Ver XML crudo' funciona igual).",
+      "estilos": "background:#FFFFFF; border:1px solid #E4E9E2; border-radius:18px; overflow:hidden; margin-bottom:14px; opacity:{{ buzonOpacidad }}; transition:opacity .3s"
+     },
+     {
+      "nombre": "Envoltura de scroll horizontal",
+      "descripcion": "Div con data-noscroll=\"1\" y overflow-x:auto (línea 907) que contiene un div con min-width:920px (línea 908). En pantallas estrechas la tabla se desplaza horizontalmente en lugar de comprimirse.",
+      "estilos": "overflow-x:auto; interior min-width:920px"
+     },
+     {
+      "nombre": "Fila de encabezados de la tabla",
+      "descripcion": "Rejilla de 6 columnas con los rótulos Recibido, Inquilino · buzón, Remitente, Contenido, Parseo y una sexta celda vacía (líneas 909-916).",
+      "estilos": "display:grid; grid-template-columns:104px 1.2fr 1.2fr 150px 120px 120px; gap:12px; padding:11px 18px; background:#FBFCFA; border-bottom:1px solid #EFF2EE. Cada rótulo: font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#5A7267"
+     },
+     {
+      "nombre": "Fila de correo",
+      "descripcion": "Repetida con <sc-for list=\"{{ correosBuzon }}\" as=\"cb\" hint-placeholder-count=\"5\"> (línea 917). Cada fila es un bloque con borde inferior que contiene la rejilla de datos y, colapsado debajo, el visor de XML (líneas 918-937).",
+      "estilos": "contenedor: border-bottom:1px solid #EFF2EE. Rejilla interna: display:grid; grid-template-columns:104px 1.2fr 1.2fr 150px 120px 120px; gap:12px; padding:12px 18px; align-items:center"
+     },
+     {
+      "nombre": "Celda Recibido",
+      "descripcion": "Marca temporal relativa del correo, {{ cb.hora }} (línea 920).",
+      "estilos": "font-size:12px; color:#5A7267; white-space:nowrap"
+     },
+     {
+      "nombre": "Celda Inquilino · buzón (dos líneas)",
+      "descripcion": "Celda apilada (líneas 921-924): arriba el nombre del inquilino {{ cb.inquilino }}; abajo, en tipografía monoespaciada y gris claro, la dirección de buzón {{ cb.buzon }}. Ambas líneas truncan con puntos suspensivos si no caben.",
+      "estilos": "nombre: font-size:13px; font-weight:600; color:#123D2F; white-space:nowrap; overflow:hidden; text-overflow:ellipsis. buzón: font-family:'SF Mono',ui-monospace,monospace; font-size:10.5px; color:#8A9A91; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"
+     },
+     {
+      "nombre": "Celda Remitente",
+      "descripcion": "Correo del emisor del mensaje, {{ cb.remitente }} (línea 925). Trunca con elipsis.",
+      "estilos": "font-size:12px; color:#5A7267; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"
+     },
+     {
+      "nombre": "Celda Contenido",
+      "descripcion": "Tipo de documento detectado en el correo, {{ cb.tipo }} (línea 926).",
+      "estilos": "font-size:12.5px; color:#3E5A4E; white-space:nowrap"
+     },
+     {
+      "nombre": "Píldora de Parseo",
+      "descripcion": "Muestra {{ cb.estado }} con los colores inyectados por el mapa PILL_BUZ (líneas 927, 1475-1479, 1486).",
+      "estilos": "display:inline-block; background:{{ cb.pillBg }}; border:1px solid {{ cb.pillBorde }}; color:{{ cb.pillColor }}; border-radius:999px; padding:3px 10px; font-size:10.5px; font-weight:700"
+     },
+     {
+      "nombre": "Botón Ver XML crudo / Cerrar XML",
+      "descripcion": "Botón de la sexta columna, alineado a la derecha (líneas 928-930). Envuelto en <sc-if value=\"{{ cb.esError }}\">: aparece SOLO en filas con estado ERROR. Al pulsarlo se abre o cierra el visor mediante buzonXmlOpen (línea 1489); como el estado guarda un único id, abrir un XML CIERRA cualquier otro que estuviera abierto.",
+      "estilos": "contenedor: text-align:right. botón: background:none; border:1px solid rgba(168,53,44,.35); color:#A8352C; padding:5px 12px; border-radius:999px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap"
+     },
+     {
+      "nombre": "Visor de XML crudo",
+      "descripcion": "Panel desplegable a todo el ancho de la fila, condicionado por <sc-if value=\"{{ cb.xmlAbierto }}\"> (líneas 932-936). Fondo verde casi negro con texto verde claro monoespaciado que rompe por cualquier carácter para no desbordar. Contiene el volcado del XML y, al final del mismo bloque de texto, el mensaje de error de parseo entre corchetes. No tiene título, botón de copiar ni botón de cerrar propio: se cierra con el mismo botón de la fila.",
+      "estilos": "panel: background:#0C2318; padding:13px 18px; animation:saIn .2s ease-out both. texto: font-family:'SF Mono',ui-monospace,monospace; font-size:11px; line-height:1.7; color:#8FCCA9; word-break:break-all"
+     },
+     {
+      "nombre": "Tarjeta de aviso de buzón sin correos",
+      "descripcion": "Última tarjeta de la sección (líneas 943-946). Lleva un punto ámbar sólido como indicador de severidad y un mensaje con el nombre del inquilino en negrita. Es contenido ESTÁTICO del marcado, no está dentro de ningún sc-if ni sc-for, y NO se atenúa con el flag (queda a opacidad completa aunque el módulo esté apagado).",
+      "estilos": "tarjeta: display:flex; align-items:center; gap:12px; background:#FFFFFF; border:1px solid #F2E4C0; border-radius:16px; padding:14px 18px. punto: width:9px; height:9px; border-radius:50%; background:#D9A62E; flex-shrink:0. texto: flex:1; min-width:0; font-size:13px; color:#123D2F, con <strong style=\"font-weight:700\"> en el nombre"
+     },
+     {
+      "nombre": "Aviso flotante (toast) compartido",
+      "descripcion": "Notificación global de la pantalla (líneas 1140-1142), no exclusiva del buzón pero es la respuesta visible al alternar el flag. Aparece anclada abajo y centrada, dura 3200 ms (línea 1220) y se sustituye si llega otro aviso antes.",
+      "estilos": "position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:400; background:#123D2F; color:#FAF9F5; border-radius:999px; padding:11px 22px; font-size:13.5px; font-weight:600; box-shadow:0 18px 40px -14px rgba(18,61,47,.6); animation:saIn .25s ease-out both; max-width:86vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"
+     }
+    ],
+    "estados": [
+     {
+      "estado": "Módulo APAGADO (BUZON_ACTIVO = false) — estado inicial",
+      "cuando": "buzonOn es falso. Es el valor por defecto del componente: `buzonOn: false` en la línea 1150.",
+      "que_muestra": "Píldora ámbar 'BUZON_ACTIVO = false' (bg #FFF8E8, borde #F2E4C0, color #8A6410) y borde ámbar en toda la banda. Botón (solo SUPERADMIN) con la etiqueta 'Encender el módulo'. La tarjeta de la tabla baja a opacity .55 pero sigue mostrando las 5 filas y sigue siendo interactiva. La tarjeta de aviso inferior no se atenúa."
+     },
+     {
+      "estado": "Módulo ENCENDIDO (BUZON_ACTIVO = true)",
+      "cuando": "buzonOn es verdadero, tras pulsar 'Encender el módulo'.",
+      "que_muestra": "Píldora verde 'BUZON_ACTIVO = true' (bg rgba(34,197,94,.1), borde rgba(22,121,74,.28), color #16794A) y borde verde en la banda. Botón con la etiqueta 'Apagar el módulo'. Tabla a opacity 1. El texto explicativo de la banda NO cambia: sigue diciendo 'Mientras el flag esté apagado...' aunque esté encendido."
+     },
+     {
+      "estado": "Rol SUPERADMIN",
+      "cuando": "props.rol === 'SUPERADMIN' → rolEsSuper verdadero (línea 1410).",
+      "que_muestra": "Sección completa: banda con botón de alternar operativo, tabla y aviso."
+     },
+     {
+      "estado": "Rol SOPORTE o LECTURA",
+      "cuando": "props.rol es 'SOPORTE' o 'LECTURA' → rolEsSuper falso.",
+      "que_muestra": "La banda se muestra igual (píldora + texto) pero SIN el botón de alternar. La tabla de correos, el visor de XML crudo y el aviso inferior se ven y funcionan exactamente igual que para SUPERADMIN. No hay pantalla de bloqueo como la de Configuración ('Solo para el rol SUPERADMIN', línea 800): el buzón NO está restringido por rol salvo en el botón."
+     },
+     {
+      "estado": "Fila PROCESADO",
+      "cuando": "cb.estado === 'PROCESADO' (filas b1, b2, b5).",
+      "que_muestra": "Píldora verde: bg rgba(34,197,94,.1), borde rgba(22,121,74,.28), color #16794A (línea 1476). La sexta columna queda VACÍA: no hay ninguna acción disponible."
+     },
+     {
+      "estado": "Fila ERROR",
+      "cuando": "cb.estado === 'ERROR' (fila b3). Deriva cb.esError = c.estado === 'ERROR' (línea 1487).",
+      "que_muestra": "Píldora roja: bg rgba(168,53,44,.08), borde rgba(168,53,44,.3), color #A8352C (línea 1477). Es la ÚNICA fila que muestra el botón de la sexta columna, con borde y texto rojos."
+     },
+     {
+      "estado": "Fila DUPLICADO",
+      "cuando": "cb.estado === 'DUPLICADO' (fila b4).",
+      "que_muestra": "Píldora gris neutra: bg #F4F6F3, borde #E4E9E2, color #8A9A91 (línea 1478). Sin acción en la sexta columna: no se puede inspeccionar ni reprocesar."
+     },
+     {
+      "estado": "Visor de XML cerrado",
+      "cuando": "s.buzonXmlOpen no coincide con el id de la fila. Valor inicial: `buzonXmlOpen: null` (línea 1150), es decir todos cerrados al entrar.",
+      "que_muestra": "Solo la fila de datos. El botón dice 'Ver XML crudo'."
+     },
+     {
+      "estado": "Visor de XML abierto",
+      "cuando": "s.buzonXmlOpen === cb.id, tras pulsar el botón (línea 1489).",
+      "que_muestra": "Panel #0C2318 desplegado bajo la fila con animación saIn .2s, con el volcado del XML y el mensaje de error de parseo entre corchetes al final. El botón cambia a 'Cerrar XML'."
+     },
+     {
+      "estado": "Cambio de XML abierto",
+      "cuando": "Hay un visor abierto y se pulsa 'Ver XML crudo' en otra fila ERROR.",
+      "que_muestra": "Solo un visor abierto a la vez: buzonXmlOpen guarda un único id, así que el anterior se cierra. Con los datos actuales no es observable porque solo existe una fila ERROR."
+     },
+     {
+      "estado": "Tabla vacía",
+      "cuando": "correosBuzon no tuviera filas.",
+      "que_muestra": "NO EXISTE estado vacío definido: la tarjeta quedaría con la fila de encabezados y nada debajo. Contrasta con Auditoría, que sí tiene 'Sin registros con esos filtros.' (línea 998). Falta definir el texto de estado vacío."
+     },
+     {
+      "estado": "Confirmación de auditoría tras alternar",
+      "cuando": "Inmediatamente después de pulsar el botón de encender/apagar.",
+      "que_muestra": "Toast verde oscuro centrado abajo con 'Feature flag BUZON_ACTIVO → true · registrado en auditoría' (o '→ false'), durante 3200 ms, y una fila nueva al principio de la tabla de Auditoría con fecha 'Ahora', admin 'Libio Pareja', tipo 'Sesión actual', cliente '—', IP '190.152.1.44'."
+     }
+    ],
+    "datos": [
+     "Formato EXACTO de la dirección de buzón por inquilino: {RUC de 13 dígitos}@factuchat.com — el RUC es el mismo campo `ruc` del cliente en clientesBase. Verificado uno a uno: c1 1791234567001 (líneas 1168, 1481), c2 1712345678001 (1169, 1482), c3 1104567890001 (1170, 1483), c5 1798765432001 (1172, 1485). Sin prefijos, sin guiones, sin subdominio: solo RUC + @ + dominio.",
+     "Estado del componente relativo al buzón (línea 1150): `buzonOn: false, buzonXmlOpen: null`.",
+     "Feature flag: buzonOn (booleano) y su negación buzonOff, ambos expuestos en la línea 1603. buzonOff NO se usa en el marcado de la sección.",
+     "rolEsSuper: derivado en la línea 1410 como `rol === 'SUPERADMIN'`, siendo rol = this.props.rol ?? 'SUPERADMIN' (línea 1230). Se expone en la línea 1603.",
+     "Variables derivadas del flag (líneas 1604-1609): buzonFlagLabel, buzonFlagBg, buzonFlagBorde, buzonFlagColor, buzonTogLabel, buzonOpacidad.",
+     "Mapa de colores PILL_BUZ (líneas 1475-1479), bajo el comentario `// ---- FASE D ----`: PROCESADO {pillBg rgba(34,197,94,.1), pillBorde rgba(22,121,74,.28), pillColor #16794A}; ERROR {pillBg rgba(168,53,44,.08), pillBorde rgba(168,53,44,.3), pillColor #A8352C}; DUPLICADO {pillBg #F4F6F3, pillBorde #E4E9E2, pillColor #8A9A91}.",
+     "Fila b1 (línea 1481): hora 'Hoy 10:18' · buzon '1791234567001@factuchat.com' · inquilino 'Comercial Andrade S.A.' · remitente 'facturacion@claro.com.ec' · tipo 'Retención recibida' · estado 'PROCESADO'.",
+     "Fila b2 (línea 1482): hora 'Hoy 09:51' · buzon '1712345678001@factuchat.com' · inquilino 'Ferretería El Tornillo' · remitente 'comprobantes@corporacionfavorita.com' · tipo 'Factura recibida' · estado 'PROCESADO'.",
+     "Fila b3 (línea 1483): hora 'Hoy 09:22' · buzon '1104567890001@factuchat.com' · inquilino 'Panadería Doña Andrade' · remitente 'no-reply@proveedorx.ec' · tipo 'XML adjunto' · estado 'ERROR' · xml con el volcado y el mensaje '[etiqueta <infoTributaria> sin cerrar: parseo abortado en línea 14]'. Es el único registro con campo xml.",
+     "Fila b4 (línea 1484): hora 'Ayer 18:40' · buzon '1791234567001@factuchat.com' · inquilino 'Comercial Andrade S.A.' · remitente 'facturacion@claro.com.ec' · tipo 'Retención recibida' · estado 'DUPLICADO'. Coincide en buzón, remitente y tipo con b1, lo que ilustra la deduplicación.",
+     "Fila b5 (línea 1485): hora 'Ayer 15:07' · buzon '1798765432001@factuchat.com' · inquilino 'Clínica San Rafael' · remitente 'sri-comprobantes@movistar.com.ec' · tipo 'Factura recibida' · estado 'PROCESADO'.",
+     "Campos derivados por fila (líneas 1486-1491): esError, xmlAbierto, xml (cadena vacía si no hay), verXml (toggle) y xmlLabel.",
+     "togBuzon (líneas 1492-1496): invierte buzonOn, hace setState y llama a this.audit('Feature flag BUZON_ACTIVO → ' + (nuevo ? 'true' : 'false')).",
+     "audit(t) (líneas 1223-1226): llama a flash(t + ' · registrado en auditoría') e inserta al inicio de auditExtra {fecha 'Ahora', dia 'hoy', admin 'Libio Pareja', rol: props.rol ?? 'SUPERADMIN', accion: t, tipo 'Sesión actual', cliente '—', cambio '', ip '190.152.1.44'}.",
+     "flash(t) (líneas 1217-1221): fija s.aviso y lo limpia a los 3200 ms.",
+     "Títulos de la pantalla (línea 1541): buzon: ['Buzón SRI', 'Correos recibidos por inquilino y estado del parseo de XML'].",
+     "Navegación (línea 1245): { id: 'buzon', label: 'Buzón SRI', on: true } — décimo de once ítems, entre 'WhatsApp' y 'Soporte'.",
+     "hint-placeholder-count=\"5\" en el sc-for (línea 917), coherente con las 5 filas del juego de datos."
+    ],
+    "reglas": [
+     "El flag BUZON_ACTIVO nace APAGADO (buzonOn: false, línea 1150). Es un interruptor global del módulo, no por inquilino.",
+     "Solo el rol SUPERADMIN puede alternar el flag: el botón está envuelto en <sc-if value=\"{{ rolEsSuper }}\"> (línea 903). SOPORTE y LECTURA lo ven todo pero no pueden cambiarlo. Nótese que la variable `puedeActuar` (rol !== 'LECTURA', línea 1231) NO se usa en esta sección: el criterio aquí es estrictamente SUPERADMIN.",
+     "Cada cambio del flag se audita. Lo que se registra es literalmente la cadena 'Feature flag BUZON_ACTIVO → true' o '... → false' como Acción, con tipo 'Sesión actual', admin 'Libio Pareja', cliente '—', columna 'Antes → después' VACÍA e IP '190.152.1.44'. La fila se antepone (aparece primera en Auditoría).",
+     "Apagar el módulo NO oculta la tabla: solo la atenúa a opacity .55 con transición de .3s. Los datos siguen visibles y los botones siguen respondiendo. La lectura de negocio la da el texto de la banda: con el flag apagado los clientes no ven nada y los correos solo se registran para depurar.",
+     "El botón 'Ver XML crudo' existe únicamente para las filas con estado ERROR (cb.esError). PROCESADO y DUPLICADO no ofrecen ninguna acción.",
+     "Solo puede haber un visor de XML abierto a la vez: buzonXmlOpen almacena un único id y el mismo botón alterna abrir/cerrar (línea 1489).",
+     "El mensaje de error de parseo va embebido al final del propio volcado de XML, entre corchetes, con el mismo estilo monoespaciado verde. No es un componente separado ni tiene icono.",
+     "La tabla tiene 6 columnas con anchos fijos 104px / 1.2fr / 1.2fr / 150px / 120px / 120px y ancho mínimo total de 920px con scroll horizontal propio. El cuerpo de la página no debe desplazarse horizontalmente.",
+     "La dirección de buzón se muestra siempre bajo el nombre del inquilino, en la misma celda, en tipografía monoespaciada y gris (#8A9A91), y trunca con elipsis si no cabe.",
+     "La sección NO tiene búsqueda, filtros, paginación, exportación ni acción de reprocesar, a diferencia de Clientes, Comprobantes y Auditoría. Tampoco define estado vacío para la tabla.",
+     "CORRECCIONES DE COPY OBLIGATORIAS: en la sección Buzón SRI NO aparecen 'Pacalina', 'wathsapp', 'fué' con tilde ni 'Panamá'. Nada que corregir aquí. Sí existen en otro archivo del set y quedan pendientes fuera de esta sección: 'wathsapp' en 'Facturas IA.dc.html' línea 1369, 'Pacalina' en la línea 1392 y 'fué' en la línea 1728; 'Panamá' aparece en las líneas 135, 154, 1780, 1813, 2673, 2679, 2687, 2948 y 2954 del mismo archivo y debe pasar de Disponible a 'Muy pronto'.",
+     "CONTRADICCIÓN DE DOMINIO (crítica, el dominio definitivo no está confirmado): las direcciones de buzón usan '@factuchat.com' (líneas 1481-1485), pero el resto de las maquetas usa dos dominios distintos: 'factuchat.ec' en 'Dashboard.dc.html' líneas 4281 y 4284 (enlace de tienda) y en 'Facturas IA.dc.html' línea 1764 (pie de página), y 'factuchat.ai' en 'Facturas IA.dc.html' líneas 229, 1615 y 1621 (correos de contacto: ventas@factuchat.ai, info@factuchat.ai). Son TRES dominios incompatibles. Hay que decidirlo antes de implementar, porque el dominio del buzón es el que se le entrega al cliente para configurar el reenvío en el SRI.",
+     "DATO DE RELLENO / INCONSISTENCIA: la fila b2 nombra al inquilino 'Ferretería El Tornillo', mientras que en clientesBase (línea 1169) su razón social es 'Ferretería El Tornillo Cía. Ltda.'. La tabla debe mostrar la razón social real del inquilino, no una versión abreviada a mano.",
+     "DATO DE RELLENO: la tarjeta de aviso inferior está HARDCODEADA en el marcado (línea 945), fuera de todo sc-if y sc-for. El nombre 'Andrade Cedeño Pablo', los '13 días' y el umbral de '30' son literales. Los 13 días sí cuadran con los datos (alta '11 ago 2026' en la línea 1174 frente a hoy '24 ago 2026' en la línea 1554), pero la regla real —avisar a los 30 días sin correos— no está implementada ni parametrizada, y el aviso se mostraría siempre, incluso si ese inquilino ya recibiera correos.",
+     "OBSERVACIÓN: el aviso inferior NO se atenúa con el flag apagado (queda fuera de la tarjeta con buzonOpacidad), lo que resulta incoherente: recomienda 'configurar el reenvío desde el SRI' para un módulo que los clientes todavía no ven.",
+     "OBSERVACIÓN: el texto de la banda está redactado únicamente para el estado apagado ('Mientras el flag esté apagado...') y no cambia al encender el módulo. Hace falta una segunda redacción para el estado activo.",
+     "OBSERVACIÓN: la columna se titula 'Parseo' pero la píldora muestra el estado del correo completo. 'DUPLICADO' no es un resultado de parseo sino de deduplicación, así que el rótulo o el conjunto de estados debe revisarse.",
+     "DATOS DE RELLENO: los remitentes de ejemplo usan dominios de empresas reales del Ecuador — 'facturacion@claro.com.ec' (Claro), 'comprobantes@corporacionfavorita.com' (Corporación Favorita), 'sri-comprobantes@movistar.com.ec' (Movistar) — junto a uno ficticio, 'no-reply@proveedorx.ec'. No deben tomarse como direcciones reales ni publicarse en material visible.",
+     "DATO DE RELLENO: la fecha de cabecera está fijada a '24 ago 2026' (línea 1554) y las horas de los correos son relativas ('Hoy', 'Ayer'), por lo que toda la sección está anclada a esa fecha simulada.",
+     "La etiqueta del flag se escribe SIN tilde en el código ('BUZON_ACTIVO'), a diferencia del nombre visible de la sección, que sí la lleva ('Buzón SRI'). Es deliberado: el flag es un identificador técnico. No debe 'corregirse' a BUZÓN_ACTIVO."
+    ]
+   }
+  },
+  {
+   "key": "retenciones-panel",
+   "spec": {
+    "seccion": "Panel del inquilino — Comprobantes › Retenciones (`esRetenciones`, líneas 380-449) y su muro por plan (`esRetencionesLock`, líneas 451-460) — diseno/Dashboard.dc.html",
+    "resumen": "La pantalla \"Retenciones\" NO es una pantalla propia del menú: es el filtro `retencion` dentro de la pantalla \"Comprobantes\". Cuando el filtro está activo, el bloque genérico de comprobantes (`esComprobantesGenerico`, L462+, con buscador, columna \"Estado SRI\" y acciones) se apaga por completo y se sustituye por una vista propia (L380-449) compuesta por: (1) una fila de tres tarjetas KPI —\"Saldo a tu favor\" $1,556.70 sobre fondo verde oscuro, \"Retenciones recibidas\" 14, y \"Reenvía y listo\" con CTA al chat—; (2) una banda blanca con el compromiso de custodia de XML y PDF por siete años y un botón \"Descargar todo\"; y (3) una tabla de seis columnas (Quién te retuvo / Fecha / Concepto / Ret. renta / Ret. IVA / Archivo) con dos botones de descarga por fila, XML y PDF. La tabla NO tiene columna de estado, ni buscador, ni contador de documentos, ni estado vacío, ni paginación: es la única tabla del panel sin esas piezas. La cabecera de Comprobantes (chips de filtro + botón \"Crear comprobante\") sigue visible por encima, porque vive fuera del `sc-if`. El muro por plan (L451-460) sustituye TODO el bloque anterior con una tarjeta blanca de máx. 600 px: candado, título \"El resumen de retenciones viene con un plan superior\", un párrafo y el botón \"Ver los planes\". La bifurcación depende exclusivamente de `plan.archivos` (L2975-2978): el muro solo aparece en el plan Inicial ($2.99); Esencial, Independiente y Emprendedor tienen `archivos: true` y ven la vista completa. Los datos de ejemplo de retenciones NO están en las líneas 3000-3060 (ahí está `histCliente`, que sí contiene filas `tipo: 'retencion'` con estado \"Recibida\"): el arreglo real `retenciones` está en L3714-3726, con 6 filas, y su handler de descarga masiva en L3727.",
+    "textos": [
+     {
+      "donde": "Cabecera de la pantalla — eyebrow (L3368-3370, mapa `titulos.comprobantes[0]`)",
+      "texto": "Historial",
+      "condicion": "Siempre en la pantalla Comprobantes, incluido el filtro Retenciones y el muro"
+     },
+     {
+      "donde": "Cabecera de la pantalla — título (L3370, mapa `titulos.comprobantes[1]`)",
+      "texto": "Tus retenciones recibidas",
+      "condicion": "s.filtro === 'retencion' (también se muestra con el muro activo)"
+     },
+     {
+      "donde": "Chip de filtro activo, fila de chips (L370-372; etiquetas en L3384 y submenú lateral en L3201)",
+      "texto": "Retenciones",
+      "condicion": "Siempre; al estar activo el chip pasa a fondo #123D2F y texto #FAF9F5"
+     },
+     {
+      "donde": "Botón oscuro de la cabecera, a la derecha de los chips (L374-377)",
+      "texto": "Crear comprobante",
+      "condicion": "Siempre visible en Comprobantes, incluso con el filtro Retenciones activo y con el muro (está fuera de ambos sc-if)"
+     },
+     {
+      "donde": "Tarjeta KPI 1 (verde oscuro) — etiqueta superior (L386)",
+      "texto": "Saldo a tu favor",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 1 — cifra grande (L387, valor literal hardcodeado en el HTML)",
+      "texto": "$1,556.70",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 1 — pie (L388)",
+      "texto": "Crédito acumulado del semestre, listo para descontar.",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 2 (blanca) — etiqueta superior (L392)",
+      "texto": "Retenciones recibidas",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 2 — cifra grande (L393, literal hardcodeado)",
+      "texto": "14",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 2 — pie (L394)",
+      "texto": "De 6 empresas distintas este semestre.",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 3 (blanca) — etiqueta superior (L397)",
+      "texto": "Reenvía y listo",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 3 — párrafo (L398)",
+      "texto": "Manda el XML al chat y el asistente lo lee, lo clasifica y lo suma solo.",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tarjeta KPI 3 — botón verde `irWhats` (L399)",
+      "texto": "Abrir el chat",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Banda blanca de custodia, texto central (L407) — TEXTO DE LOS SIETE AÑOS",
+      "texto": "Guardamos el XML y el PDF de cada comprobante de retención, con su detalle de renta y de IVA, por siete años. Baja uno o todos cuando los necesites.",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Banda blanca de custodia, botón derecho `bajarArchivoRet` (L408)",
+      "texto": "Descargar todo",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 1 (L415)",
+      "texto": "Quién te retuvo",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 2 (L416)",
+      "texto": "Fecha",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 3 (L417)",
+      "texto": "Concepto",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 4, alineado a la derecha (L418)",
+      "texto": "Ret. renta",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 5, alineado a la derecha (L419)",
+      "texto": "Ret. IVA",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Tabla — encabezado columna 6, alineado a la derecha (L420)",
+      "texto": "Archivo",
+      "condicion": "esRetenciones"
+     },
+     {
+      "donde": "Fila de tabla — botón de descarga 1, etiqueta visible (L436)",
+      "texto": "XML",
+      "condicion": "Una vez por fila de `retenciones`"
+     },
+     {
+      "donde": "Fila de tabla — botón de descarga 1, atributo title/tooltip (L434)",
+      "texto": "Descargar XML",
+      "condicion": "Hover / lector de pantalla"
+     },
+     {
+      "donde": "Fila de tabla — botón de descarga 2, etiqueta visible (L440)",
+      "texto": "PDF",
+      "condicion": "Una vez por fila de `retenciones`"
+     },
+     {
+      "donde": "Fila de tabla — botón de descarga 2, atributo title/tooltip (L438)",
+      "texto": "Descargar PDF",
+      "condicion": "Hover / lector de pantalla"
+     },
+     {
+      "donde": "Toast global `aviso` al pulsar \"Descargar todo\" (L3727)",
+      "texto": "Preparando el archivo con los 14 comprobantes de retención del semestre",
+      "condicion": "onClick bajarArchivoRet; visible 2600 ms (L2686-2690)"
+     },
+     {
+      "donde": "Toast global `aviso` al pulsar XML en una fila (L3724)",
+      "texto": "Descargando XML de la retención \" + r.num (p. ej. \"Descargando XML de la retención 001-001-000001234",
+      "condicion": "onClick r.bajarXml; concatena el número del comprobante"
+     },
+     {
+      "donde": "Toast global `aviso` al pulsar PDF en una fila (L3725)",
+      "texto": "Descargando PDF de la retención \" + r.num (p. ej. \"Descargando PDF de la retención 001-001-000001234",
+      "condicion": "onClick r.bajarPdf; concatena el número del comprobante"
+     },
+     {
+      "donde": "Toast global `aviso` al pulsar \"Abrir el chat\" (L3983, handler `irWhats`)",
+      "texto": "Abriendo tu chat de WhatsApp",
+      "condicion": "onClick irWhats"
+     },
+     {
+      "donde": "MURO — título H2 (L456). TEXTO EXACTO DEL MURO",
+      "texto": "El resumen de retenciones viene con un plan superior",
+      "condicion": "esRetencionesLock (plan sin `archivos`, es decir plan Inicial)"
+     },
+     {
+      "donde": "MURO — párrafo (L457). TEXTO EXACTO DEL MURO",
+      "texto": "Tus retenciones recibidas siguen sumándose. Al activar el plan que incluye este resumen, verás aquí el crédito acumulado y podrás descargar cada archivo.",
+      "condicion": "esRetencionesLock"
+     },
+     {
+      "donde": "MURO — botón verde `irPlan` (L458)",
+      "texto": "Ver los planes",
+      "condicion": "esRetencionesLock"
+     },
+     {
+      "donde": "Toast global `aviso` al pulsar \"Ver los planes\" (L3981, handler `irPlan`)",
+      "texto": "Abriendo los planes",
+      "condicion": "onClick irPlan"
+     },
+     {
+      "donde": "Contexto relacionado — aviso dentro del modal \"Crear comprobante\" cuando el tipo elegido es retención (L1957)",
+      "texto": "Tú no emites retenciones: las recibes. Aquí guardas la que te entregó tu cliente, y su valor se descuenta de lo que declaras. Lo más rápido es subir el XML y dejar que el asistente lo lea.",
+      "condicion": "compEsRetencion — es la doctrina de producto que debe respetar la pantalla de Retenciones"
+     },
+     {
+      "donde": "Contexto relacionado — tutorial de retenciones (L3749)",
+      "texto": "Las retenciones son tu plata / Qué te retienen, por qué es crédito a tu favor y cómo reenviar el XML para que se sume solo. / 4 min",
+      "condicion": "Tema 'comprobantes' en la pantalla Tutoriales"
+     },
+     {
+      "donde": "Contexto relacionado — desglose de la declaración en Reportes (L3961-3963)",
+      "texto": "IVA cobrado en julio $514.50 / Retenciones a tu favor − $360.30 / Neto a pagar $154.20",
+      "condicion": "Pantalla Reportes; es el otro lugar del panel donde se totalizan retenciones"
+     }
+    ],
+    "componentes": [
+     {
+      "nombre": "Contenedor de la vista Retenciones (L380-449)",
+      "descripcion": "`<sc-if value=\"{{ esRetenciones }}\">` que envuelve un div único con las tres piezas apiladas: grid KPI, banda de custodia y tabla. Sustituye por completo al bloque `esComprobantesGenerico` (L462+): cuando el filtro es 'retencion' no hay buscador, ni contador `conteoDocs`, ni columna \"Estado SRI\", ni acciones por fila del listado genérico.",
+      "estilos": "animation:dbFadeOnly .22s ease-out both (keyframes en L26: opacidad 0→1, sin desplazamiento). La animación de entrada de toda la pantalla Comprobantes es dbIn .45s cubic-bezier(.16,1,.3,1) both (L367, keyframes L20)."
+     },
+     {
+      "nombre": "Cabecera compartida de Comprobantes (L368-378)",
+      "descripcion": "Fila flex con wrap: a la izquierda los chips de filtro (`sc-for list=\"{{ filtros }}\"`, hint-placeholder-count=7 aunque solo hay 6 tipos, L370-372, definidos en L3381-3395) y a la derecha el botón \"Crear comprobante\" con icono de cruz. Vive FUERA de los dos sc-if, así que se muestra igual en la vista de retenciones y detrás del muro.",
+      "estilos": "Contenedor: display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px. Chip: border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600; activo bg #123D2F / borde #123D2F / color #FAF9F5, inactivo bg #FFFFFF / borde #E4E9E2 / color #3E5A4E; hover border-color:#22C55E. Botón: bg #123D2F, color #FAF9F5, padding 11px 20px, radius 999px, font-size 14px/600; hover bg #16794A."
+     },
+     {
+      "nombre": "Grid de KPI (L382, data-r=\"kpi\")",
+      "descripcion": "Rejilla de tres tarjetas iguales que resume saldo, volumen y el atajo de reenvío por chat.",
+      "estilos": "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px. Responsive por el atributo data-r=\"kpi\": 2 columnas en ≤900px (L49) y 1 columna en ≤620px (L61)."
+     },
+     {
+      "nombre": "Tarjeta \"Saldo a tu favor\" (L383-390)",
+      "descripcion": "Tarjeta destacada verde oscuro con un halo dorado difuminado decorativo (círculo absoluto de 200x200 arriba a la derecha). Muestra la etiqueta, la cifra $1,556.70 y el pie explicativo. Es puramente informativa: no tiene acción ni enlace.",
+      "estilos": "bg #123D2F, border-radius:20px, padding:22px 24px 24px, color #F1F5F0, position:relative, overflow:hidden. Halo: top:-60px;right:-50px;width/height 200px;border-radius:50%;background:rgba(212,175,55,.22);filter:blur(72px);pointer-events:none. Etiqueta: 11px/700, letter-spacing .09em, uppercase, color #E8C766, margin-bottom 14px. Cifra: 'Familjen Grotesk', 40px/700, letter-spacing -.04em, color #FFFFFF, line-height 1. Pie: 13.5px, line-height 1.5, color #A6BFB2."
+     },
+     {
+      "nombre": "Tarjeta \"Retenciones recibidas\" (L391-395)",
+      "descripcion": "Tarjeta blanca con el conteo del período (14) y el pie \"De 6 empresas distintas este semestre.\". Sin acciones.",
+      "estilos": "bg #FFFFFF, border 1px solid #E4E9E2, border-radius:20px, padding:22px 24px 24px. Etiqueta: 11px/700, .09em, uppercase, color #5A7267, mb 14px. Cifra: 'Familjen Grotesk' 40px/700, -.04em, color #123D2F. Pie: 13.5px, line-height 1.5, color #3E5A4E."
+     },
+     {
+      "nombre": "Tarjeta \"Reenvía y listo\" (L396-400)",
+      "descripcion": "Tarjeta blanca con microcopy sobre mandar el XML al chat y un botón verde `irWhats` que dispara el toast \"Abriendo tu chat de WhatsApp\".",
+      "estilos": "Misma caja blanca que la anterior. Párrafo: 13.5px, line-height 1.55, color #3E5A4E, margin:0 0 16px, text-wrap:pretty. Botón: inline-flex, gap 8px, bg #22C55E, color #0A2A1F, padding 11px 18px, radius 999px, 13.5px/600; hover bg #5CE68F."
+     },
+     {
+      "nombre": "Banda de custodia \"siete años\" (L403-409)",
+      "descripcion": "Fila blanca con tres partes: icono cuadrado de archivador/caja (SVG stroke #16794A), el texto de custodia de XML y PDF por siete años, y el botón \"Descargar todo\" (`bajarArchivoRet`). Es el equivalente para retenciones de la banda genérica de comprobantes (L463-468), pero con copy distinto: aquí se mencionan explícitamente XML, PDF, detalle de renta y de IVA.",
+      "estilos": "display:flex;align-items:center;gap:13px;bg #FFFFFF;border 1px solid #E4E9E2;border-radius:18px;padding:18px 22px;margin-bottom:14px. Icono: 34x34, radius 11px, bg rgba(34,197,94,.09), borde rgba(22,121,74,.2), display:grid;place-items:center. Texto: flex:1;min-width:0;13.5px;line-height 1.55;color #3E5A4E;text-wrap:pretty. Botón: fantasma — background:none, border 1px solid #D6DED6, color #123D2F, padding 11px 20px, radius 999px, 14px/600, white-space:nowrap; hover border-color #123D2F, background #123D2F, color #FAF9F5."
+     },
+     {
+      "nombre": "Tabla de retenciones — contenedor y scroll (L411-414, 445-447)",
+      "descripcion": "Tarjeta blanca con esquinas redondeadas que recorta el contenido; dentro, un contenedor con scroll horizontal y un lienzo de ancho mínimo 980px para que las seis columnas no se aplasten.",
+      "estilos": "Tarjeta: bg #FFFFFF;border 1px solid #E4E9E2;border-radius:20px;overflow:hidden. Scroll: data-r=\"scroll\" con overflow-x:auto (barra personalizada 9px, track #FBFCFA, thumb #C4D2C8, hover #16794A — L36-39). Lienzo interior: min-width:980px."
+     },
+     {
+      "nombre": "Fila de encabezado de la tabla (L414-421)",
+      "descripcion": "Seis celdas de encabezado. Las tres primeras alineadas a la izquierda (Quién te retuvo, Fecha, Concepto) y las tres últimas a la derecha (Ret. renta, Ret. IVA, Archivo).",
+      "estilos": "display:grid;grid-template-columns:1.6fr 100px 1fr 108px 108px 130px;gap:12px;padding:12px 20px;background:#FBFCFA;border-bottom:1px solid #EFF2EE. Celdas: 11px/700, letter-spacing .07em, text-transform:uppercase, color #5A7267; las tres últimas con text-align:right."
+     },
+     {
+      "nombre": "Fila de retención (L422-444, `sc-for list=\"{{ retenciones }}\" as=\"r\"` con hint-placeholder-count=6)",
+      "descripcion": "Cada fila repite la misma rejilla del encabezado. Columna 1: bloque de tres líneas con nombre del agente de retención, su RUC y el número del comprobante. Columna 2: fecha corta. Columna 3: concepto. Columnas 4 y 5: importes de renta e IVA en tipografía de cifras. Columna 6: los dos botones de descarga alineados a la derecha.",
+      "estilos": "display:grid;mismas columnas;gap:12px;padding:14px 20px;border-bottom:1px solid #EFF2EE;align-items:center;transition:background .2s; hover background rgba(34,197,94,.045). Nombre: 14px/600 color #123D2F con white-space:nowrap;overflow:hidden;text-overflow:ellipsis. RUC: 'SF Mono',ui-monospace,monospace 11.5px color #5A7267. Número: mismo mono 11.5px color #8A9A91. Fecha y Concepto: 13px color #3E5A4E, nowrap (concepto con ellipsis). Importes: 'Familjen Grotesk' 15px/700, letter-spacing -.02em, color #123D2F, text-align:right, font-variant-numeric:tabular-nums."
+     },
+     {
+      "nombre": "Botones de descarga por fila, XML y PDF (L433-442)",
+      "descripcion": "Par de botones pequeños con icono de flecha hacia abajo sobre una línea de base. El de XML se pinta en verde (acción primaria: es el archivo que vale fiscalmente) y el de PDF en gris verdoso. Cada uno tiene `title` propio y dispara su toast con el número del comprobante.",
+      "estilos": "Contenedor: display:flex;gap:6px;justify-content:flex-end. Ambos botones: inline-flex, gap 5px, padding 6px 10px, border 1px solid #E4E9E2, bg #FFFFFF, border-radius:9px, 11.5px/700, letter-spacing .03em. XML: color e icono #16794A; hover border-color #22C55E, background rgba(34,197,94,.08). PDF: color e icono #3E5A4E; hover border-color #123D2F, background #F4F6F3. Iconos SVG 11x11, path \"M12 4v11M7 11l5 5 5-5M4 20h16\", stroke-width 2.2."
+     },
+     {
+      "nombre": "MURO por plan `esRetencionesLock` (L451-460)",
+      "descripcion": "Tarjeta blanca única, alineada a la izquierda y limitada a 600px, con cuatro elementos verticales: cuadro con icono de candado cerrado, título, párrafo y botón verde \"Ver los planes\" (`irPlan`). Reemplaza absolutamente todo lo anterior: con el muro no se ve ni el saldo, ni el conteo, ni la banda de siete años, ni la tabla, ni ninguna descarga.",
+      "estilos": "animation:dbFadeOnly .22s ease-out both;bg #FFFFFF;border 1px solid #E4E9E2;border-radius:24px;padding:38px 36px 40px;max-width:600px. Icono: caja 52x52, radius 16px, bg #F4F6F3, borde #E4E9E2, mb 20px; SVG 22x22 candado (rect x4 y10.5 w16 h11 rx2.5 + arco M8 10.5V7a4 4 0 018 0v3.5) con stroke #5A7267. H2: 'Familjen Grotesk' 24px/700, line-height 1.12, letter-spacing -.03em, margin 0 0 12px, color #123D2F, text-wrap:balance. Párrafo: 15px, line-height 1.6, color #3E5A4E, margin 0 0 22px, max-width 46ch, text-wrap:pretty. Botón: inline-flex, gap 9px, bg #22C55E, color #0A2A1F, padding 13px 24px, radius 999px, 14.5px/600; hover bg #16A34A, color #FFFFFF, box-shadow 0 16px 38px -12px rgba(34,197,94,.85)."
+     },
+     {
+      "nombre": "Toast global `aviso` (L2508-2513, lógica en L2686-2690)",
+      "descripcion": "Píldora fija centrada abajo con un check verde y el mensaje. Es el único feedback de TODAS las descargas de esta pantalla: no hay barra de progreso, ni descarga real, ni estado de \"preparando\" persistente. Un nuevo aviso cancela el temporizador del anterior.",
+      "estilos": "position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:120;bg #123D2F;color #F1F5F0;border-radius:999px;padding:14px 24px;box-shadow:0 24px 50px -18px rgba(18,61,47,.8);display:flex;align-items:center;gap:11px;max-width:calc(100vw - 40px);animation:dbSheet .3s cubic-bezier(.16,1,.3,1) both. Check SVG 16x16 stroke #5CE68F. Texto 14px/500 con ellipsis. Duración 2600 ms."
+     }
+    ],
+    "estados": [
+     {
+      "estado": "esRetenciones (vista completa)",
+      "cuando": "L3903: `activa === 'comprobantes' && !bloqueado && s.filtro === 'retencion' && !!plan.archivos`. Es decir: pantalla Comprobantes, módulo no bloqueado por plan, filtro/chip \"Retenciones\" activo y plan con archivos (Esencial, Independiente o Emprendedor).",
+      "que_muestra": "Cabecera (chips + \"Crear comprobante\") + grid de 3 KPI + banda de siete años con \"Descargar todo\" + tabla de 6 columnas con botones XML y PDF por fila."
+     },
+     {
+      "estado": "esRetencionesLock (muro por plan)",
+      "cuando": "L3904: `activa === 'comprobantes' && !bloqueado && s.filtro === 'retencion' && !plan.archivos`. Según L2975-2978 solo el plan **Inicial** ($2.99, cupo 15) tiene `archivos: false`; Esencial ($4.99), Independiente ($9.99) y Emprendedor ($19.99) tienen `archivos: true`.",
+      "que_muestra": "Cabecera de Comprobantes (sigue visible, incluido \"Crear comprobante\") + tarjeta de candado con \"El resumen de retenciones viene con un plan superior\", el párrafo y \"Ver los planes\". Cero datos, cero descargas."
+     },
+     {
+      "estado": "esComprobantesGenerico (contraste)",
+      "cuando": "L3902: `activa === 'comprobantes' && !bloqueado && s.filtro !== 'retencion'`.",
+      "que_muestra": "El listado genérico con buscador \"Buscar por cliente, número o monto\" (L473), contador `conteoDocs` (L475), columnas Número / Cliente / Detalle / Total / Estado SRI / Acciones (L481-486) y la banda de custodia genérica (L467). Ninguna de estas piezas existe en la vista de Retenciones."
+     },
+     {
+      "estado": "Hover de fila de retención",
+      "cuando": "Puntero sobre cualquier fila de la tabla (L423).",
+      "que_muestra": "Fondo rgba(34,197,94,.045) con transición .2s. La fila NO es clicable: no abre ficha ni detalle; solo los dos botones de descarga son interactivos."
+     },
+     {
+      "estado": "Hover de botón XML",
+      "cuando": "Puntero sobre el botón XML de una fila (L434).",
+      "que_muestra": "border-color #22C55E y background rgba(34,197,94,.08), transición .22s; tooltip nativo \"Descargar XML\"."
+     },
+     {
+      "estado": "Hover de botón PDF",
+      "cuando": "Puntero sobre el botón PDF de una fila (L438).",
+      "que_muestra": "border-color #123D2F y background #F4F6F3, transición .22s; tooltip nativo \"Descargar PDF\"."
+     },
+     {
+      "estado": "Hover de \"Descargar todo\"",
+      "cuando": "Puntero sobre el botón de la banda de custodia (L408).",
+      "que_muestra": "El botón fantasma se invierte: border-color #123D2F, background #123D2F, color #FAF9F5."
+     },
+     {
+      "estado": "Hover de \"Abrir el chat\" / \"Ver los planes\"",
+      "cuando": "Puntero sobre los CTA verdes (L399 y L458).",
+      "que_muestra": "\"Abrir el chat\": background pasa a #5CE68F. \"Ver los planes\": background #16A34A, color #FFFFFF y sombra 0 16px 38px -12px rgba(34,197,94,.85)."
+     },
+     {
+      "estado": "Descarga individual disparada",
+      "cuando": "Click en XML o PDF de una fila (L3724-3725).",
+      "que_muestra": "Toast inferior 2600 ms: \"Descargando XML de la retención {num}\" o \"Descargando PDF de la retención {num}\". No hay cambio en la fila, ni spinner, ni estado \"descargado\"."
+     },
+     {
+      "estado": "Descarga masiva disparada",
+      "cuando": "Click en \"Descargar todo\" (L3727).",
+      "que_muestra": "Toast inferior 2600 ms: \"Preparando el archivo con los 14 comprobantes de retención del semestre\". No hay modal, ni selección de rango, ni elección de formato."
+     },
+     {
+      "estado": "Entrada de la vista",
+      "cuando": "Al cambiar al chip \"Retenciones\" desde otro filtro (L381 y L452).",
+      "que_muestra": "Fundido dbFadeOnly .22s ease-out both (solo opacidad, sin desplazamiento), tanto para la vista completa como para el muro. La pantalla Comprobantes completa entra con dbIn .45s (L367)."
+     },
+     {
+      "estado": "Responsive ≤1080px",
+      "cuando": "Media query L40-47.",
+      "que_muestra": "La barra lateral pasa a cajón fijo con burger y velo; el main baja a padding 20px 22px 60px. La vista de retenciones no cambia de estructura."
+     },
+     {
+      "estado": "Responsive ≤900px",
+      "cuando": "Media query L48-56 sobre data-r=\"kpi\".",
+      "que_muestra": "El grid de las tres tarjetas KPI pasa a 2 columnas (la tercera baja a una fila propia a ancho completo)."
+     },
+     {
+      "estado": "Responsive ≤620px",
+      "cuando": "Media query L60-66 sobre data-r=\"kpi\".",
+      "que_muestra": "Las tres tarjetas KPI se apilan en 1 columna. La tabla NO se reestructura: mantiene min-width:980px y se navega con scroll horizontal (data-r=\"scroll\", L412), lo que en móvil obliga a arrastrar para ver Ret. IVA y los botones de descarga."
+     },
+     {
+      "estado": "Estado vacío (NO DEFINIDO en la maqueta)",
+      "cuando": "Si `retenciones` llegara vacío (usuario nuevo, primer mes, sin retenciones recibidas).",
+      "que_muestra": "Nada: el `sc-for` (L422) no tiene fallback y la maqueta no define copy de vacío. Quedaría la tarjeta blanca con solo el encabezado de columnas, y los KPI mostrando los literales fijos $1,556.70 y 14. Falta especificar."
+     },
+     {
+      "estado": "Búsqueda / filtro por fecha / paginación (NO EXISTEN)",
+      "cuando": "Siempre.",
+      "que_muestra": "La vista de retenciones no tiene buscador ni contador de documentos ni paginación, a diferencia del listado genérico. Con 14 retenciones al semestre puede ser aceptable; con volumen real habrá que decidirlo."
+     }
+    ],
+    "datos": [
+     "`retenciones` — arreglo de ejemplo, L3714-3720 (NO está en 3000-3060 como indicaba el encargo). Seis filas con los campos: quien, ruc, num, fecha, concepto, renta, iva.",
+     "Fila 1 (L3715): quien 'Comercial Andrade Cía. Ltda.' · ruc '0992745103001' · num '001-001-000001234' · fecha '12 ago 2026' · concepto 'Servicios profesionales' · renta 41.40 · iva 54.32",
+     "Fila 2 (L3716): quien 'Textiles del Litoral S.A.' · ruc '0991234567001' · num '002-004-000000891' · fecha '08 ago 2026' · concepto 'Diseño y publicidad' · renta 69.00 · iva 90.56",
+     "Fila 3 (L3717): quien 'Distribuidora Sur' · ruc '1790012345001' · num '001-002-000005510' · fecha '02 ago 2026' · concepto 'Servicios profesionales' · renta 18.40 · iva 24.15",
+     "Fila 4 (L3718): quien 'Agrícola El Cañal' · ruc '0690123456001' · num '001-001-000000342' · fecha '27 jul 2026' · concepto 'Arrendamiento' · renta 73.60 · iva 96.60",
+     "Fila 5 (L3719): quien 'Comercial Andrade Cía. Ltda.' · ruc '0992745103001' · num '001-001-000001188' · fecha '15 jul 2026' · concepto 'Servicios profesionales' · renta 41.40 · iva 54.32",
+     "Fila 6 (L3720): quien 'Constructora Yavirac' · ruc '1791234567001' · num '003-001-000002077' · fecha '04 jul 2026' · concepto 'Honorarios' · renta 63.56 · iva 83.46",
+     "Transformación de la fila (L3721-3726): se copian quien/ruc/num/fecha/concepto tal cual, `renta` e `iva` pasan por `this.money()` y se añaden los handlers `bajarXml` y `bajarPdf`, ambos cerrados sobre `r.num`.",
+     "`money(n)` (L2965-2969): `Number(n)`, dos decimales fijos, separador de miles con coma, prefijo '$' o '-$' si es negativo. Formato resultante: $41.40, $1,556.70.",
+     "`bajarArchivoRet` (L3727): función suelta que solo dispara el toast con el literal '14 comprobantes de retención del semestre'.",
+     "Conceptos observados en el ejemplo (vocabulario a soportar): 'Servicios profesionales', 'Diseño y publicidad', 'Arrendamiento', 'Honorarios'.",
+     "Formato de número de comprobante de retención: 3-3-9 dígitos con guiones (001-001-000001234), distinto del formato corto de facturas del listado genérico (001-001-412, L2984).",
+     "Formato de fecha: 'DD mmm AAAA' en minúsculas y abreviado, en español ('12 ago 2026', '27 jul 2026').",
+     "Valores hardcodeados en el HTML, sin binding a datos: '$1,556.70' (L387) y '14' (L393). Si se implementan como cifras calculadas, hay que definir su fórmula y su período.",
+     "Datos de retención en `histCliente` (L2996-3047), que es lo que hay realmente en 3000-3060: filas con `tipo: 'retencion'`, número, detalle, fecha, total y `estado: 'Recibida'` — L3001 '007-001-091' 'Retención renta 8% e IVA 70%' 95.72; L3003 '007-001-077' ídem 95.72; L3011 '009-001-044' ídem 159.56; L3031 '011-001-208' ídem 42.55; L3041 '013-001-112' 'Retención por arrendamiento' 170.20.",
+     "Único estado documentado para una retención en toda la maqueta: 'Recibida' (L3001, L3003, L3011, L3031, L3041), y solo aparece en la ficha de cliente — la tabla de Retenciones NO tiene columna de estado.",
+     "Estilo visual del tipo 'retencion' en el catálogo de badges (L3490): cod 'RET', label 'Retenciones', bg 'rgba(232,199,102,.16)', borde 'rgba(138,100,16,.26)', color '#8A6410' (dorado). Nota: ese dorado NO se usa en la pantalla de Retenciones, que va en verde.",
+     "Icono de notificación de tipo retención (L3893): path 'M12 4v11M7 11l5 5 5-5M4 20h16', tono #16794A, iconBg rgba(34,197,94,.1), iconBorde rgba(22,121,74,.22) — el mismo path que los botones de descarga.",
+     "Planes y acceso (L2975-2978): Inicial {precio 2.99, archivos:false} · Esencial {4.99, archivos:true} · Independiente {9.99, archivos:true} · Emprendedor {19.99, archivos:true}. `archivos` es la única bandera que gobierna esta pantalla.",
+     "Cliente marcado como agente de retención (L3056): 'Comercial Andrade Cía. Ltda.' con tipo 'RUC · agente de retención'; la bandera derivada es `fRetiene` (L3909, `tipo.indexOf('retención') >= 0`)."
+    ],
+    "reglas": [
+     "Retenciones NO es una pantalla del menú: es el filtro `retencion` de la pantalla Comprobantes (`s.filtro`). El acceso es por el chip \"Retenciones\" (L3384) o por el submenú lateral de Comprobantes (L3201, L3316).",
+     "La bifurcación vista/muro depende de una sola bandera de plan: `plan.archivos`. No hay estado intermedio (ni vista parcial, ni datos difuminados): o todo o el muro.",
+     "El muro cubre el 100% de la funcionalidad: con plan Inicial no se ve el saldo, ni el conteo, ni el texto de siete años, ni una sola descarga. El propio copy lo reconoce: 'Tus retenciones recibidas siguen sumándose' — se siguen acumulando en backend aunque el usuario no las vea.",
+     "El usuario NUNCA emite retenciones, solo las recibe (doctrina fijada en L1957). Por eso las columnas son 'Quién te retuvo' y no 'Cliente', y el ingreso de datos se hace subiendo el XML/PDF o mandándolo al chat de WhatsApp.",
+     "Custodia obligatoria: se guardan XML y PDF de cada comprobante de retención, con su detalle de renta y de IVA, por SIETE años (L407). El texto genérico de comprobantes (L467) usa la misma promesa pero con otra redacción ('como exige la normativa'); el de retenciones es más específico.",
+     "Cada fila ofrece dos descargas separadas e independientes: XML (verde, acción primaria) y PDF (gris). No hay descarga combinada por fila.",
+     "La descarga masiva es una sola acción, sin opciones: 'Descargar todo' prepara un archivo con los 14 comprobantes del semestre. No hay selección múltiple, ni rango de fechas, ni elección de formato.",
+     "Todas las descargas son simuladas: solo disparan el toast `aviso` durante 2600 ms (L2686-2690). No hay estados de carga, error de descarga, ni confirmación persistente. Habrá que definirlos al implementar.",
+     "Los importes se muestran con `font-variant-numeric: tabular-nums` y alineados a la derecha para que las columnas de renta e IVA cuadren visualmente.",
+     "La tabla exige 980px de ancho mínimo y se resuelve con scroll horizontal en pantallas pequeñas; no hay versión en tarjetas para móvil.",
+     "CORRECCIONES DE COPY OBLIGATORIAS: en la sección de Retenciones y en TODO Dashboard.dc.html no aparece ninguna de las cuatro (busqué 'Pacalina', 'wathsapp', 'Panamá/Panama' y 'fué': cero coincidencias). El archivo escribe correctamente 'WhatsApp' (L398 'chat', L3983 'Abriendo tu chat de WhatsApp', L2467, L3917). Las correcciones deben aplicarse en las otras maquetas de /diseno, no aquí.",
+     "CONTRADICCIÓN 1 — El chip y el submenú \"Retenciones\" muestran contador 0. `subDocs` calcula `cnt: cuenta('retencion')` sobre `this.docs()` (L3195, L3201), y `docs()` (L2983-2993) NO contiene ni una sola fila con `tipo: 'retencion'`. Es decir, el menú lateral dirá 'Retenciones 0' mientras la pantalla muestra 14 recibidas y 6 filas. Hay que decidir si las retenciones se cuentan en el mismo repositorio de comprobantes emitidos o en uno aparte (conceptualmente van aparte: no las emite el usuario).",
+     "CONTRADICCIÓN 2 — Los totales no cuadran. La suma de las 6 filas visibles es $307.36 de renta + $403.41 de IVA = $710.77, frente al 'Saldo a tu favor' de $1,556.70 y a las '14 retenciones'. Se puede justificar diciendo que la tabla solo muestra las 6 más recientes de 14, pero entonces falta la regla de corte y un 'Ver todas'. Ambas cifras están hardcodeadas en el HTML (L387, L393).",
+     "CONTRADICCIÓN 3 — 'De 6 empresas distintas este semestre' (L394), pero en las 6 filas visibles solo hay 5 emisores distintos (Comercial Andrade se repite en L3715 y L3719). Dato de relleno a confirmar.",
+     "CONTRADICCIÓN 4 — Tres cifras de retenciones conviven sin explicación en el panel: $1,556.70 'Saldo a tu favor... del semestre' (L387), $710.77 sumando la tabla, y '− $360.30 Retenciones a tu favor' en el desglose de Reportes (L3962, sobre 'IVA de julio'). Hay que fijar los períodos y su relación antes de implementar, y decidir si el saldo de Retenciones debe enlazar a Reportes.",
+     "CONTRADICCIÓN 5 — El botón 'Crear comprobante' (L374-377) sigue visible con el filtro Retenciones activo, cuando el propio producto afirma 'Tú no emites retenciones: las recibes' (L1957). El modal sí contempla el tipo retención como 'subir el XML o el PDF' (L1960-1969), así que el botón funciona, pero la etiqueta 'Crear' es engañosa en este contexto. Sugerencia a validar con el usuario: en esta vista debería leerse 'Subir retención' o similar.",
+     "CONTRADICCIÓN 6 — El botón 'Crear comprobante' TAMBIÉN se muestra sobre el muro (`esRetencionesLock`), porque está fuera del `sc-if`. Un usuario del plan Inicial puede pulsarlo y subir una retención que después no puede ver ni descargar. Definir si el muro debe ocultar también ese botón.",
+     "INCONSISTENCIA MENOR — El color del tipo 'retencion' en el catálogo de badges es dorado #8A6410 (L3490) y el icono de notificación es verde #16794A (L3893); la pantalla de Retenciones usa el verde y reserva el dorado solo para el halo decorativo de la tarjeta de saldo. Unificar el token de color del concepto 'retención'.",
+     "INCONSISTENCIA MENOR — `sc-for` de los chips declara `hint-placeholder-count=\"7\"` (L370) pero `tipos` solo tiene 6 entradas (L3381-3385). Es solo una pista de maquetación, sin efecto funcional.",
+     "DOMINIOS Y CORREOS DE RELLENO detectados en los datos de ejemplo (el dominio definitivo del proyecto NO está confirmado, y ninguno de estos es de Factuchat — son clientes ficticios): pagos@andrade.ec, compras@textilitoral.ec, jperez@gmail.com, marcia.v@outlook.com, admin@dsur.com.ec, ana.cb@hotmail.com, gerencia@elcanal.ec (L3056-3062). En la sección de Retenciones propiamente dicha no aparece ningún dominio ni correo. Las empresas del arreglo `retenciones` sí traen RUC de 13 dígitos aparentemente válidos en formato pero ficticios; 'Constructora Yavirac' (L3720, RUC 1791234567001) no existe en la libreta de clientes (L3054-3063) — es un emisor que retuvo sin ser cliente registrado, lo cual es correcto conceptualmente pero conviene confirmarlo como intencional.",
+     "FALTA POR DEFINIR — No hay estado vacío, ni buscador, ni filtro por período (el copy habla de 'semestre' pero no hay selector), ni paginación, ni columna de estado del comprobante de retención (aunque 'Recibida' existe como estado en la ficha de cliente, L3001). Tampoco hay acción para reenviar una retención por WhatsApp, a diferencia de la ficha de cliente que sí la tiene (L3917)."
+    ]
+   }
+  },
+  {
+   "key": "alta-retencion",
+   "spec": {
+    "seccion": "Retenciones recibidas — Dashboard.dc.html (formulario \"Registrar retención recibida\", filtro \"Retenciones\" del historial y respuesta del asistente)",
+    "resumen": "En Factuchat el inquilino NUNCA emite una retención: solo la registra o la recibe. El archivo diseno/Dashboard.dc.html (4342 líneas) define tres puertas de entrada. (1) El modal \"Crear comprobante\" tiene una quinta tarjeta, \"Retención recibida\" (L4189); al elegirla el modal cambia de título a \"Registrar retención recibida\" (L4182) y muestra el bloque compEsRetencion (L1953-2015): un aviso verde que aclara \"Tú no emites retenciones: las recibes\" (L1957), un botón punteado \"Subir el XML o el PDF de la retención\" (L1961-1964) que autocompleta todos los campos con datos de demo y lanza el flash \"XML leído: el asistente completó los datos\" (L4250), siete campos (quién te retuvo, su RUC, número, fecha, base imponible, retención de renta, retención de IVA) de los cuales SOLO dos son obligatorios (retQuienBad ≥3 caracteres y retNumBad ≥5 caracteres, L3452-3453), y un totalizador \"Crédito que suma a tu favor\" = renta + IVA (L2010-2012, L4261). El botón final dice \"Guardar retención\" en vez de \"Revisar y enviar al SRI\" (L4263) y al guardar cierra el modal y muestra el toast \"Retención de {quién te retuvo} guardada en tu archivo\" (L3462, L2809-2818). (2) El historial de comprobantes tiene el chip \"Retenciones\" (L3384, rótulo idéntico en el sub-nav lateral L3201); al activarlo el encabezado pasa a \"Historial\" / \"Tus retenciones recibidas\" (L3370) y la vista NO filtra la tabla genérica sino que la reemplaza por un panel propio (esRetenciones, L380-449) con tres KPI (\"Saldo a tu favor $1,556.70\", \"Retenciones recibidas 14\", \"Reenvía y listo\"), un banner de custodia de siete años y una tabla de seis columnas con descarga de XML y PDF por fila; si el plan no incluye archivos, en su lugar sale el muro \"El resumen de retenciones viene con un plan superior\" (L451-460). (3) El asistente responde a \"retencion\", \"retuvieron\" o \"me retienen\" (L2607) con un texto de dos párrafos que termina en \"Reenvíame el XML al chat y yo lo leo, lo clasifico y lo sumo a tu crédito\", y ofrece dos acciones: \"Ver mi crédito acumulado\" (lleva a pantalla comprobantes con filtro retencion, L2610) y \"Mandar un XML por WhatsApp\" (flash \"Abriendo tu chat de WhatsApp\", L2611). Correcciones obligatorias de copy: no aplica ninguna en este archivo — no aparecen \"Pacalina\", \"wathsapp\", \"fué\" ni Panamá (grep sin coincidencias); \"WhatsApp\" ya está bien escrito en L2611, L3408, L3636. Sí hay contradicciones numéricas graves entre las tres fuentes de datos de retenciones (ver reglas).",
+    "textos": [
+     {
+      "donde": "L4189 — tarjeta del picker de \"Crear comprobante\" (tiposComp, id 'retencion')",
+      "texto": "Retención recibida",
+      "condicion": "Siempre visible como quinta y última opción del picker, después de Factura, Nota de crédito, Nota de débito y Guía de remisión"
+     },
+     {
+      "donde": "L4189 — descripción de la tarjeta del picker",
+      "texto": "Tu cliente te retuvo y te mandó el comprobante.",
+      "condicion": "Siempre, bajo el label \"Retención recibida\""
+     },
+     {
+      "donde": "L4182 — título del modal (tituloComp)",
+      "texto": "Registrar retención recibida",
+      "condicion": "Cuando compTipo === 'retencion'. Los otros tipos dicen \"Nueva factura\", \"Nueva nota de crédito\", etc.: este es el único que dice \"Registrar\" y no \"Nueva\""
+     },
+     {
+      "donde": "L4183 — subtítulo del modal (subtituloComp)",
+      "texto": "Guarda el comprobante que te entregó tu cliente.",
+      "condicion": "Cuando compTipo === 'retencion'"
+     },
+     {
+      "donde": "L1957 — aviso verde superior del bloque compEsRetencion",
+      "texto": "Tú no emites retenciones: las recibes. Aquí guardas la que te entregó tu cliente, y su valor se descuenta de lo que declaras. Lo más rápido es subir el XML y dejar que el asistente lo lea.",
+      "condicion": "Siempre que compEsRetencion sea verdadero (fondo rgba(34,197,94,.06), borde rgba(22,121,74,.2), texto #255C46 a 12.5px, icono de información #16794A)"
+     },
+     {
+      "donde": "L1963 — botón punteado de carga (dentro de sc-if compRetSinArchivo)",
+      "texto": "Subir el XML o el PDF de la retención",
+      "condicion": "Solo mientras compForm.retArchivo === false (compRetSinArchivo, L4249)"
+     },
+     {
+      "donde": "L1968 — insignia cuadrada del archivo cargado",
+      "texto": "XML",
+      "condicion": "Cuando compForm.retArchivo === true. El rótulo está escrito en duro: dice \"XML\" aunque el botón ofrecía también subir un PDF"
+     },
+     {
+      "donde": "L1969 — texto de la fila del archivo cargado",
+      "texto": "Archivo leído. Revisa los datos abajo antes de guardar.",
+      "condicion": "Cuando compRetArchivo es verdadero"
+     },
+     {
+      "donde": "L1970 — botón secundario de la fila del archivo cargado",
+      "texto": "Quitar",
+      "condicion": "Cuando compRetArchivo es verdadero. Su hover pinta borde #D9534F y texto #A8352C"
+     },
+     {
+      "donde": "L4250 — toast tras subirRetXml",
+      "texto": "XML leído: el asistente completó los datos",
+      "condicion": "Al pulsar \"Subir el XML o el PDF de la retención\". Dura 2600 ms (flash, L2686-2690)"
+     },
+     {
+      "donde": "L1976 — label del primer campo",
+      "texto": "Quién te retuvo",
+      "condicion": "Siempre. Campo OBLIGATORIO"
+     },
+     {
+      "donde": "L1977 — placeholder de \"Quién te retuvo\"",
+      "texto": "Nombre o razón social",
+      "condicion": "Mientras el campo esté vacío"
+     },
+     {
+      "donde": "L1978 — error bajo \"Quién te retuvo\"",
+      "texto": "Requerido.",
+      "condicion": "Cuando compRetQuienError: se intentó guardar (compIntento) y retQuien.trim().length < 3 (L3452, L4253). Color #C0392B, 12px"
+     },
+     {
+      "donde": "L1981 — label del segundo campo",
+      "texto": "Su RUC",
+      "condicion": "Siempre. Campo OPCIONAL: no tiene validación ni mensaje de error"
+     },
+     {
+      "donde": "L1982 — placeholder de \"Su RUC\"",
+      "texto": "13 dígitos",
+      "condicion": "Mientras el campo esté vacío. Es solo texto de ayuda: no hay validación de longitud ni de dígitos"
+     },
+     {
+      "donde": "L1987 — label del tercer campo",
+      "texto": "Número del comprobante",
+      "condicion": "Siempre. Campo OBLIGATORIO"
+     },
+     {
+      "donde": "L1988 — placeholder de \"Número del comprobante\"",
+      "texto": "001-001-000001234",
+      "condicion": "Mientras el campo esté vacío"
+     },
+     {
+      "donde": "L1989 — error bajo \"Número del comprobante\"",
+      "texto": "Requerido.",
+      "condicion": "Cuando compRetNumError: compIntento y retNum.trim().length < 5 (L3453, L4256)"
+     },
+     {
+      "donde": "L1992 — label del cuarto campo",
+      "texto": "Fecha",
+      "condicion": "Siempre. Campo OPCIONAL, sin validación"
+     },
+     {
+      "donde": "L1993 — placeholder de \"Fecha\"",
+      "texto": "dd/mm/aaaa",
+      "condicion": "Mientras el campo esté vacío. Es un input de texto libre, no un date picker"
+     },
+     {
+      "donde": "L1996 — label del quinto campo",
+      "texto": "Base imponible",
+      "condicion": "Siempre. Campo OPCIONAL, type=\"number\", sin validación"
+     },
+     {
+      "donde": "L1997 / L2003 / L2007 — placeholder de Base imponible, Retención de renta y Retención de IVA",
+      "texto": "0.00",
+      "condicion": "Mientras el campo esté vacío"
+     },
+     {
+      "donde": "L2002 — label del sexto campo",
+      "texto": "Retención de renta",
+      "condicion": "Siempre. Campo OPCIONAL, type=\"number\". Alimenta el total del crédito"
+     },
+     {
+      "donde": "L2006 — label del séptimo campo",
+      "texto": "Retención de IVA",
+      "condicion": "Siempre. Campo OPCIONAL, type=\"number\". Alimenta el total del crédito"
+     },
+     {
+      "donde": "L2011 — etiqueta de la barra totalizadora",
+      "texto": "Crédito que suma a tu favor",
+      "condicion": "Siempre al pie del bloque de retención (fondo #F4F6F3, borde #E4E9E2, radio 14px)"
+     },
+     {
+      "donde": "L2012 — valor de la barra totalizadora (compRetTotal)",
+      "texto": "{{ compRetTotal }} — se calcula como money(Number(retRenta) + Number(retIva)) (L4261); con los campos vacíos muestra $0.00",
+      "condicion": "Siempre. Tipografía Familjen Grotesk 19px, peso 700, color #16794A"
+     },
+     {
+      "donde": "L2019 — label del bloque de establecimiento (compEstMuestra)",
+      "texto": "Desde qué establecimiento",
+      "condicion": "Se muestra cuando el negocio tiene más de un establecimiento (L4216: establecimientos.length > 1), INCLUIDO el caso de retención, aunque una retención recibida no se emita desde un establecimiento propio"
+     },
+     {
+      "donde": "L2034 — botón izquierdo del pie del modal",
+      "texto": "Otro documento",
+      "condicion": "Siempre que se esté en el formulario (compEnForm). Vuelve al picker y limpia compIntento (L4181)"
+     },
+     {
+      "donde": "L4263 — botón primario del pie del modal (textoEmitir)",
+      "texto": "Guardar retención",
+      "condicion": "Cuando compTipo === 'retencion'. Para todos los demás tipos el mismo botón dice \"Revisar y enviar al SRI\""
+     },
+     {
+      "donde": "L2038 — número secuencial junto al botón primario",
+      "texto": "{{ compNumero }}",
+      "condicion": "Solo cuando compEsEmision (L4176: compTipo distinto de 'retencion'). En retención NO se muestra número secuencial propio, porque el comprobante no es del inquilino"
+     },
+     {
+      "donde": "L3462 — toast de éxito al guardar (resumenComp)",
+      "texto": "'Retención de ' + cfc.retQuien + ' guardada en tu archivo' — p. ej. \"Retención de Comercial Andrade Cía. Ltda. guardada en tu archivo\"",
+      "condicion": "Al pulsar \"Guardar retención\" con el formulario válido: se cierra el modal (modalComp:false) y se lanza el flash 2600 ms (L2809-2818). Nótese que dice \"guardada en tu archivo\", no \"enviada al SRI\" como los otros cuatro tipos"
+     },
+     {
+      "donde": "L3384 — chip del filtro del historial (tipos)",
+      "texto": "Retenciones",
+      "condicion": "Rótulo EXACTO del chip, quinto de seis: Todos, Facturas, Notas de crédito, Notas de débito, Retenciones, Guías de remisión. Activo: fondo #123D2F, texto #FAF9F5; inactivo: fondo #FFFFFF, borde #E4E9E2, texto #3E5A4E"
+     },
+     {
+      "donde": "L3201 — entrada del sub-nav lateral (subDocs)",
+      "texto": "Retenciones",
+      "condicion": "Mismo rótulo, con contador cuenta('retencion') calculado sobre docs()"
+     },
+     {
+      "donde": "L3370 — encabezado de la pantalla (titulos.comprobantes)",
+      "texto": "Historial / Tus retenciones recibidas",
+      "condicion": "\"Historial\" es fijo; el subtítulo pasa a \"Tus retenciones recibidas\" solo cuando s.filtro === 'retencion' (los demás: \"Tus comprobantes emitidos\", \"Tus facturas\", \"Tus notas de crédito\", \"Tus notas de débito\", \"Tus guías de remisión\")"
+     },
+     {
+      "donde": "L386 — rótulo del KPI oscuro del panel de retenciones",
+      "texto": "Saldo a tu favor",
+      "condicion": "Vista esRetenciones. Mayúsculas, 11px, letter-spacing .09em, color #E8C766 sobre fondo #123D2F"
+     },
+     {
+      "donde": "L387-388 — cifra y pie del KPI oscuro",
+      "texto": "$1,556.70 / Crédito acumulado del semestre, listo para descontar.",
+      "condicion": "Valor escrito en duro en la maqueta"
+     },
+     {
+      "donde": "L392-394 — segundo KPI",
+      "texto": "Retenciones recibidas / 14 / De 6 empresas distintas este semestre.",
+      "condicion": "Valores escritos en duro"
+     },
+     {
+      "donde": "L397-399 — tercer KPI",
+      "texto": "Reenvía y listo / Manda el XML al chat y el asistente lo lee, lo clasifica y lo suma solo. / Abrir el chat",
+      "condicion": "El botón \"Abrir el chat\" dispara irWhats → flash \"Abriendo tu chat de WhatsApp\" (L3983)"
+     },
+     {
+      "donde": "L407-408 — banner de custodia del panel de retenciones",
+      "texto": "Guardamos el XML y el PDF de cada comprobante de retención, con su detalle de renta y de IVA, por siete años. Baja uno o todos cuando los necesites. / Descargar todo",
+      "condicion": "Vista esRetenciones. El banner equivalente del historial genérico (L467) dice en cambio \"Guardamos tus comprobantes por siete años, como exige la normativa. Puedes descargarlos todos en un archivo cuando quieras.\""
+     },
+     {
+      "donde": "L415-420 — cabeceras de la tabla del panel de retenciones",
+      "texto": "Quién te retuvo | Fecha | Concepto | Ret. renta | Ret. IVA | Archivo",
+      "condicion": "Seis columnas, grid 1.6fr 100px 1fr 108px 108px 130px, min-width 980px con scroll horizontal propio"
+     },
+     {
+      "donde": "L436 / L440 — botones por fila de la tabla",
+      "texto": "XML / PDF",
+      "condicion": "Con title=\"Descargar XML\" y title=\"Descargar PDF\". Disparan los flashes \"Descargando XML de la retención {num}\" y \"Descargando PDF de la retención {num}\" (L3724-3725)"
+     },
+     {
+      "donde": "L3727 — flash del botón \"Descargar todo\" del panel",
+      "texto": "Preparando el archivo con los 14 comprobantes de retención del semestre",
+      "condicion": "Al pulsar \"Descargar todo\" en la vista de retenciones"
+     },
+     {
+      "donde": "L456-458 — muro de plan (esRetencionesLock)",
+      "texto": "El resumen de retenciones viene con un plan superior / Tus retenciones recibidas siguen sumándose. Al activar el plan que incluye este resumen, verás aquí el crédito acumulado y podrás descargar cada archivo. / Ver los planes",
+      "condicion": "Cuando s.filtro === 'retencion' y el plan NO tiene archivos (solo el plan Inicial, L2975). El botón dispara flash \"Abriendo los planes\" (L3981)"
+     },
+     {
+      "donde": "L2608 — respuesta del asistente a \"retencion\", \"retuvieron\" o \"me retienen\" (L2607)",
+      "texto": "Cuando una empresa te paga, retiene una parte y te entrega un comprobante de retención. Ese valor es plata tuya: baja lo que pagas de impuesto.\\n\\nReenvíame el XML al chat y yo lo leo, lo clasifico y lo sumo a tu crédito.",
+      "condicion": "Dos párrafos separados por \\n\\n. Se dispara con this.norm(q) conteniendo cualquiera de las tres claves"
+     },
+     {
+      "donde": "L2610 — primera acción de la respuesta del asistente",
+      "texto": "Ver mi crédito acumulado",
+      "condicion": "Navega a pantalla 'comprobantes' con filtro 'retencion', cierra el nav y el chat (navAbierto:false, chatOn:false)"
+     },
+     {
+      "donde": "L2611 — segunda acción de la respuesta del asistente",
+      "texto": "Mandar un XML por WhatsApp",
+      "condicion": "Cierra el chat y lanza el flash \"Abriendo tu chat de WhatsApp\""
+     },
+     {
+      "donde": "L3887 — notificación del centro de avisos",
+      "texto": "Retención recibida y archivada — Textiles del Litoral S.A. te retuvo $159.56. XML y PDF guardados en Comprobantes.",
+      "condicion": "Marcada nueva:false, hora \"8 ago, 14:02\", enlaza a pantalla 'comprobantes'"
+     },
+     {
+      "donde": "L3974 — tarjeta del asistente en el inicio",
+      "texto": "Leí el XML que me reenviaste de Textiles del Litoral y sumé $159.56 a tu crédito del semestre. / Ver mi crédito",
+      "condicion": "Hora \"Hoy, 09:15\". El CTA lleva a comprobantes con filtro 'retencion'"
+     },
+     {
+      "donde": "L3749 — tarjeta de tutorial",
+      "texto": "Las retenciones son tu plata — Qué te retienen, por qué es crédito a tu favor y cómo reenviar el XML para que se sume solo. (4 min)",
+      "condicion": "Tema 'comprobantes' de la sección Tutoriales"
+     },
+     {
+      "donde": "L3959 — pie del bloque de pago en Reportes",
+      "texto": "IVA de julio, ya descontadas tus retenciones recibidas.",
+      "condicion": "Cierra el circuito: el crédito de las retenciones aparece descontado en Reportes"
+     }
+    ],
+    "componentes": [
+     {
+      "nombre": "Tarjeta \"Retención recibida\" del picker de comprobantes",
+      "descripcion": "Quinta y última tarjeta del listado tiposComp (L4184-4190) dentro del modal \"Crear comprobante\". Al pulsarla ejecuta setState({compTipo:'retencion', compIntento:false}) y sustituye el picker por el formulario. Es la única del picker que no genera un documento propio.",
+      "estilos": "tono #8A6410, bg rgba(232,199,102,.16), borde rgba(138,100,16,.26), icono de flecha descendente 'M12 4v11M7 11l5 5 5-5M4 20h16' (mismo icono dorado que la fila 'retencion' del mapa TD de L3490)"
+     },
+     {
+      "nombre": "Aviso pedagógico \"Tú no emites retenciones\"",
+      "descripcion": "Callout informativo en la cabecera del bloque compEsRetencion (L1955-1958). Icono circular de información más un párrafo de 12.5px que explica el modelo mental completo: no se emite, se guarda, y su valor se descuenta de la declaración.",
+      "estilos": "display:flex, gap 11px, fondo rgba(34,197,94,.06), borde 1px rgba(22,121,74,.2), radio 14px, padding 13px 15px, margin-bottom 16px, texto #255C46 line-height 1.55, text-wrap:pretty, stroke del icono #16794A"
+     },
+     {
+      "nombre": "Botón de carga punteado (subirRetXml)",
+      "descripcion": "Botón de ancho completo con borde discontinuo y flecha hacia arriba (L1961-1964). Es el atajo recomendado por el aviso. Al pulsarlo (L4250) marca retArchivo:true y rellena de golpe retQuien, retRuc, retNum, retFecha, retBase, retRenta y retIva con datos de demostración, además de lanzar el toast \"XML leído: el asistente completó los datos\".",
+      "estilos": "fondo #FBFCFA, borde 1px dashed #C4D2C8, radio 14px, padding 15px 16px, texto 13.5px peso 600 color #3E5A4E; hover borde #22C55E y fondo rgba(34,197,94,.05); transición .22s"
+     },
+     {
+      "nombre": "Fila de archivo cargado",
+      "descripcion": "Reemplaza al botón punteado cuando retArchivo es true (L1966-1972). Muestra una insignia cuadrada \"XML\", el texto \"Archivo leído. Revisa los datos abajo antes de guardar.\" y un botón \"Quitar\" que solo revierte retArchivo a false (L4251), sin limpiar los campos ya autocompletados.",
+      "estilos": "fondo #FBFCFA, borde #E4E9E2, radio 14px, padding 12px 14px; insignia 40x40 radio 11px con bg rgba(34,197,94,.1), borde rgba(22,121,74,.2) y texto 10px peso 700 color #16794A; botón Quitar pill con borde #D6DED6 que en hover pasa a #D9534F/#A8352C"
+     },
+     {
+      "nombre": "Rejilla de identificación del agente de retención",
+      "descripcion": "Dos columnas 1.5fr / 1fr (L1974-1984): \"Quién te retuvo\" (obligatorio, con error \"Requerido.\") y \"Su RUC\" (opcional, sin validación).",
+      "estilos": "grid-template-columns:1.5fr 1fr, gap 12px, margin-bottom 14px; inputs radio 12px, padding 11px 14px, 14px, color #123D2F, focus borde #22C55E y fondo #FFFFFF; en error borde/fondo vienen de bdc()/bgc() (rojo #D9534F sobre #FEF4F3)"
+     },
+     {
+      "nombre": "Rejilla del documento",
+      "descripcion": "Tres columnas 1.2fr / 1fr / 1fr (L1985-1999): \"Número del comprobante\" (obligatorio), \"Fecha\" (texto libre dd/mm/aaaa) y \"Base imponible\" (numérico).",
+      "estilos": "grid-template-columns:1.2fr 1fr 1fr, gap 12px, margin-bottom 14px; mismos inputs de 12px radio y borde #D6DED6 sobre #FBFCFA"
+     },
+     {
+      "nombre": "Rejilla de valores retenidos",
+      "descripcion": "Dos columnas iguales (L2000-2009): \"Retención de renta\" y \"Retención de IVA\", ambas type=\"number\" y ambas opcionales. Son los dos únicos campos que alimentan el total del crédito.",
+      "estilos": "grid-template-columns:1fr 1fr, gap 12px, margin-bottom 16px"
+     },
+     {
+      "nombre": "Barra totalizadora \"Crédito que suma a tu favor\"",
+      "descripcion": "Pie del bloque de retención (L2010-2013). Etiqueta a la izquierda y cifra a la derecha con el resultado de renta + IVA formateado por money(). Reemplaza al bloque de subtotal/IVA/total que llevan factura y nota de crédito.",
+      "estilos": "flex space-between, fondo #F4F6F3, borde #E4E9E2, radio 14px, padding 13px 16px; etiqueta 12.5px #3E5A4E; cifra Familjen Grotesk 19px peso 700 letter-spacing -.02em color #16794A"
+     },
+     {
+      "nombre": "Pie del modal con \"Guardar retención\"",
+      "descripcion": "Barra inferior compartida con los demás tipos (L2030-2045): a la izquierda \"Otro documento\" (vuelve al picker), a la derecha el botón primario cuyo texto conmuta a \"Guardar retención\". El número secuencial del comprobante se oculta en retención.",
+      "estilos": "borde superior #EFF2EE, fondo #FBFCFA, padding 16px 26px 20px; botón primario pill #22C55E con texto #0A2A1F, hover #16A34A con texto blanco y sombra 0 14px 32px -12px rgba(34,197,94,.8)"
+     },
+     {
+      "nombre": "Chip \"Retenciones\" del historial",
+      "descripcion": "Botón pill dentro de la fila de filtros (L370-372, datos en L3381-3395). Al pulsarlo hace setState({filtro:'retencion'}), lo que cambia el subtítulo a \"Tus retenciones recibidas\" y conmuta toda la vista al panel dedicado.",
+      "estilos": "pill radio 999px, padding 9px 16px, 13px peso 600; activo bg #123D2F, borde #123D2F, color #FAF9F5; inactivo bg #FFFFFF, borde #E4E9E2, color #3E5A4E; hover borde #22C55E"
+     },
+     {
+      "nombre": "Panel de retenciones (esRetenciones)",
+      "descripcion": "Vista completa que sustituye la tabla genérica cuando el filtro es 'retencion' y el plan incluye archivos (L380-449). Se compone de tres KPI en rejilla, un banner de custodia con \"Descargar todo\" y una tabla de seis columnas con descarga por fila. Es la pantalla a la que apunta el botón \"Ver mi crédito acumulado\" del asistente.",
+      "estilos": "KPI grid repeat(3,minmax(0,1fr)) gap 14px; primera tarjeta #123D2F con halo radial rgba(212,175,55,.22) desenfocado 72px y cifra de 40px; tarjetas 2 y 3 blancas con borde #E4E9E2 y radio 20px; tabla en contenedor radio 20px con data-r=\"scroll\" y min-width 980px"
+     },
+     {
+      "nombre": "Muro de plan de retenciones (esRetencionesLock)",
+      "descripcion": "Tarjeta de bloqueo que sustituye al panel cuando el plan no tiene archivos (L451-460): candado, titular \"El resumen de retenciones viene con un plan superior\", párrafo tranquilizador (\"siguen sumándose\") y botón \"Ver los planes\".",
+      "estilos": "fondo #FFFFFF, borde #E4E9E2, radio 24px, padding 38px 36px 40px, max-width 600px; candado en cuadro 52x52 radio 16px #F4F6F3; h2 Familjen Grotesk 24px peso 700 letter-spacing -.03em; párrafo max-width 46ch"
+     },
+     {
+      "nombre": "Respuesta del asistente sobre retenciones",
+      "descripcion": "Rama del método responder() (L2607-2613): texto de dos párrafos más dos acciones. Es el único punto del flujo que ofrece explícitamente el canal de WhatsApp para hacer entrar la retención.",
+      "estilos": "Se renderiza en el burbujeo del chat con las acciones como botones de acción; el texto se separa en párrafos con \\n\\n"
+     },
+     {
+      "nombre": "Toast de aviso (flash)",
+      "descripcion": "Píldora fija inferior centrada (L2508-2513) alimentada por flash(msg) (L2686-2690): fija state.aviso y lo borra a los 2600 ms. Es el mecanismo de TODOS los mensajes de éxito del flujo de retenciones (XML leído, retención guardada, descargas).",
+      "estilos": "position:fixed bottom 26px, left 50% translateX(-50%), z-index 120, fondo #123D2F, texto #F1F5F0 14px peso 500, radio 999px, padding 14px 24px, check #5CE68F, sombra 0 24px 50px -18px rgba(18,61,47,.8), animación dbSheet .3s"
+     }
+    ],
+    "estados": [
+     {
+      "estado": "Picker abierto (compEnPicker)",
+      "cuando": "s.compTipo es null tras abrirComp() (L2773-2783, L4175)",
+      "que_muestra": "Título \"Crear comprobante\", subtítulo \"Elige qué documento necesitas.\" y las cinco tarjetas, con \"Retención recibida\" al final"
+     },
+     {
+      "estado": "Formulario de retención sin archivo (compRetSinArchivo)",
+      "cuando": "compTipo === 'retencion' y compForm.retArchivo === false (L4249)",
+      "que_muestra": "Aviso \"Tú no emites retenciones: las recibes\", botón punteado \"Subir el XML o el PDF de la retención\", los siete campos vacíos y \"Crédito que suma a tu favor $0.00\""
+     },
+     {
+      "estado": "Formulario de retención con archivo leído (compRetArchivo)",
+      "cuando": "Tras pulsar subirRetXml (L4250)",
+      "que_muestra": "El botón punteado se sustituye por la fila con insignia \"XML\" y el texto \"Archivo leído. Revisa los datos abajo antes de guardar.\" más el botón \"Quitar\"; los siete campos aparecen rellenos con Comercial Andrade Cía. Ltda. / 0992745103001 / 001-001-000001301 / 18/08/2026 / 450.00 / 9.00 / 47.25, y el crédito pasa a $56.25. Toast: \"XML leído: el asistente completó los datos\""
+     },
+     {
+      "estado": "Archivo quitado",
+      "cuando": "Se pulsa \"Quitar\" → setComp('retArchivo', false) (L4251)",
+      "que_muestra": "Vuelve el botón punteado, PERO los siete campos conservan los datos autocompletados: el estado visual sugiere que no hay archivo mientras los valores del XML de demo siguen ahí"
+     },
+     {
+      "estado": "Intento de guardado inválido",
+      "cuando": "Se pulsa \"Guardar retención\" con compValido falso (retQuien < 3 caracteres o retNum < 5) → emitirComp (L2809-2815)",
+      "que_muestra": "compIntento pasa a true y compShake activa la animación dbShake .34s ease-out sobre el modal (L4174, L1731); los campos fallidos se pintan en rojo y aparecen los \"Requerido.\" de L1978 y L1989. El modal NO se cierra"
+     },
+     {
+      "estado": "Guardado con éxito",
+      "cuando": "compValido verdadero al pulsar \"Guardar retención\" (L2816-2817)",
+      "que_muestra": "El modal se cierra (modalComp:false) y sale el toast \"Retención de {retQuien} guardada en tu archivo\" durante 2600 ms. No se navega a ninguna pantalla ni se añade la fila a la tabla del panel"
+     },
+     {
+      "estado": "Historial con filtro Retenciones y plan con archivos (esRetenciones)",
+      "cuando": "pantalla 'comprobantes', no bloqueado, s.filtro === 'retencion' y plan.archivos true (L3903) — planes Esencial, Independiente y Emprendedor",
+      "que_muestra": "Encabezado \"Historial / Tus retenciones recibidas\", los tres KPI, el banner de custodia de siete años y la tabla de seis retenciones con botones XML y PDF"
+     },
+     {
+      "estado": "Historial con filtro Retenciones y plan sin archivos (esRetencionesLock)",
+      "cuando": "Mismo filtro pero plan.archivos false (L3904) — solo el plan Inicial (L2975)",
+      "que_muestra": "La tarjeta \"El resumen de retenciones viene con un plan superior\" con el botón \"Ver los planes\""
+     },
+     {
+      "estado": "Historial con cualquier otro filtro (esComprobantesGenerico)",
+      "cuando": "pantalla 'comprobantes' y s.filtro distinto de 'retencion' (L3902)",
+      "que_muestra": "El banner genérico de siete años y la tabla normal de comprobantes. Las retenciones de docs() nunca llegan a verse en esta tabla porque el chip que las seleccionaría conmuta a la otra vista"
+     },
+     {
+      "estado": "Asistente respondiendo sobre retenciones",
+      "cuando": "El texto normalizado del usuario contiene 'retencion', 'retuvieron' o 'me retienen' (L2607)",
+      "que_muestra": "El texto de dos párrafos y los botones \"Ver mi crédito acumulado\" y \"Mandar un XML por WhatsApp\""
+     },
+     {
+      "estado": "Bloque de establecimiento visible dentro de la retención",
+      "cuando": "El negocio tiene más de un establecimiento (L4216) — el estado inicial trae solo la Matriz (L2541), así que por defecto está oculto",
+      "que_muestra": "El label \"Desde qué establecimiento\" y los chips de establecimientos, también en el formulario de retención recibida"
+     }
+    ],
+    "datos": [
+     "compForm.retQuien — \"Quién te retuvo\", texto. OBLIGATORIO: retQuienBad = compTipo === 'retencion' && retQuien.trim().length < 3 (L3452). Se usa además en el mensaje de éxito de L3462",
+     "compForm.retRuc — \"Su RUC\", texto con placeholder \"13 dígitos\". OPCIONAL, sin ninguna validación en la maqueta",
+     "compForm.retNum — \"Número del comprobante\", texto con placeholder \"001-001-000001234\". OBLIGATORIO: retNumBad = compTipo === 'retencion' && retNum.trim().length < 5 (L3453)",
+     "compForm.retFecha — \"Fecha\", input de texto libre con placeholder \"dd/mm/aaaa\". OPCIONAL, sin validación ni formato forzado",
+     "compForm.retBase — \"Base imponible\", type=\"number\", placeholder \"0.00\". OPCIONAL. No participa en ningún cálculo de la maqueta",
+     "compForm.retRenta — \"Retención de renta\", type=\"number\". OPCIONAL. Sumando del crédito",
+     "compForm.retIva — \"Retención de IVA\", type=\"number\". OPCIONAL. Sumando del crédito",
+     "compForm.retArchivo — booleano que conmuta entre el botón punteado y la fila de archivo leído (L4249)",
+     "compRetTotal — derivado, money(Number(retRenta) + Number(retIva)) (L4261). No es un campo editable",
+     "compForm.establecimiento — '001' por defecto (L2777); el selector solo aparece si hay más de un establecimiento, incluido el formulario de retención",
+     "Valores de demostración que inyecta subirRetXml (L4250): retQuien 'Comercial Andrade Cía. Ltda.', retRuc '0992745103001', retNum '001-001-000001301', retFecha '18/08/2026', retBase '450.00', retRenta '9.00', retIva '47.25'",
+     "Array retenciones del panel (L3714-3720), 6 filas con quien / ruc / num / fecha / concepto / renta / iva: Comercial Andrade Cía. Ltda. 0992745103001 001-001-000001234 12 ago 2026 Servicios profesionales 41.40/54.32; Textiles del Litoral S.A. 0991234567001 002-004-000000891 08 ago 2026 Diseño y publicidad 69.00/90.56; Distribuidora Sur 1790012345001 001-002-000005510 02 ago 2026 Servicios profesionales 18.40/24.15; Agrícola El Cañal 0690123456001 001-001-000000342 27 jul 2026 Arrendamiento 73.60/96.60; Comercial Andrade Cía. Ltda. 0992745103001 001-001-000001188 15 jul 2026 Servicios profesionales 41.40/54.32; Constructora Yavirac 1791234567001 003-001-000002077 04 jul 2026 Honorarios 63.56/83.46",
+     "KPI escritos en duro en el panel: saldo \"$1,556.70\", conteo \"14\", pie \"De 6 empresas distintas este semestre.\"",
+     "Retenciones incrustadas en docs() (L3001, 3003, 3011, 3031, 3041), 5 filas con tipo 'retencion', estado 'Recibida' y numeración distinta: 007-001-091 (95.72), 007-001-077 (95.72), 009-001-044 (159.56), 011-001-208 (42.55), 013-001-112 (170.20); detalles \"Retención renta 8% e IVA 70%\" y \"Retención por arrendamiento\"",
+     "Mapa TD para el tipo 'retencion' (L3490): cod 'RET', label 'Retenciones', bg rgba(232,199,102,.16), borde rgba(138,100,16,.26), color #8A6410; el orden de tipos es factura, credito, debito, retencion, guia (L3493)",
+     "plan.archivos — booleano por plan que decide entre el panel y el muro (L2975-2978): Inicial false; Esencial, Independiente y Emprendedor true",
+     "Columna 'agente_retencion' de la plantilla de importación de clientes (L3799), con la ayuda \"si o no. Cambia cómo se calcula tu cobro\""
+    ],
+    "reglas": [
+     "Una retención NUNCA se emite ni se envía al SRI desde Factuchat: entra al sistema de tres formas — subiendo el XML o el PDF en el formulario, reenviando el XML al asistente por el chat de WhatsApp, o tecleando los datos a mano. El botón final dice \"Guardar retención\" y el mensaje de éxito \"guardada en tu archivo\", frente a \"Revisar y enviar al SRI\" y \"enviada al SRI\" del resto de tipos (L3458-3462, L4263)",
+     "Solo DOS campos son obligatorios: \"Quién te retuvo\" (mínimo 3 caracteres, L3452) y \"Número del comprobante\" (mínimo 5 caracteres, L3453). RUC, fecha, base imponible, retención de renta y retención de IVA son todos opcionales, sin validación",
+     "La retención es el ÚNICO tipo de comprobante que no pide cliente: clienteBad excluye explícitamente compTipo === 'retencion' (L3454) y compPideCliente / compClienteError también (L4198, L4203). Tampoco lleva ítems (compConItems solo cubre factura y nota de crédito, L4197) ni número secuencial propio (compEsEmision, L4176)",
+     "compValido para retención se reduce a !retQuienBad && !retNumBad (L3456). Consecuencia práctica: se puede guardar una retención con \"Crédito que suma a tu favor: $0.00\", sin RUC ni fecha, y la maqueta la da por válida",
+     "El crédito mostrado es estrictamente renta + IVA (L4261); la base imponible se captura pero no se usa para nada en la maqueta",
+     "El chip \"Retenciones\" del historial NO filtra la tabla de comprobantes: cuando s.filtro === 'retencion' la vista genérica se apaga (esComprobantesGenerico exige filtro distinto de 'retencion', L3902) y se enciende el panel propio con su tabla independiente. Las retenciones que viven en docs() (L3001-3041) no se ven en ninguna parte del historial",
+     "CONTRADICCIÓN NUMÉRICA GRAVE — hay TRES fuentes de datos de retenciones que no cuadran entre sí: (a) el KPI dice 14 retenciones y $1,556.70 de saldo (L387, L393); (b) la tabla del panel (L3714-3720) trae 6 filas cuyos importes suman renta 307.36 + IVA 403.41 = 710.77, menos de la mitad del saldo anunciado; (c) docs() contiene 5 retenciones con numeración y valores completamente distintos (007-001-091, 009-001-044, etc.). El contador del sub-nav lateral (L3201, cuenta('retencion')) usa la fuente (c) y por tanto mostrará 5 junto a un panel que dice 14",
+     "CONTRADICCIÓN — el KPI dice \"De 6 empresas distintas este semestre.\" (L394) pero las 6 filas de la tabla pertenecen a 5 empresas: Comercial Andrade Cía. Ltda. se repite en las filas 1 y 5 (L3715 y L3719)",
+     "CONTRADICCIÓN — el flash de \"Descargar todo\" promete \"los 14 comprobantes de retención del semestre\" (L3727) mientras la tabla visible solo lista 6",
+     "INCOHERENCIA DE COPY — el botón ofrece \"Subir el XML o el PDF de la retención\" (L1963), pero la insignia posterior está escrita en duro como \"XML\" (L1968) y el toast dice \"XML leído: el asistente completó los datos\" (L4250). Si el usuario sube un PDF, la interfaz le miente",
+     "DEFECTO DE ESTADO — \"Quitar\" solo hace setComp('retArchivo', false) (L4251): no limpia retQuien, retRuc, retNum, retFecha, retBase, retRenta ni retIva. El usuario queda con el formulario lleno de los datos del XML de demo y sin indicación de que vienen de un archivo que ya quitó",
+     "INCOHERENCIA DE DOMINIO FUNCIONAL — el bloque \"Desde qué establecimiento\" (L2017-2026) se muestra también en el formulario de retención, porque compEstMuestra solo comprueba establecimientos.length > 1 (L4216) sin mirar compTipo. Una retención recibida no se emite desde un establecimiento del inquilino: el campo no debería aparecer aquí",
+     "DATOS DE RELLENO DECLARADOS — todo el flujo se apoya en datos inventados: los siete valores que inyecta subirRetXml (Comercial Andrade Cía. Ltda., RUC 0992745103001, comprobante 001-001-000001301, 18/08/2026, base 450.00, renta 9.00, IVA 47.25), las 6 filas de la tabla con sus RUC, el saldo $1,556.70 y el conteo 14. Los RUC son verosímiles pero ficticios y no deben migrar a producción",
+     "INCONSISTENCIA DEL XML DE DEMO — los valores autocompletados (base 450.00, renta 9.00 = 2%, IVA 47.25 = 70% del IVA 15% de 450) son coherentes entre sí, pero el comprobante 001-001-000001301 nunca aparece en la tabla del panel: guardar no persiste nada, solo lanza un toast",
+     "El panel de retenciones está detrás del plan: con el plan Inicial (archivos:false, L2975) el chip \"Retenciones\" lleva al muro \"El resumen de retenciones viene con un plan superior\". El botón \"Ver mi crédito acumulado\" del asistente (L2610) apunta a esa misma pantalla sin comprobar el plan, así que a un usuario Inicial el asistente le promete un crédito que la pantalla siguiente le bloquea",
+     "La promesa de custodia es de siete años y cubre XML y PDF con su detalle de renta e IVA (L407); el banner genérico del historial da la misma promesa sin desglose (L467)",
+     "El circuito se cierra en Reportes: \"IVA de julio, ya descontadas tus retenciones recibidas.\" (L3959) y en el asistente de declaración: \"En Reportes tienes el número final a pagar, ya descontadas tus retenciones\" (L2629). El valor de la retención existe para bajar el impuesto a pagar",
+     "CORRECCIONES DE COPY OBLIGATORIAS — ninguna aplica en diseno/Dashboard.dc.html: grep sin coincidencias de \"Pacalina\", \"wathsapp\", \"fué\" ni de Panamá / \"Disponible\" como estado de país. \"WhatsApp\" ya está correctamente escrito en L2611, L3408, L3636 y L3983. La tabla de países con Panamá y el naming de marca viven en otras maquetas, no en esta",
+     "DOMINIOS Y CORREOS — el flujo de retenciones NO expone ningún dominio ni dirección de correo; el único canal externo nombrado es \"tu chat de WhatsApp\" (flash irWhats, L3983), sin número ni enlace concreto. No hay por tanto nada que reservar a la espera del dominio definitivo en esta sección, pero conviene confirmarlo antes de implementar el reenvío del XML",
+     "TILDE A REVISAR — la ayuda de la columna de importación 'agente_retencion' dice \"si o no. Cambia cómo se calcula tu cobro\" (L3799): debería ser \"sí o no\" con tilde, ya que es el adverbio afirmativo y no la conjunción condicional"
+    ]
+   }
+  },
+  {
+   "key": "mapa-backend",
+   "spec": {
+    "piezas": [
+     {
+      "que": "Modelo BuzonCorreo ya esbozado (tabla buzon_correos): tenant_id FK CASCADE, message_id String(300) UNIQUE, remitente, asunto, xml_sha256 String(64) indexado, tipo_detectado String(30), estado EstadoCorreoBuzon default RECIBIDO, payload_path String(500) con el comentario '# cifrado en reposo (fase 7)', recibido_at server_default now(), procesado_at. Hereda UUIDPk + Base (NO Timestamps: no tiene updated_at).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/db/models/admin.py:164-183 (DDL real en alembic/versions/0001_nucleo.py:102-119)",
+      "como_se_reusa": "Es la tabla base de la fase 7: no se recrea, se AMPLÍA con una migración 0009 (op.add_column) para clave_acceso, motivo_error, valores retenidos y periodo fiscal. El campo payload_path ya está pensado para guardar la RUTA del blob cifrado, no el XML: se respeta ese diseño (fichero cifrado en storage_dir, la BD solo guarda ruta + sha256)."
+     },
+     {
+      "que": "Enum EstadoCorreoBuzon (StrEnum): RECIBIDO, PARSEADO, DUPLICADO, ERROR. Ya existe como tipo nativo de PostgreSQL 'estado_correo_buzon' creado en 0001.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/db/models/enums.py:117-121; tipo PG en alembic/versions/0001_nucleo.py:109 y 405",
+      "como_se_reusa": "Máquina de estados del buzón tal cual. OJO: la maqueta del panel interno pinta las píldoras como PROCESADO / ERROR / DUPLICADO (docs/spec-superadmin.json, bloque 'buzon-soporte'), así que el mapeo PARSEADO→'Procesado' se hace en la capa de presentación; NO renombrar el enum (exigiría ALTER TYPE y tocar 0001)."
+     },
+     {
+      "que": "Helper AES-256-GCM genérico con AAD para separar dominios de uso: aesgcm_encrypt(key_b64, plaintext, aad, key_name) / aesgcm_decrypt(...). Formato del blob: base64(nonce(12) + ciphertext+tag). _load_key valida 32 bytes.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/core/crypto.py:13-30",
+      "como_se_reusa": "Es EXACTAMENTE el helper para 'cifrar en reposo' que pide 7.1. Se cifra el XML/EML crudo con un AAD nuevo (p. ej. AAD_BUZON = b\"factuchat:buzon-xml\") siguiendo el patrón de app/sri/firma.py:25-26 (AAD_P12 vs AAD_P12_PASSWORD). No escribir criptografía nueva."
+     },
+     {
+      "que": "Patrón de cifrado en reposo de un secreto de tenant, de punta a punta: guardar_certificado() valida tamaño (MAX_P12_BYTES=100KB), valida el contenido, comprueba que pertenece al RUC del tenant, cifra archivo y contraseña POR SEPARADO con CERT_ENC_KEY, y solo entonces toca la BD. descifrar_p12() descifra en memoria; el paso de firma hace 'del p12, password' al terminar.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/services/certificados.py:15-83; app/sri/firma.py:65-71; app/tasks/emision.py:94-116",
+      "como_se_reusa": "Plantilla literal para services/buzon.py: tope de bytes → validar → verificar pertenencia al tenant → cifrar → persistir. El bloque de app/tasks/emision.py:96-108 (qué hacer cuando la clave maestra rotó o el blob está corrupto: NO dejar el registro atascado, marcarlo con motivo legible) se copia para el estado ERROR del buzón."
+     },
+     {
+      "que": "Parser XML defensivo ya endurecido: etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=False), más _texto()/_parse_mensajes() que recorren respuestas SOAP del SRI tolerando namespaces con etree.QName(el).localname.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/sri/client.py:139-147 (parser), :150-169 (_texto/_parse_mensajes), :234-266 (recorrido por localname)",
+      "como_se_reusa": "El parser del buzón DEBE construirse con ese mismo XMLParser (es la única defensa XXE/XEE del repo; app/sri/firma.py:112 y :141 usan etree.fromstring PELADO y no deben copiarse). El recorrido por localname sirve porque el XML que manda el SRI viene envuelto en <autorizacion><comprobante> con CDATA y namespaces variables."
+     },
+     {
+      "que": "Cliente SOAP del SRI con lista blanca de hosts (HOSTS_PERMITIDOS_SRI = celcer/cel.sri.gob.ec), circuit breaker en Redis, timeouts, y consultar_autorizacion(clave, ambiente) que valida que claveAccesoConsultada coincide con la pedida y devuelve estado AUTORIZADO / NO AUTORIZADO / EN PROCESO / SIN REGISTRO.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/sri/client.py:26,73-77,116-147,220-267",
+      "como_se_reusa": "Para NO fiarse de un XML que llegó por correo: tras parsear la clave de acceso de la retención recibida, se llama consultar_autorizacion() y solo se acepta si el SRI dice AUTORIZADO. Toda la protección SSRF/circuit breaker/reintentos ya viene puesta. SRITransientError es la excepción que hace reintentar a Celery."
+     },
+     {
+      "que": "Firma XAdES: descifrar_p12(), cargar_p12(), verificar_firma(xml_firmado, cert_pem) (verificación local XAdESVerifier), y huella_sha256(data)->hex.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/sri/firma.py:33-41,65-71,136-148,151-154",
+      "como_se_reusa": "huella_sha256() es literalmente la función que llena buzon_correos.xml_sha256 (mismo formato hex de 64 chars que Comprobante.sha256_xml). verificar_firma() sirve para rechazar XML no firmados antes de sumarlos al saldo — pero ojo, su parámetro expect_references=3 está afinado para NUESTROS comprobantes."
+     },
+     {
+      "que": "construir_retencion(): estructura completa del comprobanteRetencion 2.0.0 — infoCompRetencion (tipoIdentificacionSujetoRetenido, razonSocialSujetoRetenido, identificacionSujetoRetenido, periodoFiscal mm/aaaa), docsSustento/docSustento (codSustento, codDocSustento, numDocSustento, totalSinImpuestos, importeTotal), retenciones/retencion (codigo 1=renta 2=IVA, codigoRetencion, baseImponible, porcentajeRetener, valorRetenido). Más TARIFAS_IVA (tabla 17) y fmt2/fmt6.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/sri/xml_builder.py:250-301; TARIFAS_IVA :25-35; fmt2/fmt6 :41-46",
+      "como_se_reusa": "Es el mapa inverso del parser: cada _e(padre,'tag',valor) dice exactamente qué etiqueta leer. El parser del buzón recorre docsSustento→retenciones→retencion y suma valorRetenido separando codigo='2' (IVA, resta del IVA a pagar) de codigo='1' (renta, NO resta del IVA). El builder solo escribe; hay que escribir el lector."
+     },
+     {
+      "que": "Clave de acceso SRI: estructura documentada de los 49 dígitos (fecha8+codDoc2+ruc13+ambiente1+serie6+secuencial9+numérico8+tipoEmision1+DV1) y digito_verificador_mod11() para validarla.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/sri/clave.py:1-25 (docstring con el layout) y :11-25",
+      "como_se_reusa": "Se parsea la claveAcceso del XML recibido para (a) extraer el RUC del emisor y el codDoc ('07' = retención) sin fiarse del cuerpo, (b) validar el DV mod-11 y descartar basura antes de tocar la BD, (c) usarla como clave de deduplicación fuerte por tenant (UNIQUE(tenant_id, clave_acceso)), que es mucho más sólida que message_id."
+     },
+     {
+      "que": "resumen_fiscal(): las retenciones están FIJADAS A CERO esperando esta fase, con el comentario '# Retenciones que le hicieron al tenant: llegan por el buzón (fase 7).' El dataclass ResumenFiscal ya expone retenciones_recibidas y a_pagar = max(0, iva_neto - retenciones).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/services/reportes.py:124-129 (el cero), :82 (campo), :142-153 (retorno); consumidores: app/api/routes/reportes.py:46 y app/whatsapp/asistente.py:378",
+      "como_se_reusa": "Único punto de enganche del saldo: se sustituye `retenciones = Decimal(\"0\")` por una consulta al buzón (solo filas PARSEADO del tenant, del periodo, y SOLO retenciones de IVA código 2). Cambiar solo esa línea propaga el número al endpoint /reportes/resumen, al Inicio y al reporte por WhatsApp sin tocar nada más."
+     },
+     {
+      "que": "planes.py: LIMITES_POR_PLAN con la clave 'ia' (cupo mensual de análisis con IA: 0/20/40/100) y la bandera 'archivos' (False en Inicial, True desde Independiente), exigir_funcion(plan,'archivos') cuyo mensaje ya dice 'La bandeja de retenciones viene con el plan {sugerido}', y resumen_para_frontend() que publica 'analisis_ia'.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/services/planes.py:29-86 ('ia' en :33,47,61,75), :195-211 (exigir_funcion, mensaje 'archivos' en :203), :285 (analisis_ia)",
+      "como_se_reusa": "La bandeja del buzón se gatea con exigir_funcion(plan,'archivos') — el mensaje al usuario YA está escrito. Y el cupo 'ia' es la pieza que 7.2 debe NO tocar: hoy 'ia' solo se REPORTA, nadie lo descuenta (grep confirma cero consumidores), así que la regla se garantiza etiquetando el origen del documento (BUZON) en el punto donde algún día se cuente, no por omisión."
+     },
+     {
+      "que": "Traducción de LimitePlanError a HTTP 402 con detalle estructurado {mensaje, funcion, plan_sugerido}.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/api/routes/clientes.py:40-44 (_error_plan); mismo patrón en routes/productos.py:71, routes/tienda.py:29-30, routes/comprobantes.py:68",
+      "como_se_reusa": "Copiar _error_plan tal cual en el router del buzón para el gate 'archivos'. El frontend ya sabe leer esa forma."
+     },
+     {
+      "que": "apply_rls_context(db, ctx, is_internal) fija los GUCs app.tenant_id / app.user_id / app.is_internal locales a la transacción; despues_del_commit(db, hook) encola trabajo SOLO tras el commit; get_db() ejecuta los hooks post_commit.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/db/session.py:34-47 (apply_rls_context), :50-66 (get_db), :69-70 (despues_del_commit); uso ejemplar en app/services/emision.py:362-368",
+      "como_se_reusa": "Toda sesión de worker del buzón abre con apply_rls_context(tenant del correo) — es lo que hace que el aislamiento del checklist F7 ('sumado al tenant correcto y SOLO a ese') lo garantice PostgreSQL y no el código. Y si el parseo dispara un aviso por WhatsApp/correo, se encola con despues_del_commit."
+     },
+     {
+      "que": "Sesión de worker con contexto RLS + auditoría de sistema: @contextmanager _sesion_tenant(tenant_id) que crea RequestContext(tenant_id=..., rol='SYSTEM'), lo mete en db.info['audit_ctx'], llama apply_rls_context y hace commit/rollback/close. Variante _sesion_sistema() con is_internal=True para resolver a quién pertenece un identificador externo.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/tasks/emision.py:45-59; app/tasks/whatsapp.py:27-57 (las dos variantes juntas)",
+      "como_se_reusa": "Se copia literal a app/tasks/buzon.py. El par 'sesión sistema para resolver el dueño / sesión de tenant para escribir' de tasks/whatsapp.py:145-175 es el molde exacto del flujo 'llega correo → ¿de quién es? → escribir en SU buzón'."
+     },
+     {
+      "que": "Candado distribuido por entidad en Redis: _lock_comprobante() con SET NX EX y liberación solo si el token sigue siendo nuestro; más el patrón de idempotencia por identificador externo de consumo.registrar() (si ya existe wa_message_id, devuelve la fila existente sin duplicar ni cobrar).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/tasks/emision.py:292-313 (_lock_comprobante, _LOCK_TTL_S=300); app/whatsapp/consumo.py:75-81 (dedupe por wa_message_id)",
+      "como_se_reusa": "Los dos juntos son la deduplicación del buzón: candado por message_id mientras se procesa (Celery con acks_late puede correr el mismo correo dos veces) + comprobación previa de existencia que devuelve el registro en vez de insertar. El estado DUPLICADO del enum es el resultado a escribir."
+     },
+     {
+      "que": "Barrido periódico global: _buscar_atascados() abre un engine con database_url_admin (conexión de SUPERUSUARIO, sin RLS) porque 'el barrido no actúa en nombre de ningún tenant', devuelve SOLO (tenant_id, id) y luego cada elemento se reprocesa con el contexto RLS de SU tenant; barrer_atascados() lo encola.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/tasks/emision.py:362-406 (comentario clave en :370-373)",
+      "como_se_reusa": "Molde exacto de la alerta de 30 días sin recibir nada: consulta global con el engine admin que devuelve solo tenant_ids sin correos recientes, y después un task por tenant que avisa dentro de SU contexto RLS. La regla 'solo identificadores, nunca datos' es la que mantiene el aislamiento."
+     },
+     {
+      "que": "Declaración de tasks Celery: decorador con name namespaced, autoretry_for, retry_backoff/retry_backoff_max/retry_jitter, max_retries, acks_late; o bind=True + self.retry(exc=exc). Y beat_schedule declarado al final del módulo de tasks.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/tasks/emision.py:349-359 y :393; app/tasks/notificaciones.py:37-44; beat en app/tasks/emision.py:409-414; registro de módulos en app/worker.py:19 (include=[...]); servicio beat en deploy/docker-compose.prod.yml:59-68",
+      "como_se_reusa": "app/tasks/buzon.py se declara igual y se AÑADE a la lista include de app/worker.py:19 (si no, el worker no lo carga). CUIDADO: emision.py hace `celery_app.conf.beat_schedule = {...}` (asignación, no update) — la entrada periódica del buzón debe fusionarse, no reasignarse (ver riesgos)."
+     },
+     {
+      "que": "Marca de 'ya avisado' para que el reintento del task no mande dos correos: se escribe DESPUÉS del envío y el reintento la consulta antes de actuar (avisado_at en solicitudes_contacto, índice parcial WHERE avisado_at IS NULL).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/tasks/notificaciones.py:9-14 (razonamiento), :66-67 y :104-109; migración alembic/versions/0008_aviso_de_solicitudes.py:22-31",
+      "como_se_reusa": "Misma marca para la alerta de 30 días (p. ej. tenants.buzon_alertado_at) para no repetir el aviso cada vez que corre el beat. El índice parcial de 0008 es el patrón de índice a copiar en 0009."
+     },
+     {
+      "que": "Auditoría automática por listener before_flush: toda escritura ORM genera una fila en audit_log en la MISMA transacción, con snapshot completo de columnas; SENSITIVE_FIELDS enmascara password_hash, totp_secret_enc, token_hash, p12_password_enc, p12_data_enc; bytes se enmascaran siempre.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/core/audit.py:24-32 (SENSITIVE_FIELDS), :35-56 (_serialize/_snapshot), :108-138 (_before_flush)",
+      "como_se_reusa": "Insertar un BuzonCorreo se audita solo, gratis: no hay que escribir código de auditoría. Pero hay que AÑADIR a SENSITIVE_FIELDS cualquier columna nueva que lleve contenido del correo (ver riesgos: _snapshot vuelca todas las columnas a audit_log)."
+     },
+     {
+      "que": "Migraciones: patrón completo de RLS para una tabla de tenant — ENABLE + FORCE ROW LEVEL SECURITY, CREATE POLICY x_tenant FOR ALL USING (tenant_id = app_tenant()) WITH CHECK (...), GRANT SELECT,INSERT,UPDATE,DELETE a factuchat_app. Helpers app_tenant()/app_user()/app_is_internal(). Política interna añadida a posteriori para que el panel interno vea datos globales. Funciones SECURITY DEFINER SET search_path = public, pg_temp que verifican el rol REAL con sa_verificar_rol() y dejan rastro en audit_log, con el bucle ALTER FUNCTION ... OWNER TO factuchat_security / REVOKE ALL FROM PUBLIC / GRANT EXECUTE TO factuchat_app.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/alembic/versions/0002_rls_y_funciones.py:23-34 (buzon_correos YA está en STRICT_TENANT_TABLES), :68-82 (helpers), :85-107 (políticas), :166-183 (GRANTs, buzon_correos incluido en :170), :394-420 (patrón sa_*), :423-447 (OWNER/REVOKE/GRANT EXECUTE); alembic/versions/0006_whatsapp.py:22-33 (política interna + índice compuesto); alembic/versions/0005_superadmin.py:80-108 (sa_verificar_rol)",
+      "como_se_reusa": "buzon_correos YA tiene RLS por tenant, FORCE y GRANTs desde 0002 — no hay que crearlos. La migración 0009 (down_revision='0008', es la cabeza actual) solo añade: columnas nuevas, la política buzon_correos_interno calcada de 0006, índices compuestos (tenant_id, recibido_at) e índices únicos de deduplicación, y las funciones sa_* del panel de buzón si se opta por ese camino."
+     },
+     {
+      "que": "Webhook público verificado por HMAC antes de mirar el cuerpo: verificar(cuerpo_crudo, cabecera) con hmac.compare_digest, que RECHAZA todo si el secreto no está configurado ('fallar abierto aquí equivaldría a dejar el webhook público'); el endpoint lee request.body() crudo, verifica, responde 200 rápido y delega a Celery.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/whatsapp/firma.py:26-52; app/api/routes/whatsapp.py:42-64",
+      "como_se_reusa": "Si el correo entrante llega por webhook de un proveedor (Mailgun/SES/Postmark), este es el molde íntegro: firma sobre el cuerpo crudo, comparación en tiempo constante, sin secreto no se procesa nada, 403 mudo, y el trabajo real en Celery. No inventar otra verificación."
+     },
+     {
+      "que": "Correo saliente enviar_correo(destinatario, asunto, cuerpo_html, adjuntos) con STARTTLS verificado y modo outbox .eml cuando no hay SMTP; y plantillas de aviso por WhatsApp (Aviso StrEnum + PLANTILLAS + preparar()) despachadas por el task enviar_aviso(tenant_id, wa_phone, aviso, datos).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/core/mailer.py:16-52; app/whatsapp/plantillas.py:31-34,63-99,106-110; app/tasks/whatsapp.py:199-219",
+      "como_se_reusa": "La alerta de '30 días sin recibir nada' se emite por cualquiera de las dos vías ya montadas. Si va por WhatsApp hay que añadir un valor al enum Aviso y su Plantilla (y registrarla en Meta); si va por correo, enviar_correo basta y en desarrollo cae en var/outbox para poder probar el checklist F7."
+     },
+     {
+      "que": "Configuración: Settings pydantic con validador model_validator(mode='after') que en producción exige SECRET_KEY fuerte, TOTP_ENC_KEY, CERT_ENC_KEY, APP_DOMAIN y WA_APP_SECRET-si-WhatsApp-activo; propiedades derivadas dominio_publico/email_info/email_ventas; storage_dir; get_settings() cacheado con lru_cache.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/core/config.py:37 (cert_enc_key), :102 (storage_dir), :114-132 (propiedades), :134-154 (validador de producción), :157-159 (lru_cache); plantilla en backend/.env.example:19-21",
+      "como_se_reusa": "BUZON_ACTIVO (bool, default False) y la clave del buzón se declaran aquí, y el validador de producción se extiende con la regla condicional ya existente para WhatsApp: 'si BUZON_ACTIVO entonces BUZON_ENC_KEY y el dominio del buzón son obligatorios'. Añadir las entradas correspondientes a .env.example."
+     },
+     {
+      "que": "Almacenamiento de ficheros por tenant: ruta_almacen(tenant_id, clave_acceso, extension) -> storage_dir/<tenant_id>/<clave>.<ext>, con volumen 'comprobantes' compartido entre api y worker en producción.",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/app/services/emision.py:467-470; deploy/docker-compose.prod.yml:28-33 y :48-50",
+      "como_se_reusa": "Misma convención de carpeta por tenant para el blob cifrado del buzón (buzon_correos.payload_path). Importante: aquí los XML de comprobantes se escriben EN CLARO; el del buzón va cifrado con aesgcm_encrypt antes de write_bytes."
+     },
+     {
+      "que": "Tests con PostgreSQL real y RLS de verdad: conftest crea esquema limpio + migraciones + seeds (TENANT_A/TENANT_B, usuarios ana/bob, soporte, lectura, root), fixtures admin_engine (superusuario, sin RLS, para verificar efectos), app_engine (rol de la app, con RLS) y admin_db. test_rls.py prueba el aislamiento en las DOS barreras: API (B no ve, no accede por id, 404 sin revelar existencia) y PostgreSQL (sin contexto no hay filas, no se puede insertar para otro tenant, el rol app no puede apagar RLS).",
+      "donde": "C:/Users/User/Documents/GitHub/factuchat/backend/tests/conftest.py:27-53,56-131,149-153; tests/test_rls.py:28-127 (_set_ctx en :67-74)",
+      "como_se_reusa": "El checklist F7 ('correo de prueba parseado y sumado al saldo de retenciones del tenant correcto y SOLO de ese') se escribe calcando TestAislamientoPostgres: ingerir un correo para TENANT_A, comprobar con app_engine + _set_ctx(TENANT_B) que no ve la fila, y que resumen_fiscal de B sigue con retenciones en 0. tests/sri_utils.py:15 (generar_p12_prueba) permite fabricar un XML de retención FIRMADO de prueba."
+     }
+    ],
+    "huecos": [
+     "Ingesta de correo entrante: no existe absolutamente nada. app/core/mailer.py es solo SALIENTE (smtplib + outbox .eml). Hay que construir la recepción entera — o webhook de proveedor (Mailgun/SES/Postmark, molde en app/api/routes/whatsapp.py:42-64) o poller IMAP en un task de Celery. La decisión condiciona todo lo demás y no está tomada en el repo.",
+     "Buzón por inquilino 'cedula@factuchat.[dominio]': no hay columna en tenants para la dirección ni resolver de dirección→tenant. Existe el análogo tenant_por_telefono (app/whatsapp/asistente.py:45-59) pero nada equivalente para correo. Además el dominio sigue sin confirmar (app/core/config.py:46-48, app_domain vacío con respaldo factuchat.ec).",
+     "Feature flag BUZON_ACTIVO: NO existe en Settings ni en .env.example (grep confirma que solo aparece como texto en el docstring de app/db/models/admin.py:165 y en docs/spec-superadmin.json). Falta el campo bool, la regla en el validador de producción, la entrada en .env.example y el interruptor del panel interno (que la maqueta reserva solo a rolEsSuper y exige auditar al conmutar).",
+     "Clave de cifrado del buzón: no hay BUZON_ENC_KEY en config.py. Reusar CERT_ENC_KEY sería lo cómodo pero amplía el radio de daño (ver riesgos). Falta también la constante AAD (p. ej. AAD_BUZON) al lado de AAD_P12/AAD_P12_PASSWORD de app/sri/firma.py:25-26.",
+     "Lector de XML de comprobante de retención: app/sri/xml_builder.py solo ESCRIBE. No hay parser que lea comprobanteRetencion 2.0.0, ni que desenvuelva el sobre <autorizacion><comprobante><![CDATA[...]]></comprobante></autorizacion> con el que el SRI reenvía los documentos por correo, ni que extraiga infoCompRetencion/docsSustento/retenciones.",
+     "Columnas del modelo que faltan para cumplir 7.1 y la maqueta: clave_acceso (49), ruc_emisor, periodo_fiscal, total_retenido_iva, total_retenido_renta, motivo_error (la maqueta ofrece 'Ver XML crudo' + motivo del fallo solo en filas ERROR), y updated_at (BuzonCorreo no hereda Timestamps). Alternativamente, una tabla hija retenciones_recibidas con el detalle por docSustento.",
+     "Deduplicación real: message_id es UNIQUE GLOBAL (no por tenant) y xml_sha256 solo tiene índice NO único. Faltan los índices únicos correctos — UNIQUE(tenant_id, message_id) y UNIQUE(tenant_id, clave_acceso) — y la lógica que marca DUPLICADO en vez de reventar por IntegrityError.",
+     "Política RLS interna sobre buzon_correos: la sección 'Buzón SRI' del panel interno lista correos de TODOS los inquilinos, pero buzon_correos solo tiene la política por tenant de 0002. Falta el calco exacto de alembic/versions/0006_whatsapp.py:22-27 (CREATE POLICY buzon_correos_interno ... USING (app_is_internal())) o, en su defecto, funciones sa_* con sa_verificar_rol.",
+     "Migración 0009: no existe. down_revision='0008' (cabeza actual). Debe traer columnas nuevas, política interna, índices únicos de dedupe e índice compuesto (tenant_id, recibido_at) para la consulta 'último correo recibido'.",
+     "Módulo app/tasks/buzon.py y su registro: no existe, y app/worker.py:19 no lo lista en include=[...]. Sin añadirlo, el worker jamás carga el task.",
+     "Alerta de 30 días sin recepción: falta todo — columna tenants.ultimo_correo_buzon_at (o consulta MAX(recibido_at) por tenant), el task periódico con el patrón de _buscar_atascados (engine admin, solo ids), la marca anti-repetición estilo avisado_at de 0008, la entrada de beat, y el texto del aviso (si va por WhatsApp hace falta un valor nuevo en Aviso + Plantilla registrada en Meta).",
+     "Enganche del saldo en reportes: app/services/reportes.py:126 sigue con `retenciones = Decimal(\"0\")`. Falta la consulta al buzón y, sobre todo, la decisión de qué se resta: solo el código 2 (IVA) resta del IVA a pagar; el código 1 (renta) es otro impuesto y hoy `a_pagar` los mezclaría.",
+     "Endpoints: no hay ninguno. Faltan (a) la bandeja del cliente (submenú 'Retenciones' de la maqueta, XML/PDF descargables) con gate exigir_funcion(plan,'archivos') y _error_plan 402, y (b) /sa/buzon en el panel interno + el conmutador del flag auditado (solo SUPERADMIN).",
+     "Contabilización del cupo IA: hoy 'ia' de LIMITES_POR_PLAN solo se publica (planes.py:285, routes/publico.py:95); NADIE lo descuenta. La regla 7.2 no se puede 'implementar' porque no hay contador: hace falta crear el mecanismo de consumo con una discriminación de origen (BUZON vs FOTO) para que la exención sea explícita y no un accidente.",
+     "Tests: no existe tests/test_buzon.py. Falta el caso del checklist F7 y los utilitarios para fabricar un XML de retención de prueba firmado (tests/sri_utils.py:15 genera el .p12, pero no hay generador de comprobanteRetencion).",
+     "Presentación del estado: el enum dice PARSEADO y la maqueta pinta 'PROCESADO'. Falta la capa de traducción (y decidir dónde vive) para no divergir del texto ya especificado en docs/spec-superadmin.json."
+    ],
+    "riesgos": [
+     "Cross-tenant por deduplicación envenenada: buzon_correos.message_id es UNIQUE GLOBAL (app/db/models/admin.py:172, uq_buzon_correos_message_id en 0001:116). Un remitente hostil que adivine o reuse un Message-ID puede 'quemarlo' antes de que llegue el correo legítimo de OTRO inquilino, que quedaría marcado DUPLICADO y su retención nunca se sumaría — denegación silenciosa cruzada, y encima con un mensaje que parece normal. Debe ser UNIQUE(tenant_id, message_id).",
+     "Suplantación de inquilino por el contenido del XML: si el tenant se resuelve leyendo identificacionSujetoRetenido del XML en vez del destinatario real del sobre, cualquiera manda un XML con el RUC de otro y le inyecta filas en su buzón. La regla debe ser: el tenant lo fija la DIRECCIÓN destinataria verificada, y el RUC del XML solo sirve para VALIDAR que coincide con tenants.ruc — exactamente el control que ya hace guardar_certificado (app/services/certificados.py:52-59) al exigir que el certificado pertenezca al RUC del tenant.",
+     "XXE / expansión de entidades / bomba XML: app/sri/firma.py:112 y :141 usan etree.fromstring PELADO. Si el parser del buzón se calca de ahí en lugar de app/sri/client.py:139-147 (resolve_entities=False, no_network=True, huge_tree=False), un XML de un desconocido lee ficheros del contenedor o tumba el worker. Y como el worker es quien descifra el .p12, ese contenedor es el más sensible del sistema. Falta además un tope de bytes (patrón MAX_P12_BYTES=100KB / MAX_BYTES=5MB de carga_masiva.py:22) y rechazo explícito de DOCTYPE.",
+     "Fuga de contenido a la bitácora: app/core/audit.py:_snapshot (:49-56) vuelca TODAS las columnas de cada fila insertada a audit_log.despues, y audit_log lo lee el personal interno (política audit_log_select en 0002:146). Hoy eso ya mete remitente y asunto — datos personales — en la bitácora inmutable. Si además se añade una columna con el XML o cualquier dato del correo en claro, queda replicado en texto plano fuera del cifrado en reposo y es IMBORRABLE (trigger trg_audit_log_inmutable, 0002:159-161). Toda columna nueva con contenido debe entrar en SENSITIVE_FIELDS.",
+     "Documentos falsos que alteran la declaración de impuestos: cualquiera puede enviar un correo con un XML inventado. Si se suma sin verificar, `retenciones_recibidas` sube y `a_pagar = max(0, iva_neto - retenciones)` (reportes.py:129) BAJA: el sistema le diría al contribuyente que debe menos IVA del que debe, con consecuencias fiscales reales. Mitigación disponible ya: validar el DV mod-11 de la clave (sri/clave.py:11-25), verificar la firma XAdES y confirmar contra el SRI con consultar_autorizacion() (sri/client.py:220) exigiendo estado AUTORIZADO.",
+     "Mezclar retención de renta con retención de IVA: construir_retencion (xml_builder.py:289) muestra que <retencion><codigo> es 1=renta y 2=IVA. Sumarlas juntas y restarlas del IVA a pagar da un número fiscalmente falso. Hay que separarlas en el parser y en el saldo.",
+     "Doble conteo del mismo hecho: un comprobante de RETENCIÓN puede existir a la vez como Comprobante emitido por el tenant (TipoComprobante.RETENCION) y como correo recibido en el buzón. Sin una clave común (clave_acceso) el saldo puede contar dos veces. Además, un mismo XML puede llegar por dos correos distintos (reenvío): dedupe por xml_sha256 Y por clave_acceso, no solo por message_id.",
+     "Reproceso duplicado por Celery: los tasks corren con acks_late=True y reintentos; el mismo correo puede procesarse dos veces en paralelo tras un reinicio del worker. Sin el candado Redis (patrón _lock_comprobante, tasks/emision.py:292-313) y sin la comprobación previa de existencia (patrón consumo.registrar, whatsapp/consumo.py:75-81), la retención se suma dos veces al saldo.",
+     "Colisión del beat_schedule: app/tasks/emision.py:409 hace `celery_app.conf.beat_schedule = {...}` (ASIGNACIÓN). Si app/tasks/buzon.py hace lo mismo, el último módulo importado (orden de include en app/worker.py:19) BORRA la programación del otro y el barrido de comprobantes atascados deja de correr en silencio — un fallo que no da error y solo se nota cuando hay facturas colgadas. Fusionar el dict, no reasignarlo.",
+     "Uso indebido de la conexión de administración: database_url_admin es el SUPERUSUARIO de PostgreSQL (deploy/postgres/init/01-roles.sh usa POSTGRES_USER), que ignora RLS incluso con FORCE. Es lo que permite el barrido global de emision.py:378, y ahí se limita a devolver identificadores. Si el barrido de 30 días o el panel del buzón usan ese engine para LEER o ESCRIBIR datos de correos, el aislamiento por tenant deja de existir y ninguna política RLS lo detendrá.",
+     "Escritura imposible cuando no se sabe de quién es el correo: buzon_correos.tenant_id es NOT NULL y la política es tenant_id = app_tenant() (0002:89-97). Un correo a una dirección desconocida no tiene dónde guardarse, y la tentación será activar app.is_internal o usar el engine admin para registrarlo 'para depurar' (que es justo lo que la maqueta pide con el flag apagado). Hay que decidir el destino de esos correos ANTES de escribir el ingestor, o esa excepción se convertirá en el agujero permanente.",
+     "Path traversal en payload_path: ruta_almacen (services/emision.py:467-470) es segura porque la clave de acceso son 49 dígitos validados. Un nombre derivado del Message-ID, del asunto o del filename del adjunto —todos controlados por el remitente— permite escribir fuera del directorio del tenant o pisar el fichero de otro. El nombre debe ser el UUID de la fila o el sha256, nunca texto del correo.",
+     "Radio de daño de la clave maestra: si el buzón se cifra con CERT_ENC_KEY, una sola clave protege los .p12 de firma Y los documentos fiscales de todos los inquilinos; y su rotación obliga a recifrar ambas cosas a la vez (.env.example:21 ya avisa del coste). El patrón de AAD distintos (AAD_P12 vs AAD_P12_PASSWORD) mitiga el reuso de blobs pero no el compromiso de la clave. Además hay que replicar el manejo de 'clave rotada / blob corrupto' de tasks/emision.py:96-108, o un correo quedará ilegible y atascado sin motivo visible.",
+     "Feature flag aplicado en un solo sitio: si BUZON_ACTIVO solo se consulta en el router, el ingestor seguirá escribiendo y —peor— resumen_fiscal empezará a restar retenciones a inquilinos cuyo módulo está 'apagado', cambiándoles el IVA a pagar sin que nadie haya encendido nada. La maqueta es explícita en que con el flag apagado 'los clientes no ven nada y los correos solo se registran para depurar': el flag tiene que evaluarse también en el punto de suma del saldo y en el de aviso.",
+     "SSRF por contenido del correo: un correo puede traer el XML como enlace en vez de adjunto, y la solución obvia (descargarlo) convierte al worker en un cliente HTTP dirigido por un desconocido. El proyecto ya fija la regla contraria (lista blanca HOSTS_PERMITIDOS_SRI en sri/client.py:26 y el compromiso 'ninguna URL provista por el usuario se visita' de PLAN.md): no seguir enlaces del correo.",
+     "La regla 'no consume cupo IA' se cumple hoy por accidente: nadie descuenta 'ia' en ningún sitio del código. Si más adelante se implementa el contador sin discriminar el origen del documento, la exención publicada en la landing (docs/spec-landing.json: 'Los XML de tu buzón SRI no consumen tus análisis con IA; las fotos de documentos sí') se romperá en silencio y será un incumplimiento de lo prometido comercialmente. La marca de origen debe existir desde ahora, aunque el contador no."
+    ]
+   }
+  }
+ ]
+}

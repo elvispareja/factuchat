@@ -1,0 +1,152 @@
+/* Design system de Factuchat — extraído de diseno/Dashboard.dc.html.
+   La maqueta es la única fuente de verdad visual: estos valores son los suyos,
+   no una reinterpretación. La especificación completa está en
+   docs/spec-dashboard.json. */
+
+:root {
+  /* --- Color ------------------------------------------------------------ */
+  --verde-marca: #123d2f; /* barra lateral, texto primario, botón oscuro */
+  --verde-acento: #22c55e; /* acción principal */
+  --verde-claro: #5ce68f; /* hover del acento, logo sobre oscuro */
+  --verde-medio: #16794a; /* enlaces, texto de éxito */
+  --verde-whatsapp: #25d366;
+
+  --fondo: #faf9f5; /* crema de la aplicación */
+  --superficie: #ffffff;
+  --superficie-suave: #fbfcfa; /* campos de formulario */
+  --superficie-tenue: #f4f6f3; /* deshabilitado, solo lectura */
+  --superficie-tab: #f1f3ef;
+
+  --borde: #e4e9e2;
+  --borde-campo: #d6ded6;
+
+  --texto: #123d2f;
+  --texto-suave: #3e5a4e;
+  --texto-tenue: #5a7267;
+  --texto-sobre-oscuro: #f1f5f0;
+  --texto-tenue-oscuro: #8fb3a0;
+
+  /* Estados semánticos */
+  --exito-bg: rgba(34, 197, 94, 0.1);
+  --exito-borde: rgba(22, 121, 74, 0.24);
+  --exito-texto: #16794a;
+  --exito-punto: #22c55e;
+
+  --aviso-bg: #fff8e8;
+  --aviso-borde: #f2e4c0;
+  --aviso-texto: #8a6410;
+  --aviso-texto-fuerte: #6b4e08;
+  --aviso-punto: #d8a22a;
+
+  --error-bg: #fef1f0;
+  --error-borde: #f5d5d2;
+  --error-texto: #a8352c;
+  --error-punto: #d9534f;
+  --error-campo: #c0392b;
+
+  --dorado: #e8c766;
+
+  /* --- Tipografía ------------------------------------------------------- */
+  --fuente-ui: "Instrument Sans", system-ui, sans-serif;
+  --fuente-titulo: "Familjen Grotesk", "Instrument Sans", system-ui, sans-serif;
+  --fuente-mano: "Caveat", cursive; /* logotipo y frases del asistente */
+  --fuente-mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+
+  /* --- Forma ------------------------------------------------------------ */
+  --radio-tarjeta: 20px;
+  --radio-tarjeta-grande: 24px;
+  --radio-panel: 18px;
+  --radio-item: 16px;
+  --radio-campo: 12px;
+  --radio-tab: 14px;
+  --radio-icono: 9px;
+  --radio-pildora: 999px;
+
+  --sombra-panel: 0 20px 40px -18px rgba(18, 61, 47, 0.45);
+  --sombra-elevada: 0 24px 48px -26px rgba(18, 61, 47, 0.45);
+  --sombra-acento: 0 14px 32px -12px rgba(34, 197, 94, 0.8);
+
+  --lateral-ancho: 264px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  font-family: var(--fuente-ui);
+  -webkit-font-smoothing: antialiased;
+  color: var(--texto);
+}
+
+a {
+  color: var(--texto);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--verde-medio);
+}
+
+/* --- Animaciones de la maqueta ------------------------------------------ */
+@keyframes dbIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dbPulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes dbSheet {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dbBar {
+  from { width: 0; }
+}
+@keyframes dbSweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(420%); }
+}
+@keyframes dbTabIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dbSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes dbFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Barra de desplazamiento -------------------------------------------- */
+.fc-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.fc-scroll::-webkit-scrollbar-track { background: var(--superficie-suave); border-radius: 9px; }
+.fc-scroll::-webkit-scrollbar-thumb {
+  background: #c4d2c8;
+  border-radius: 9px;
+  border: 2px solid var(--superficie-suave);
+}
+.fc-scroll::-webkit-scrollbar-thumb:hover { background: var(--verde-medio); }
+
+/* Foco visible para navegación por teclado (accesibilidad) */
+:focus-visible {
+  outline: 2px solid var(--verde-acento);
+  outline-offset: 2px;
+}

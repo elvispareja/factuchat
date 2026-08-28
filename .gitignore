@@ -1,0 +1,53 @@
+# Entornos y secretos — NUNCA subir .env reales (OWASP A02)
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.key
+
+# Datos de ejecución — NUNCA al repo (facturas, buzón SRI, comprobantes)
+backend/var/
+var/storage/
+storage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# IDE / SO
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Respaldos y datos locales
+*.dump
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+deploy/backups/
+
+# Cachés de herramientas
+.cache/
+backend/.cache/
+.pip-audit-cache/
+dist/
+build/
+*.log

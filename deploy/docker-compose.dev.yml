@@ -1,0 +1,63 @@
+# Entorno de DESARROLLO/TESTS. Las credenciales de abajo son solo locales.
+# El compose de producción vive en docker-compose.prod.yml (se completa en la fase de despliegue).
+name: factuchat-dev
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: factuchat
+      POSTGRES_PASSWORD: dev-admin-pass
+      POSTGRES_DB: factuchat
+      APP_DB_PASSWORD: dev-app-pass
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - pgdata-dev:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U factuchat"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  api:
+    build:
+      context: ../backend
+      target: dev
+    # Los secretos de verdad (contraseña del SMTP) viven en deploy/.env, que no
+    # se sube al repositorio. Lo de abajo son valores de desarrollo, no secretos.
+    env_file:
+      - ./.env
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://factuchat_app:dev-app-pass@postgres:5432/factuchat
+      DATABASE_URL_ADMIN: postgresql+psycopg://factuchat:dev-admin-pass@postgres:5432/factuchat
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-solo-local-con-largo-suficiente-para-hmac-sha256
+      TOTP_ENC_KEY: "aWt2YWx0ZXN0a2V5MDEyMzQ1Njc4OTAxMjM0NTY3ODk="
+      CERT_ENC_KEY: "Y2VydGtleWRldjAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+      STORAGE_DIR: /app/var/storage
+      EMAIL_OUTBOX_DIR: /app/var/outbox
+    volumes:
+      - ../backend:/app
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata-dev:

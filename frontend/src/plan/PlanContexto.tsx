@@ -1,0 +1,77 @@
+/** Estado del plan, cargado del servidor.
+ *
+ * El panel NO decide permisos: solo refleja lo que el servidor respondió en
+ * /panel/estado. Cualquier bloqueo pintado aquí tiene su guarda equivalente en
+ * el backend (services/planes.py), que es la que realmente protege.
+ */
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { api } from "../api/cliente";
+import type { EstadoPlan, FuncionPlan, NombrePlan } from "../api/tipos";
+
+export interface EstadoFirma {
+  cargada: boolean;
+  vence: string | null;
+}
+
+interface ValorContexto {
+  plan: EstadoPlan | null;
+  /** null mientras no se sabe. Sin firma cargada el negocio no puede operar:
+   *  el servidor rechaza sus peticiones con FIRMA_REQUERIDA. */
+  firma: EstadoFirma | null;
+  cargando: boolean;
+  error: string | null;
+  permite: (funcion: FuncionPlan) => boolean;
+  planPara: (funcion: FuncionPlan) => NombrePlan | null;
+  recargar: () => Promise<void>;
+}
+
+const Contexto = createContext<ValorContexto | null>(null);
+
+export function ProveedorPlan({ children }: { children: ReactNode }) {
+  const [plan, setPlan] = useState<EstadoPlan | null>(null);
+  const [firma, setFirma] = useState<EstadoFirma | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const recargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const datos = await api.get<{ plan: EstadoPlan; firma: EstadoFirma }>("/panel/estado");
+      setPlan(datos.plan);
+      setFirma(datos.firma);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos cargar tu plan");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void recargar();
+  }, [recargar]);
+
+  const valor = useMemo<ValorContexto>(
+    () => ({
+      plan,
+      firma,
+      cargando,
+      error,
+      // Sin datos del servidor no se concede nada (deny by default)
+      permite: (funcion) => Boolean(plan?.funciones?.[funcion]),
+      planPara: (funcion) => plan?.planes_para_desbloquear?.[funcion] ?? null,
+      recargar,
+    }),
+    [plan, firma, cargando, error, recargar],
+  );
+
+  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+}
+
+export function usePlan(): ValorContexto {
+  const valor = useContext(Contexto);
+  if (!valor) throw new Error("usePlan debe usarse dentro de ProveedorPlan");
+  return valor;
+}

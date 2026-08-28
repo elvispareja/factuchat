@@ -1,0 +1,258 @@
+# PRODUCCIÓN.
+#
+# Secretos: archivo .env con permisos 600, propiedad root, NUNCA en el repo (A02).
+#
+# Endurecimiento aplicado (paso 2 de la lista de despliegue de PLAN.md):
+#   · Ningún contenedor puede escalar privilegios (`no-new-privileges`).
+#   · Todas las capacidades de Linux se sueltan y solo se devuelven las que un
+#     servicio necesita de verdad (nginx necesita atarse a los puertos 80/443).
+#   · Sistema de archivos de solo lectura donde el servicio no escribe, con
+#     `tmpfs` para lo efímero. Un proceso comprometido que no puede escribir en
+#     disco tiene mucho menos margen.
+#   · Límites de memoria y CPU: un contenedor que se desboca no puede tumbar al
+#     resto. El worker es el que más pesa (firma, WeasyPrint, parseo de XML).
+#   · Rotación de logs en el propio driver, además de logrotate en el host.
+#
+# Aislamiento de red (paso 4): postgres y redis viven en una red `interna`
+# marcada `internal: true`, que Docker deja SIN salida a internet y sin puertos
+# publicables. No es solo "no publicar el puerto": aunque alguien añadiera un
+# `ports:` por error, esa red no lo expondría al exterior.
+#
+# Digests (paso 8 / OWASP A03): las imágenes base salen del .env y HOY van por
+# ETIQUETA. Fijarlas por digest sigue PENDIENTE, y hay que hacerlo antes de
+# desplegar: una etiqueta como `postgres:16` cambia de contenido sin avisar.
+# Para obtener el digest actual y anotarlo en el .env:
+#     docker pull postgres:16 && docker inspect --format='{{index .RepoDigests 0}}' postgres:16
+# y antes de subirlo: `trivy image --severity HIGH,CRITICAL <imagen@digest>`.
+name: factuchat
+
+x-registro: &registro
+  driver: json-file
+  options: { max-size: "20m", max-file: "5" }
+
+x-python-comun: &python-comun
+  build:
+    context: ../backend
+    target: prod
+  image: factuchat/backend:${FACTUCHAT_VERSION:-latest}
+  env_file: [.env]
+  environment:
+    ENVIRONMENT: production
+    STORAGE_DIR: /var/factuchat/storage
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  read_only: true
+  # El código y las dependencias son de solo lectura; lo único que se escribe es
+  # el almacén de comprobantes (volumen) y los temporales.
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=128m
+  restart: unless-stopped
+  logging: *registro
+
+services:
+  nginx:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # El dominio definitivo sigue PENDIENTE de confirmar; entra por aquí y
+      # envsubst lo mete en los bloques `server` al arrancar.
+      FACTUCHAT_DOMINIO: ${FACTUCHAT_DOMINIO:?falta FACTUCHAT_DOMINIO}
+    # Recarga cada 6 horas para tomar el certificado que certbot haya renovado.
+    # `command` reemplaza al CMD pero NO al entrypoint de la imagen, que es quien
+    # procesa las plantillas con envsubst: eso sigue ocurriendo antes.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while :; do sleep 6h; nginx -s reload 2>/dev/null || true; done &
+        exec nginx -g 'daemon off;'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - certs:/etc/letsencrypt:ro
+      - acme:/var/www/acme
+      - static:/srv/static:ro
+      - nginx-logs:/var/log/nginx
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    # Atarse a los puertos privilegiados 80 y 443, y cambiar al usuario nginx
+    cap_add: ["NET_BIND_SERVICE", "SETUID", "SETGID", "CHOWN"]
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,size=64m
+      - /var/run:rw,noexec,nosuid,size=8m
+      # envsubst escribe aquí el resultado de los templates. Con el sistema de
+      # archivos en solo lectura, sin este tmpfs nginx no llegaría a arrancar.
+      - /etc/nginx/conf.d:rw,nosuid,size=8m
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [publica]
+    deploy:
+      resources:
+        limits: { cpus: "1.00", memory: 256M }
+    restart: unless-stopped
+    logging: *registro
+
+  api:
+    <<: *python-comun
+    # El worker escribe los XML firmados y los RIDE; la API los sirve. Sin este
+    # volumen COMPARTIDO cada contenedor ve su propio sistema de archivos y las
+    # descargas fallan (además de perderse al recrear el contenedor).
+    volumes:
+      - comprobantes:/var/factuchat/storage
+    expose: ["8000"]
+    healthcheck:
+      # Sin healthcheck, nginx arranca contra una API que todavía migra y los
+      # primeros clientes ven errores.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [publica, interna]
+    deploy:
+      resources:
+        limits: { cpus: "2.00", memory: 1G }
+        reservations: { memory: 256M }
+
+  worker:
+    <<: *python-comun
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
+    volumes:
+      - comprobantes:/var/factuchat/storage
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker.celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [interna, salida]
+    deploy:
+      resources:
+        # El worker firma con el .p12, genera PDF con WeasyPrint y parsea XML
+        # ajeno: es el que más memoria necesita y el que más conviene acotar.
+        limits: { cpus: "2.00", memory: 2G }
+        reservations: { memory: 512M }
+
+  beat:
+    <<: *python-comun
+    command: celery -A app.worker.celery_app beat --loglevel=info
+    depends_on:
+      redis: { condition: service_healthy }
+    networks: [interna]
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 256M }
+        reservations: { memory: 64M }
+
+  # Renovación del certificado TLS de Let's Encrypt.
+  #
+  # NO publica ningún puerto, a propósito: renueva por el desafío de fichero
+  # (webroot), escribiendo en el volumen `acme` que nginx sirve bajo
+  # /.well-known/acme-challenge/. Publicar el 80 aquí chocaría con nginx, que ya
+  # lo tiene, y el servicio no llegaría ni a arrancar.
+  #
+  # La PRIMERA emisión es otra cosa y la hace `deploy/scripts/tls-emitir.sh`:
+  # nginx no arranca sin los ficheros del certificado y el certificado no se
+  # emite sin nginx respondiendo, así que hay que romper el círculo con un
+  # certificado autofirmado temporal. El script lo hace y lo explica.
+  #
+  # Recarga: certbot no puede avisar a nginx desde otro contenedor sin el socket
+  # de Docker, y darle ese socket sería darle root sobre el anfitrión. En su
+  # lugar, nginx se recarga solo cada 6 horas (ver su `command`), así que como
+  # mucho tarda ese rato en tomar el certificado nuevo. Con 30 días de margen
+  # que da Let's Encrypt, sobra.
+  certbot:
+    image: ${CERTBOT_IMAGE:-certbot/certbot:latest}
+    volumes:
+      - certs:/etc/letsencrypt
+      - acme:/var/www/acme
+    entrypoint: >-
+      sh -c 'trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/acme --quiet;
+      sleep 12h & wait $${!}; done'
+    networks: [publica]
+    restart: unless-stopped
+    logging: *registro
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    # SOLO red interna: jamás publicar el puerto (control de despliegue #4)
+    env_file: [.env]
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    security_opt: ["no-new-privileges:true"]
+    # Postgres necesita escribir en su directorio de datos, así que no va en
+    # solo lectura; el volumen es suyo y de nadie más.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [interna]
+    deploy:
+      resources:
+        limits: { cpus: "2.00", memory: 2G }
+        reservations: { memory: 512M }
+    restart: unless-stopped
+    logging: *registro
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    # SOLO red interna. Con contraseña: si algún día se expusiera por error, un
+    # Redis abierto es acceso directo a la cola de tareas.
+    command: >-
+      redis-server --requirepass ${REDIS_PASSWORD:?falta REDIS_PASSWORD}
+      --save 900 1 --appendonly no --maxmemory 512mb --maxmemory-policy noeviction
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?falta REDIS_PASSWORD}
+    networks: [interna]
+    deploy:
+      resources:
+        limits: { cpus: "1.00", memory: 768M }
+    restart: unless-stopped
+    logging: *registro
+
+networks:
+  # Lo que nginx necesita alcanzar
+  publica:
+  # Base de datos y cola. `internal: true` = sin ruta a internet y sin
+  # posibilidad de publicar puertos, aunque alguien lo intente por error.
+  interna:
+    internal: true
+  # El worker sí sale a internet: SRI, Meta y SMTP. La API no lo necesita.
+  salida:
+
+volumes:
+  pgdata:
+  certs:
+  acme:
+  static:
+  nginx-logs:
+  # XML firmados y RIDE: compartido entre api y worker. Entra en el respaldo
+  # (control A.8.13): son los documentos con valor tributario, y una fila de la
+  # base que apunte a un fichero que ya no existe no sirve de nada.
+  comprobantes:

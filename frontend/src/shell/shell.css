@@ -1,0 +1,187 @@
+/* Armazón del panel: rejilla, barra lateral y cabecera (maqueta líneas 40-66, 72-200). */
+
+.fc-shell {
+  display: grid;
+  grid-template-columns: var(--lateral-ancho) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.fc-lateral {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: var(--verde-marca);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fc-lateral__cerrar {
+  display: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(92, 230, 143, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  cursor: pointer;
+  place-items: center;
+}
+.fc-lateral__cerrar:hover {
+  border-color: var(--verde-claro);
+  background: rgba(92, 230, 143, 0.14);
+}
+
+.fc-lateral__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radio-campo);
+  padding: 11px 14px;
+  margin-bottom: 2px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--texto-tenue-oscuro);
+  cursor: pointer;
+  transition: background 0.22s, color 0.22s;
+}
+.fc-lateral__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dff3e7;
+}
+.fc-lateral__item[data-activa="1"] {
+  background: rgba(92, 230, 143, 0.14);
+  color: var(--verde-claro);
+}
+
+.fc-main {
+  padding: 26px 34px 70px;
+  min-width: 0;
+}
+
+.fc-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+}
+
+.fc-burger {
+  display: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  border-radius: 12px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.fc-veil {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(6, 20, 15, 0.55);
+  backdrop-filter: blur(5px);
+  border: none;
+  padding: 0;
+}
+
+.fc-pildora-asistente {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--radio-pildora);
+  padding: 6px 13px;
+  background: var(--exito-bg);
+  border: 1px solid var(--exito-borde);
+  color: var(--exito-texto);
+  font-size: 12px;
+  font-weight: 600;
+}
+.fc-pildora-asistente span[data-punto] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--exito-punto);
+  animation: dbPulse 2s ease-in-out infinite;
+}
+
+@media (max-width: 1080px) {
+  .fc-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fc-lateral {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--lateral-ancho);
+    z-index: 80;
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fc-lateral[data-abierta="1"] {
+    transform: none;
+  }
+  .fc-lateral__cerrar,
+  .fc-burger {
+    display: grid;
+  }
+  .fc-veil[data-abierta="1"] {
+    display: block;
+  }
+  .fc-main {
+    padding: 20px 22px 60px;
+  }
+}
+
+/* Rejillas que la maqueta colapsa por breakpoint */
+.fc-kpi {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.fc-split {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .fc-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .fc-kpi {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fc-cabecera {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* --- Primer ingreso: subir la firma electrónica --------------------------
+   Ocupa la pantalla entera a propósito. Sin certificado el servidor rechaza
+   todas las rutas de operación, así que no hay panel detrás que mirar. */
+.fc-firma {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--fondo);
+}
+.fc-firma__caja {
+  width: 100%;
+  max-width: 470px;
+}

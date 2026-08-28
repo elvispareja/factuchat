@@ -1,0 +1,21 @@
+# Fin de línea. En Windows, cualquier herramienta que reescriba un fichero puede
+# dejar CRLF, y un script de shell con CRLF NO ARRANCA en Linux: falla con
+# "bad interpreter: /bin/bash^M". Aquí se fija LF para todo lo que se ejecuta o
+# se copia a un servidor, para que el sistema operativo de quien edita no
+# decida si el despliegue funciona.
+* text=auto eol=lf
+
+*.sh            text eol=lf
+*.conf          text eol=lf
+*.template      text eol=lf
+*.inc           text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+Dockerfile      text eol=lf
+.env.example    text eol=lf
+
+*.ps1           text eol=crlf
+
+*.png           binary
+*.p12           binary
+*.pdf           binary

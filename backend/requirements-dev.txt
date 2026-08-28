@@ -1,0 +1,8 @@
+# Herramientas de desarrollo y CI local (fase 1.6)
+-r requirements.txt
+pytest==9.1.1
+httpx==0.28.1
+ruff==0.16.4
+mypy==2.3.1
+pip-audit==2.10.1
+respx==0.23.1
