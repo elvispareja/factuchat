@@ -1,0 +1,141 @@
+/* ============================================================
+   FACTUCHAT — PATRÓN VISUAL Y ANIMACIONES
+   Extraído del diseño original. Pegar tal cual: no cambiar valores.
+   ============================================================
+
+   FUENTES (van en el <head>, antes de este CSS):
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin">
+   <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&amp;family=Instrument+Sans:ital,wght@0,400..700&amp;family=Caveat:wght@500;600;700&amp;display=swap" rel="stylesheet">
+
+   PALETA EXACTA
+   --------------------------------------------------------
+   Verde WhatsApp (acento principal) ....... #25D366
+   Verde acción (botones) .................. #22C55E   hover #16A34A
+   Verde neón (sobre fondo oscuro) ......... #5CE68F
+   Verde profundo (texto y fondos) ......... #123D2F
+   Verde medio (texto secundario) .......... #16794A
+   Fondo claro (base de la página) ......... #FAF9F5
+   Fondo oscuro (bandas) ................... #08120D  y #050E0A
+   Texto sobre oscuro ...................... #DDF3E6 / #A9C7B6
+   Texto secundario sobre claro ............ #3E5A4E / #5A7267 / #8A9A91
+   Bordes claros ........................... #E4E9E2 / #D6DED6
+   Ámbar (avisos) .......................... #8A6410 sobre #FFF8E8, borde #F2E4C0
+   Rojo (errores) .......................... #A8352C / #D9534F
+
+   TIPOGRAFÍA
+   --------------------------------------------------------
+   Titulares ....... 'Familjen Grotesk', peso 700, letter-spacing -.03em
+   Cuerpo .......... 'Instrument Sans', 15-17px, line-height 1.6
+   Manuscrita ...... 'Caveat', peso 600, solo para etiquetas de anotación
+   Monoespaciada ... 'SF Mono', ui-monospace (números, códigos, RUC)
+
+   FORMAS
+   --------------------------------------------------------
+   Botones y pills ......... border-radius 999px
+   Tarjetas ................ border-radius 18-22px
+   Campos de formulario .... border-radius 12px
+   Cristal oscuro .......... background rgba(255,255,255,.05)
+                             border 1px solid rgba(92,230,143,.28)
+                             backdrop-filter blur(10px)
+   Sombra verde ............ 0 8px 22px -8px rgba(34,197,94,.75)
+   Sombra neutra ........... 0 20px 40px -18px rgba(18,61,47,.45)
+   Transición estándar ..... .25s  ·  suave: cubic-bezier(.16,1,.3,1)
+   ============================================================ */
+
+* { box-sizing: border-box; }
+  body { margin: 0; background: #FAF9F5; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #123D2F; }
+  a { color: #123D2F; text-decoration: none; }
+  a:hover { color: #16794A; }
+  @keyframes waRise { from { opacity: 0; transform: translateY(7px) scale(.99); } to { opacity: 1; transform: none; } }
+  @keyframes waSheet { from { transform: translateY(101%); } to { transform: none; } }
+  @keyframes waFade { from { opacity: 0; } to { opacity: 1; } }
+  [data-noscrollbar]::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  @keyframes fiArrow { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(12px); } }
+  @keyframes fiGlowText { 0%, 100% { text-shadow: 0 0 14px rgba(37,211,102,.35), 0 0 30px rgba(37,211,102,.15); } 50% { text-shadow: 0 0 22px rgba(37,211,102,.85), 0 0 54px rgba(37,211,102,.5), 0 0 90px rgba(37,211,102,.25); } }
+  @keyframes fiNavShine { 0%, 78% { opacity: 0; transform: translateX(-115%); } 84% { opacity: 1; } 94%, 100% { opacity: 0; transform: translateX(115%); } }
+  @keyframes fiOpen { from { opacity: 0; transform: translateY(-8px); max-height: 0; } to { opacity: 1; transform: none; max-height: 620px; } }
+  @keyframes fiLetter { from { opacity: 0; transform: scale(2.6); filter: blur(12px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
+  @keyframes fiType { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fiRowIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+  @keyframes fiXray { 0% { top: -120px; } 46% { top: 100%; } 54% { top: 100%; } 100% { top: -120px; } }
+  @keyframes fiBlurIn { from { opacity: 0; filter: blur(14px); transform: translateY(10px); } to { opacity: 1; filter: blur(0); transform: none; } }
+  @keyframes fiFloatD { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-13px); } }
+  @keyframes fiBreath { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.16); opacity: 1; } }
+  @keyframes fiFlow { 0% { transform: translateY(-140%); } 100% { transform: translateY(400%); } }
+  @keyframes fiFloatA { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-11px); } }
+  @keyframes fiFloatB { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+  @keyframes fiFloatC { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes fiTwinkle { 0%, 100% { opacity: .55; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.12); } }
+  @keyframes fiBreathSoft { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+  @keyframes fiWrite { from { clip-path: inset(-.2em 100% -.2em 0); } to { clip-path: inset(-.2em -.35em -.2em 0); } }
+  @keyframes fiCue { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 9px); } }
+  @keyframes fiArrowY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
+  @keyframes fiHalo { 0%, 100% { opacity: .45; transform: scale(1); } 50% { opacity: .9; transform: scale(1.04); } }
+  html { overflow-x: hidden; }
+  @media (max-width: 1000px) {
+    [data-r="1col"], [data-r="flip"] { grid-template-columns: minmax(0,1fr) !important; gap: 44px !important; }
+    [data-r="flip"] > *:first-child { order: 2; }
+
+    [data-r="tri"] { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 26px !important; }
+    [data-r="faq"] { columns: 1 !important; }
+    [data-r="planes"] { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 16px !important; }
+    [data-r="contacto"] { grid-template-columns: minmax(0,1fr) !important; gap: 34px !important; padding: 8px 0 0 !important; }
+    [data-r="mapa"] { aspect-ratio: auto !important; height: 260px !important; min-height: 0 !important; flex: 0 0 auto !important; }
+    [data-r="mega"] { font-size: 76px !important; }
+  }
+  @media (max-width: 1000px) {
+    [data-r="paislabel"] { display: none !important; }
+  }
+  @media (max-width: 900px) {
+    [data-r="burger"] { display: grid !important; }
+    [data-r="navcta"], [data-r="navlinks"] { display: none !important; }
+    [data-r="sheet"][data-open="1"] { display: flex !important; }
+  }
+  @media (max-width: 700px) {
+    [data-r="doc"] { grid-template-columns: minmax(0,1fr) !important; gap: 8px !important; }
+    [data-r="doc"] > *:last-child { text-align: left !important; }
+    [data-r="planes"] { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+    [data-r="tri"] { grid-template-columns: minmax(0,1fr) !important; }
+    [data-r="campos"] { grid-template-columns: minmax(0,1fr) !important; }
+    [data-r="contacto"] { padding: 4px 0 0 !important; }
+    [data-r="mega"] { font-size: 56px !important; }
+    h1 { font-size: 36px !important; }
+    h2 { font-size: 31px !important; }
+    h3 { font-size: 19px !important; }
+  }
+  @media (max-width: 560px) {
+    [data-r="planes"] { grid-template-columns: minmax(0,1fr) !important; }
+  }
+  @media (max-width: 420px) {
+    [data-r="phone"] { zoom: .84; }
+    [data-r="mega"] { font-size: 46px !important; }
+    h1 { font-size: 31px !important; }
+    h2 { font-size: 27px !important; }
+  }
+  @keyframes fiFloatFab { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  @keyframes fiAura { 0%, 100% { opacity: .42; transform: scale(.9); } 50% { opacity: .95; transform: scale(1.1); } }
+  @keyframes fiPulseRing { 0% { transform: scale(1); opacity: .85; } 70% { opacity: 0; } 100% { transform: scale(2.1); opacity: 0; } }
+  @keyframes fiSurge { 0%, 74% { box-shadow: 0 12px 34px -8px rgba(37,211,102,.9), 0 0 0 1px rgba(255,255,255,.14) inset; transform: scale(1); } 82% { box-shadow: 0 12px 44px -4px rgba(37,211,102,1), 0 0 32px 8px rgba(37,211,102,.75), 0 0 0 1px rgba(255,255,255,.3) inset; transform: scale(1.11); } 90% { transform: scale(.98); } 100% { box-shadow: 0 12px 34px -8px rgba(37,211,102,.9), 0 0 0 1px rgba(255,255,255,.14) inset; transform: scale(1); } }
+  @keyframes fiOrbit { to { transform: rotate(360deg); } }
+  @keyframes fiShine { 0%, 82% { opacity: 0; transform: translateX(-120%); } 88% { opacity: 1; } 96%, 100% { opacity: 0; transform: translateX(120%); } }
+  @keyframes fiRing { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.55); opacity: 0; } }
+  @keyframes fiCaret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  @keyframes fiSweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
+  @keyframes fiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @keyframes fiAurora { 0%, 100% { transform: translate(0,0) scale(1); opacity: .5; } 50% { transform: translate(26px,-20px) scale(1.14); opacity: .78; } }
+  @keyframes fiPulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  @keyframes fiSubir { 0%, 100% { border-color: #B7C4BB; box-shadow: 0 0 0 0 rgba(34,197,94,0); background: #FBFCFA; } 50% { border-color: #22C55E; box-shadow: 0 0 0 5px rgba(34,197,94,.14), 0 0 24px -6px rgba(34,197,94,.7); background: #FFFFFF; } }
+  @keyframes fiSubirGlow { 0%, 100% { border-color: rgba(92,230,143,0); box-shadow: 0 0 0 0 rgba(34,197,94,0); } 50% { border-color: #5CE68F; box-shadow: 0 0 0 5px rgba(34,197,94,.16), 0 0 26px rgba(34,197,94,.5); } }
+  @keyframes fiFraseA { 0%, 42% { opacity: 1; transform: translateY(0); } 50%, 92% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: translateY(0); } }
+  @keyframes fiFraseB { 0%, 42% { opacity: 0; transform: translateY(6px); } 50%, 92% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(6px); } }
+  @keyframes fiSubirIcono { 0%, 100% { transform: translateY(0); opacity: .85; } 50% { transform: translateY(-3px); opacity: 1; } }
+  [data-r="listbox"]::-webkit-scrollbar { width: 9px; }
+  [data-r="listbox"]::-webkit-scrollbar-track { background: #FBFCFA; border-radius: 9px; }
+  [data-r="listbox"]::-webkit-scrollbar-thumb { background: #C4D2C8; border-radius: 9px; border: 2px solid #FBFCFA; }
+  [data-r="listbox"]::-webkit-scrollbar-thumb:hover { background: #16794A; }
+  @keyframes fiSheetIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+  @keyframes fiScan { 0% { transform: translateY(-100%); } 100% { transform: translateY(2400%); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }

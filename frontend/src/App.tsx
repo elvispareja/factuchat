@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import "./design/patron-factuchat.css";
 import "./design/tokens.css";
 import "./design/componentes.css";
 import "./shell/shell.css";

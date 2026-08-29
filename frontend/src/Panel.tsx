@@ -7,12 +7,12 @@ import { usePlan } from "./plan/PlanContexto";
 import { MuroPlan } from "./plan/Bloqueos";
 import { Cargando, ErrorSeccion } from "./ui/Estados";
 import { Inicio } from "./secciones/Inicio";
-import { Comprobantes } from "./secciones/Comprobantes";
+import { Comprobantes, type Filtro as FiltroComprobantes } from "./secciones/Comprobantes";
 import { Clientes } from "./secciones/Clientes";
-import { Catalogo } from "./secciones/Catalogo";
+import { Catalogo, type FiltroTipo as FiltroCatalogo } from "./secciones/Catalogo";
 import { Tienda } from "./secciones/Tienda";
 import { Reportes } from "./secciones/Reportes";
-import { Tutoriales } from "./secciones/Tutoriales";
+import { Tutoriales, type Tema as FiltroTutoriales } from "./secciones/Tutoriales";
 import { MiCuenta } from "./secciones/MiCuenta";
 import { SubirFirma } from "./secciones/SubirFirma";
 
@@ -22,10 +22,42 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
   const [navAbierta, setNavAbierta] = useState(false);
   const [avisoPlanes, setAvisoPlanes] = useState(false);
 
+  // Submenú activo por sección (Comprobantes/Catálogo) y sus conteos, para
+  // que la barra lateral refleje dónde está el cliente parado (maqueta:
+  // Dashboard.dc.html, submenús de Comprobantes y Artículos/Servicios).
+  const [filtroComprobantes, setFiltroComprobantes] = useState<FiltroComprobantes>("todos");
+  const [filtroCatalogo, setFiltroCatalogo] = useState<FiltroCatalogo>("todos");
+  const [filtroTutoriales, setFiltroTutoriales] = useState<FiltroTutoriales>("empezar");
+  const [conteosComprobantes, setConteosComprobantes] = useState<Record<string, number>>({});
+  const [conteosCatalogo, setConteosCatalogo] = useState<Record<string, number>>({});
+
   const ir = (destino: IdSeccion) => {
     setSeccion(destino);
     setNavAbierta(false);
   };
+
+  const irSub = (destino: IdSeccion, sub: string) => {
+    setSeccion(destino);
+    setNavAbierta(false);
+    if (destino === "comprobantes") setFiltroComprobantes(sub as FiltroComprobantes);
+    if (destino === "catalogo") setFiltroCatalogo(sub as FiltroCatalogo);
+    if (destino === "tutoriales") setFiltroTutoriales(sub as FiltroTutoriales);
+  };
+
+  const subactiva =
+    seccion === "comprobantes"
+      ? filtroComprobantes
+      : seccion === "catalogo"
+        ? filtroCatalogo
+        : seccion === "tutoriales"
+          ? filtroTutoriales
+          : undefined;
+  const conteosActivos =
+    seccion === "comprobantes"
+      ? conteosComprobantes
+      : seccion === "catalogo"
+        ? conteosCatalogo
+        : undefined;
 
   const encabezado = ENCABEZADOS[seccion];
   const verPlanes = () => {
@@ -52,6 +84,9 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
         onIr={ir}
         abierta={navAbierta}
         onCerrar={() => setNavAbierta(false)}
+        subactiva={subactiva}
+        onIrSub={irSub}
+        conteos={conteosActivos}
       />
 
       <main className="fc-main">
@@ -89,12 +124,28 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
         {plan && (
           <>
             {seccion === "inicio" && <Inicio onIr={ir} />}
-            {seccion === "comprobantes" && <Comprobantes onVerPlanes={verPlanes} />}
+            {seccion === "comprobantes" && (
+              <Comprobantes
+                onVerPlanes={verPlanes}
+                filtroExterno={filtroComprobantes}
+                onFiltro={setFiltroComprobantes}
+                onConteos={setConteosComprobantes}
+              />
+            )}
             {seccion === "clientes" && <Clientes onVerPlanes={verPlanes} />}
-            {seccion === "catalogo" && <Catalogo onVerPlanes={verPlanes} />}
+            {seccion === "catalogo" && (
+              <Catalogo
+                onVerPlanes={verPlanes}
+                filtroExterno={filtroCatalogo}
+                onFiltro={setFiltroCatalogo}
+                onConteos={setConteosCatalogo}
+              />
+            )}
             {seccion === "tienda" && <Tienda onVerPlanes={verPlanes} />}
             {seccion === "reportes" && <Reportes />}
-            {seccion === "tutoriales" && <Tutoriales />}
+            {seccion === "tutoriales" && (
+              <Tutoriales filtroExterno={filtroTutoriales} onFiltro={setFiltroTutoriales} />
+            )}
             {seccion === "cuenta" && <MiCuenta onVerPlanes={verPlanes} />}
           </>
         )}

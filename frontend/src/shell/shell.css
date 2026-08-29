@@ -58,6 +58,58 @@
   color: var(--verde-claro);
 }
 
+.fc-lateral__submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 6px 14px;
+  margin-bottom: 2px;
+  animation: dbTabIn 0.2s ease-out both;
+}
+.fc-lateral__subitem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 var(--radio-campo) var(--radio-campo) 0;
+  padding: 8px 12px 8px 15px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--texto-tenue-oscuro);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.fc-lateral__subitem:hover {
+  color: #dff3e7;
+}
+.fc-lateral__subitem[data-activa="1"] {
+  background: rgba(92, 230, 143, 0.12);
+  border-color: var(--verde-claro);
+  color: var(--verde-claro);
+}
+.fc-lateral__subpunto {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.fc-lateral__subitem[data-activa="1"] .fc-lateral__subpunto {
+  opacity: 1;
+}
+.fc-lateral__subcuenta {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
 .fc-main {
   padding: 26px 34px 70px;
   min-width: 0;

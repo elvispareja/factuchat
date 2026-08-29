@@ -227,7 +227,9 @@ export function Checkout({
 
   return (
     <div className="lp-checkout fc-scroll" role="dialog" aria-modal="true" aria-label="Finaliza tu pedido">
-      <div className="lp-ancho">
+      <div className="lp-checkout__fondo" aria-hidden="true" />
+      <div className="lp-checkout__blob" aria-hidden="true" />
+      <div className="lp-ancho" style={{ position: "relative", zIndex: 1 }}>
         <header
           style={{
             display: "flex",
@@ -655,14 +657,23 @@ function ModalBanco({
   return (
     <div className="lp-modal" onClick={onCerrar} role="dialog" aria-modal="true" aria-label="Transferencia bancaria">
       <div className="lp-modal__panel fc-scroll" onClick={(e) => e.stopPropagation()}>
-        <h3 className="lp-h2" style={{ fontSize: 21, marginBottom: 5 }}>
-          Transferencia bancaria
-        </h3>
-        <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--texto-suave)", margin: "0 0 20px" }}>
-          Transfiere el total a cualquiera de nuestras cuentas y sube el comprobante.
-        </p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
+          <div>
+            <h3 className="lp-h2" style={{ fontSize: 21, marginBottom: 5 }}>
+              Transferencia bancaria
+            </h3>
+            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--texto-suave)", margin: 0, maxWidth: "44ch" }}>
+              Transfiere el total a cualquiera de nuestras cuentas y sube el comprobante.
+            </p>
+          </div>
+          <button type="button" className="lp-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3E5A4E" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M5 5l14 14M19 5L5 19" />
+            </svg>
+          </button>
+        </div>
 
-        <p className="lp-eyebrow">Nuestras cuentas</p>
+        <p className="lp-modal__eyebrow" style={{ fontSize: 12.5, letterSpacing: ".06em" }}>Nuestras cuentas</p>
         <div
           style={{
             background: "var(--superficie-suave)",
@@ -727,36 +738,48 @@ function ModalBanco({
         <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 7 }}>
           Comprobante de la transferencia
         </label>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 13,
-            background: "var(--superficie-suave)",
-            border: "1px dashed var(--borde-campo)",
-            borderRadius: 14,
-            padding: "15px 17px",
-            cursor: "pointer",
-          }}
-        >
-          <span
-            aria-hidden="true"
-            style={{
-              width: 46,
-              height: 46,
-              flexShrink: 0,
-              borderRadius: 11,
-              border: "1px solid var(--borde)",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#D93025",
-              background: archivoUrl ? `center/cover url(${archivoUrl})` : "var(--superficie)",
-            }}
-          >
-            {archivo && !archivoUrl ? "PDF" : archivoUrl ? "" : "↑"}
-          </span>
+        <label className={`lp-dropzone${archivo ? "" : " lp-dropzone--vacio"}`}>
+          {archivoUrl ? (
+            <span
+              aria-hidden="true"
+              style={{
+                width: 46,
+                height: 46,
+                flexShrink: 0,
+                borderRadius: 11,
+                border: "1px solid var(--borde)",
+                background: `center/cover url(${archivoUrl})`,
+              }}
+            />
+          ) : archivo ? (
+            <span
+              aria-hidden="true"
+              style={{
+                width: 46,
+                height: 46,
+                flexShrink: 0,
+                borderRadius: 11,
+                background: "var(--superficie)",
+                border: "1px solid var(--borde)",
+                display: "grid",
+                placeItems: "center",
+                fontFamily: "var(--fuente-titulo)",
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#D93025",
+              }}
+            >
+              PDF
+            </span>
+          ) : (
+            <span className="lp-dropzone__icono" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#16794A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 17V5" />
+                <path d="M6 11l6-6 6 6" />
+                <path d="M4 19h16" />
+              </svg>
+            </span>
+          )}
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 14, fontWeight: 600 }}>
               {archivo ? archivo.name : "Sube tu comprobante"}
@@ -812,47 +835,69 @@ export function ModalLegal({
   return (
     <div className="lp-modal" onClick={onCerrar} role="dialog" aria-modal="true" aria-label="Términos">
       <div
-        className="lp-modal__panel fc-scroll"
-        style={{ maxWidth: 720 }}
+        className="lp-modal__panel lp-modal__panel--legal"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="lp-h2" style={{ fontSize: 22, marginBottom: 4 }}>
-          {doc?.titulo ?? "Términos de uso y tratamiento de datos"}
-        </h3>
-        {doc && (
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "0 0 18px" }}>
-            Versión {doc.version}
-          </p>
-        )}
-        {doc ? (
-          doc.secciones.map((s) => (
-            <section key={s.encabezado} style={{ marginBottom: 18 }}>
-              <h4 style={{ fontFamily: "var(--fuente-titulo)", fontSize: 15.5, margin: "0 0 6px" }}>
-                {s.encabezado}
-              </h4>
-              {s.parrafos.map((p, i) => (
-                <p
-                  key={i}
-                  style={{ fontSize: 14, lineHeight: 1.62, color: "var(--texto-suave)", margin: "0 0 8px" }}
-                >
-                  {p}
-                </p>
-              ))}
-            </section>
-          ))
-        ) : (
-          <p style={{ fontSize: 14, color: "var(--texto-suave)" }}>Cargando el documento…</p>
-        )}
-        {doc && (
-          <p style={{ fontSize: 12, color: "var(--texto-tenue)", marginBottom: 18 }}>{doc.pie}</p>
-        )}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="lp-modal__header">
+          <div>
+            <p className="lp-modal__eyebrow">Documento legal</p>
+            <h3 className="lp-modal__titulo">
+              {doc?.titulo ?? "Términos de uso y tratamiento de datos"}
+            </h3>
+          </div>
+          <button type="button" className="lp-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3E5A4E" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M5 5l14 14M19 5L5 19" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="lp-modal__cuerpo fc-scroll">
+          {doc && (
+            <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "0 0 18px" }}>
+              Versión {doc.version}
+            </p>
+          )}
+          {doc ? (
+            doc.secciones.map((s) => (
+              <section key={s.encabezado}>
+                <h4>{s.encabezado}</h4>
+                {s.parrafos.map((p, i) => (
+                  <p
+                    key={i}
+                    style={{ fontSize: 14, lineHeight: 1.65, color: "var(--texto-suave)", margin: "0 0 12px" }}
+                  >
+                    {p}
+                  </p>
+                ))}
+              </section>
+            ))
+          ) : (
+            <p style={{ fontSize: 14, color: "var(--texto-suave)" }}>Cargando el documento…</p>
+          )}
+          {doc && (
+            <div
+              style={{
+                marginTop: 22,
+                paddingTop: 16,
+                borderTop: "1px solid #EFF2EE",
+                fontSize: 12.5,
+                color: "var(--texto-tenue)",
+              }}
+            >
+              {doc.pie}
+            </div>
+          )}
+        </div>
+
+        <div className="lp-modal__pie">
           {/* Fuera del checkout el documento solo se lee: aceptar sin un pedido
               de por medio no significaría nada. */}
           {onAceptar && (
             <button
               type="button"
               className="lp-btn lp-btn--verde"
+              style={{ flex: 1 }}
               onClick={onAceptar}
               disabled={!doc}
             >
@@ -878,63 +923,94 @@ function PedidoConfirmado({
   onCerrar: () => void;
 }) {
   return (
-    <section style={{ maxWidth: 640, margin: "0 auto", textAlign: "center" }}>
-      <div
-        aria-hidden="true"
-        style={{
-          width: 62,
-          height: 62,
-          margin: "0 auto 18px",
-          borderRadius: "50%",
-          background: "rgba(34,197,94,.14)",
-          border: "1px solid rgba(22,121,74,.3)",
-          display: "grid",
-          placeItems: "center",
-          fontSize: 26,
-          color: "var(--verde-medio)",
-        }}
-      >
-        ✓
-      </div>
-      <p className="lp-firma" style={{ fontSize: 40 }}>
-        ¡Gracias!
-      </p>
-      <h1 className="lp-h2" style={{ fontSize: 30 }}>
-        Recibimos tu pedido.
-      </h1>
-      <p className="lp-bajada" style={{ margin: "0 auto 24px" }}>
-        {datos.siguiente_paso}
-      </p>
+    <section style={{ maxWidth: 640, margin: "24px auto 0" }}>
+      <div className="lp-ok-card">
+        <div style={{ textAlign: "center" }}>
+          <div className="lp-ok-check">
+            <span className="lp-ok-check__anillo" aria-hidden="true" />
+            <span className="lp-ok-check__circulo" aria-hidden="true">
+              <svg width="31" height="31" viewBox="0 0 24 24" fill="none" stroke="#16794A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12.5l5.5 5.5L20 7" />
+              </svg>
+            </span>
+          </div>
 
-      <div className="lp-tres" style={{ marginBottom: 24 }}>
-        <div className="lp-tarjeta">
-          <p className="lp-eyebrow">Pedido</p>
-          <strong className="fc-mono" style={{ fontSize: 16 }}>
-            {datos.referencia}
-          </strong>
+          <p className="lp-firma" style={{ fontSize: 26, marginBottom: 10 }}>
+            ¡Gracias!
+          </p>
+          <h2 className="lp-h2" style={{ fontSize: 33, margin: "0 0 12px" }}>
+            Recibimos tu pedido.
+          </h2>
+          <p className="lp-bajada" style={{ margin: "0 auto 26px", maxWidth: "46ch" }}>
+            {datos.siguiente_paso}
+          </p>
+
+          <div className="lp-ok-estado">
+            <span className="lp-ok-estado__punto" aria-hidden="true" />
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: "#16794A", whiteSpace: "nowrap" }}>
+              Pedido registrado
+            </span>
+          </div>
         </div>
-        <div className="lp-tarjeta">
-          <p className="lp-eyebrow">Plan</p>
-          <strong style={{ fontSize: 16 }}>{datos.plan}</strong>
+
+        <div className="lp-ok-grid">
+          <div>
+            <div className="lp-ok-grid__etq">Pedido</div>
+            <div className="lp-ok-grid__val fc-mono">{datos.referencia}</div>
+          </div>
+          <div>
+            <div className="lp-ok-grid__etq">Plan</div>
+            <div className="lp-ok-grid__val">{datos.plan}</div>
+          </div>
+          <div>
+            <div className="lp-ok-grid__etq">Total</div>
+            <div className="lp-ok-grid__val">${Number(datos.precio).toFixed(2)}</div>
+          </div>
         </div>
-        <div className="lp-tarjeta">
-          <p className="lp-eyebrow">Total</p>
-          <strong style={{ fontSize: 16 }}>${Number(datos.precio).toFixed(2)}</strong>
+
+        <div className="lp-ok-pasos">
+          <div className="lp-ok-pasos__titulo">Qué sigue</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="lp-ok-paso">
+              <span className="lp-ok-paso__n">1</span>
+              <div className="lp-ok-paso__texto">
+                <strong>Un asesor te escribe por WhatsApp</strong> para confirmar tu pedido.
+              </div>
+            </div>
+            <div className="lp-ok-paso">
+              <span className="lp-ok-paso__n">2</span>
+              <div className="lp-ok-paso__texto">
+                <strong>Activamos tu cuenta</strong> y cargamos tu firma electrónica contigo, paso a paso.
+              </div>
+            </div>
+            <div className="lp-ok-paso">
+              <span className="lp-ok-paso__n lp-ok-paso__n--activo">3</span>
+              <div className="lp-ok-paso__texto">
+                <strong>Emites tu primera factura</strong> desde el chat, el mismo día.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {config && (
-        <div
-          className="lp-oscuro"
-          style={{ borderRadius: "var(--radio-tarjeta-grande)", padding: "18px 22px", marginBottom: 22 }}
-        >
-          <p style={{ fontSize: 13.5, margin: 0, color: "#A6BFB2" }}>
-            Horario de atención: {config.horario}
-          </p>
+        <div className="lp-ok-horario">
+          <span className="lp-ok-horario__icono" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5CE68F" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7.5V12l3 2" />
+            </svg>
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "var(--fuente-titulo)", fontSize: 15.5, fontWeight: 700, letterSpacing: "-.02em", color: "#FFFFFF", marginBottom: 2 }}>
+              Horario de atención
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.5, color: "#A6BFB2" }}>{config.horario}</div>
+          </div>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 26 }}>
         {datos.wa_link && (
           <a className="lp-btn lp-btn--verde" href={datos.wa_link} target="_blank" rel="noreferrer noopener">
             Escribirnos ahora

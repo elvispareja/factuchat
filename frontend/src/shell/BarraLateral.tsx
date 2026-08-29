@@ -9,9 +9,26 @@ interface Props {
   onIr: (seccion: IdSeccion) => void;
   abierta: boolean;
   onCerrar: () => void;
+  /** Subsección activa dentro de "comprobantes" o "catalogo" (el filtro que
+   *  se está mirando ahora mismo), para reflejarla en el submenú. */
+  subactiva?: string;
+  /** Cambia de subsección sin salir de la sección — se usa al tocar un ítem
+   *  del submenú. */
+  onIrSub?: (seccion: IdSeccion, subseccion: string) => void;
+  /** Cuántos hay por cada id de subsección, para el conteo del submenú
+   *  activo (maqueta: "Todos 9", "Facturas 6", …). */
+  conteos?: Record<string, number>;
 }
 
-export function BarraLateral({ activa, onIr, abierta, onCerrar }: Props) {
+export function BarraLateral({
+  activa,
+  onIr,
+  abierta,
+  onCerrar,
+  subactiva,
+  onIrSub,
+  conteos,
+}: Props) {
   const { plan, permite } = usePlan();
 
   return (
@@ -133,34 +150,73 @@ export function BarraLateral({ activa, onIr, abierta, onCerrar }: Props) {
         {MENU.map((item) => {
           const bloqueado = Boolean(item.requiere) && !permite(item.requiere!);
           const seleccionada = activa === item.id;
+          const desplegado = seleccionada && Boolean(item.submenu);
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onIr(item.id)}
-              aria-current={seleccionada ? "page" : undefined}
-              className="fc-lateral__item"
-              data-activa={seleccionada ? "1" : "0"}
-            >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d={item.icono}
-                  stroke="currentColor"
-                  strokeWidth="1.9"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
-              {bloqueado && (
-                <span
-                  style={{ opacity: 0.65, display: "grid" }}
-                  aria-label="Viene con un plan superior"
-                >
-                  <IconoCandado tamano={14} />
-                </span>
+            <div key={item.id}>
+              <button
+                type="button"
+                onClick={() => onIr(item.id)}
+                aria-current={seleccionada ? "page" : undefined}
+                aria-expanded={item.submenu ? desplegado : undefined}
+                className="fc-lateral__item"
+                data-activa={seleccionada ? "1" : "0"}
+              >
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d={item.icono}
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
+                {bloqueado && (
+                  <span
+                    style={{ opacity: 0.65, display: "grid" }}
+                    aria-label="Viene con un plan superior"
+                  >
+                    <IconoCandado tamano={14} />
+                  </span>
+                )}
+                {item.submenu && !bloqueado && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    style={{
+                      transition: "transform .2s ease",
+                      transform: desplegado ? "rotate(180deg)" : "none",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+
+              {desplegado && !bloqueado && (
+                <div className="fc-lateral__submenu" role="group" aria-label={`Filtrar ${item.label}`}>
+                  {item.submenu!.map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className="fc-lateral__subitem"
+                      data-activa={subactiva === sub.id ? "1" : "0"}
+                      onClick={() => onIrSub?.(item.id, sub.id)}
+                    >
+                      <span className="fc-lateral__subpunto" aria-hidden="true" />
+                      {sub.label}
+                      {conteos && conteos[sub.id] !== undefined && (
+                        <span className="fc-lateral__subcuenta">{conteos[sub.id]}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
+            </div>
           );
         })}
       </nav>

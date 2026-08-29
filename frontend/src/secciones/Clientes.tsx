@@ -16,6 +16,7 @@ export function Clientes({ onVerPlanes }: { onVerPlanes: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [importando, setImportando] = useState(false);
+  const [editando, setEditando] = useState<ClienteFinal | "nuevo" | null>(null);
 
   const cargar = () =>
     api
@@ -84,7 +85,12 @@ export function Clientes({ onVerPlanes }: { onVerPlanes: () => void }) {
             >
               Importar desde Excel
             </button>
-            <button type="button" className="fc-btn fc-btn--primario">
+            <button
+              type="button"
+              className="fc-btn fc-btn--primario"
+              disabled={topeLleno}
+              onClick={() => setEditando("nuevo")}
+            >
               Nuevo cliente
             </button>
           </div>
@@ -155,7 +161,11 @@ export function Clientes({ onVerPlanes }: { onVerPlanes: () => void }) {
                     <tr
                       key={c.id}
                       // Los que exceden el tope se atenúan pero siguen usables
-                      style={tope > 0 && i >= tope ? { opacity: 0.45 } : undefined}
+                      style={{
+                        cursor: "pointer",
+                        ...(tope > 0 && i >= tope ? { opacity: 0.45 } : undefined),
+                      }}
+                      onClick={() => setEditando(c)}
                     >
                       <td style={{ fontWeight: 600 }}>{c.razon_social}</td>
                       <td className="fc-mono">
@@ -174,6 +184,194 @@ export function Clientes({ onVerPlanes }: { onVerPlanes: () => void }) {
           )}
         </section>
       )}
+
+      {editando && (
+        <FormularioCliente
+          cliente={editando === "nuevo" ? null : editando}
+          onCerrar={() => setEditando(null)}
+          onGuardado={async () => {
+            setEditando(null);
+            await cargar();
+            await recargar();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const TIPOS_ID: Array<{ id: ClienteFinal["tipo_identificacion"]; label: string }> = [
+  { id: "CEDULA", label: "Cédula" },
+  { id: "RUC", label: "RUC" },
+  { id: "PASAPORTE", label: "Pasaporte" },
+  { id: "ID_EXTERIOR", label: "Identificación del exterior" },
+  { id: "CONSUMIDOR_FINAL", label: "Consumidor final" },
+];
+
+function FormularioCliente({
+  cliente,
+  onCerrar,
+  onGuardado,
+}: {
+  cliente: ClienteFinal | null;
+  onCerrar: () => void;
+  onGuardado: () => void;
+}) {
+  const [tipoId, setTipoId] = useState<ClienteFinal["tipo_identificacion"]>(
+    cliente?.tipo_identificacion ?? "CEDULA",
+  );
+  const [identificacion, setIdentificacion] = useState(cliente?.identificacion ?? "");
+  const [razonSocial, setRazonSocial] = useState(cliente?.razon_social ?? "");
+  const [email, setEmail] = useState(cliente?.email ?? "");
+  const [telefono, setTelefono] = useState(cliente?.telefono ?? "");
+  const [direccion, setDireccion] = useState(cliente?.direccion ?? "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const cuerpo = {
+      tipo_identificacion: tipoId,
+      identificacion: identificacion.trim(),
+      razon_social: razonSocial.trim(),
+      email: email.trim() || null,
+      telefono: telefono.trim() || null,
+      direccion: direccion.trim() || null,
+    };
+    try {
+      if (cliente) {
+        await api.put(`/clientes/${cliente.id}`, cuerpo);
+      } else {
+        await api.post("/clientes", cuerpo);
+      }
+      onGuardado();
+    } catch (e) {
+      setError(
+        e instanceof ErrorLimitePlan
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : "No pudimos guardar el cliente",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  const valido = identificacion.trim().length >= 3 && razonSocial.trim().length >= 2;
+
+  return (
+    <div className="fc-modal" role="dialog" aria-modal="true" aria-label="Cliente">
+      <div className="fc-modal__panel" style={{ maxWidth: 520 }}>
+        <p className="fc-kicker">{cliente ? "Editar cliente" : "Nuevo cliente"}</p>
+        <h2 className="fc-titulo" style={{ fontSize: 20, marginBottom: 18 }}>
+          {cliente ? cliente.razon_social : "Agregar a tu libreta"}
+        </h2>
+
+        <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label className="fc-label" htmlFor="cf-tipo">
+                Tipo de identificación
+              </label>
+              <select
+                id="cf-tipo"
+                className="fc-campo"
+                value={tipoId}
+                onChange={(e) => setTipoId(e.target.value as ClienteFinal["tipo_identificacion"])}
+              >
+                {TIPOS_ID.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="fc-label" htmlFor="cf-id">
+                Número
+              </label>
+              <input
+                id="cf-id"
+                className="fc-campo fc-mono"
+                value={identificacion}
+                onChange={(e) => setIdentificacion(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="fc-label" htmlFor="cf-nombre">
+              Nombre o razón social
+            </label>
+            <input
+              id="cf-nombre"
+              className="fc-campo"
+              value={razonSocial}
+              onChange={(e) => setRazonSocial(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label className="fc-label" htmlFor="cf-email">
+                Correo
+              </label>
+              <input
+                id="cf-email"
+                type="email"
+                className="fc-campo"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="fc-label" htmlFor="cf-telefono">
+                Teléfono
+              </label>
+              <input
+                id="cf-telefono"
+                className="fc-campo"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="fc-label" htmlFor="cf-direccion">
+              Dirección
+            </label>
+            <input
+              id="cf-direccion"
+              className="fc-campo"
+              value={direccion}
+              onChange={(e) => setDireccion(e.target.value)}
+            />
+          </div>
+
+          {error && (
+            <p className="fc-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button type="button" className="fc-btn fc-btn--contorno" onClick={onCerrar}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="fc-btn fc-btn--primario"
+              disabled={!valido || guardando}
+              onClick={() => void guardar()}
+            >
+              {guardando ? "Guardando…" : cliente ? "Guardar cambios" : "Agregar"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,11 @@ export type IdSeccion =
   | "tutoriales"
   | "cuenta";
 
+export interface SubitemMenu {
+  id: string;
+  label: string;
+}
+
 export interface ItemMenu {
   id: IdSeccion;
   label: string;
@@ -20,7 +25,37 @@ export interface ItemMenu {
   requiere?: FuncionPlan;
   /** Trazado del icono (24x24), tal cual la maqueta. */
   icono: string;
+  /** Submenú que se despliega cuando la sección está activa (maqueta:
+   *  Comprobantes y Artículos/Servicios reflejan ahí el filtro elegido). */
+  submenu?: SubitemMenu[];
 }
+
+/** Los filtros de Comprobantes (Comprobantes.tsx) espejados aquí para que la
+ *  barra lateral y la sección compartan el mismo id. */
+export const SUBMENU_COMPROBANTES: SubitemMenu[] = [
+  { id: "todos", label: "Todos" },
+  { id: "factura", label: "Facturas" },
+  { id: "credito", label: "Notas de crédito" },
+  { id: "debito", label: "Notas de débito" },
+  { id: "retencion", label: "Retenciones" },
+  { id: "guia", label: "Guías de remisión" },
+];
+
+/** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio. */
+export const SUBMENU_CATALOGO: SubitemMenu[] = [
+  { id: "todos", label: "Todos" },
+  { id: "articulo", label: "Artículos" },
+  { id: "servicio", label: "Servicios" },
+];
+
+/** Los cinco temas de Tutoriales.tsx, mismo criterio. */
+export const SUBMENU_TUTORIALES: SubitemMenu[] = [
+  { id: "empezar", label: "Cómo usar el sistema" },
+  { id: "comprobantes", label: "Entender los comprobantes" },
+  { id: "declarar", label: "Mis pagos tributarios" },
+  { id: "inventario", label: "Inventario y tienda" },
+  { id: "plan", label: "Tu plan" },
+];
 
 export const MENU: ItemMenu[] = [
   { id: "inicio", label: "Inicio", icono: "M4 11.2L12 4l8 7.2V20a1 1 0 01-1 1h-4.5v-6h-5v6H5a1 1 0 01-1-1z" },
@@ -28,6 +63,7 @@ export const MENU: ItemMenu[] = [
     id: "comprobantes",
     label: "Comprobantes",
     icono: "M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1zM14 3v5h5M9 13h6M9 17h4",
+    submenu: SUBMENU_COMPROBANTES,
   },
   {
     id: "clientes",
@@ -39,6 +75,7 @@ export const MENU: ItemMenu[] = [
     id: "catalogo",
     label: "Artículos/Servicios",
     icono: "M21 8.5l-9-5-9 5v7l9 5 9-5zM3 8.5l9 5 9-5M12 13.5V20",
+    submenu: SUBMENU_CATALOGO,
   },
   {
     id: "tienda",
@@ -52,6 +89,7 @@ export const MENU: ItemMenu[] = [
     label: "Tutoriales",
     icono:
       "M4 5.5A2.5 2.5 0 016.5 3H12v17H6.5A2.5 2.5 0 004 22.5zM20 5.5A2.5 2.5 0 0017.5 3H12v17h5.5a2.5 2.5 0 012.5 2.5z",
+    submenu: SUBMENU_TUTORIALES,
   },
   {
     id: "cuenta",

@@ -377,9 +377,15 @@ function Ficha({
   const [motivo, setMotivo] = useState("");
   const [ficha, setFicha] = useState<FichaCliente | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [accion, setAccion] = useState<"impersonar" | "suspender" | null>(null);
+  const [accion, setAccion] = useState<"impersonar" | "suspender" | "editar" | null>(null);
   const [motivoAccion, setMotivoAccion] = useState("");
   const [trabajando, setTrabajando] = useState(false);
+  const [datosEdicion, setDatosEdicion] = useState({
+    razon_social: "",
+    nombre_comercial: "",
+    email: "",
+    telefono: "",
+  });
 
   async function abrir() {
     setError(null);
@@ -402,6 +408,15 @@ function Ficha({
       } else if (accion === "suspender") {
         await sa.cambiarEstado(cliente.id, "SUSPENDIDO", motivoAccion.trim());
         onVolver();
+      } else if (accion === "editar") {
+        await sa.editarCliente(cliente.id, {
+          razon_social: datosEdicion.razon_social.trim(),
+          nombre_comercial: datosEdicion.nombre_comercial.trim() || null,
+          email: datosEdicion.email.trim(),
+          telefono: datosEdicion.telefono.trim() || null,
+          motivo: motivoAccion.trim(),
+        });
+        setFicha(await sa.ficha(cliente.id, motivo.trim()));
       }
       setAccion(null);
       setMotivoAccion("");
@@ -498,6 +513,21 @@ function Ficha({
                 <button
                   type="button"
                   className="fc-btn fc-btn--contorno"
+                  onClick={() => {
+                    setDatosEdicion({
+                      razon_social: ficha.razon_social,
+                      nombre_comercial: ficha.nombre_comercial ?? "",
+                      email: ficha.email,
+                      telefono: ficha.telefono ?? "",
+                    });
+                    setAccion("editar");
+                  }}
+                >
+                  Editar datos
+                </button>
+                <button
+                  type="button"
+                  className="fc-btn fc-btn--contorno"
                   onClick={() => setAccion("impersonar")}
                 >
                   Entrar como este cliente
@@ -524,15 +554,76 @@ function Ficha({
                   <p style={{ fontSize: 13.5, fontWeight: 600, margin: "0 0 4px" }}>
                     {accion === "impersonar"
                       ? `Vas a entrar en la cuenta de ${ficha.razon_social}`
-                      : `Vas a suspender a ${ficha.razon_social}`}
+                      : accion === "suspender"
+                        ? `Vas a suspender a ${ficha.razon_social}`
+                        : `Vas a editar los datos de ${ficha.razon_social}`}
                   </p>
                   <p style={{ fontSize: 13, color: "var(--texto-suave)", margin: "0 0 12px" }}>
                     {accion === "impersonar"
                       ? "Verás su panel como si fueras el cliente, y cada acción quedará registrada a tu nombre. La sesión dura 30 minutos."
-                      : "El cliente dejará de poder emitir hasta que lo reactives."}
+                      : accion === "suspender"
+                        ? "El cliente dejará de poder emitir hasta que lo reactives."
+                        : "Corrige razón social, nombre comercial, correo o teléfono. El RUC no se puede cambiar."}
                   </p>
+
+                  {accion === "editar" && (
+                    <div style={{ display: "grid", gap: 12, marginBottom: 14 }}>
+                      <div>
+                        <label className="fc-label" htmlFor="ed-razon-social">
+                          Razón social
+                        </label>
+                        <input
+                          id="ed-razon-social"
+                          className="fc-campo"
+                          value={datosEdicion.razon_social}
+                          onChange={(e) =>
+                            setDatosEdicion((d) => ({ ...d, razon_social: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="fc-label" htmlFor="ed-nombre-comercial">
+                          Nombre comercial
+                        </label>
+                        <input
+                          id="ed-nombre-comercial"
+                          className="fc-campo"
+                          value={datosEdicion.nombre_comercial}
+                          onChange={(e) =>
+                            setDatosEdicion((d) => ({ ...d, nombre_comercial: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="fc-label" htmlFor="ed-email">
+                          Correo
+                        </label>
+                        <input
+                          id="ed-email"
+                          type="email"
+                          className="fc-campo"
+                          value={datosEdicion.email}
+                          onChange={(e) => setDatosEdicion((d) => ({ ...d, email: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="fc-label" htmlFor="ed-telefono">
+                          Teléfono
+                        </label>
+                        <input
+                          id="ed-telefono"
+                          className="fc-campo"
+                          value={datosEdicion.telefono}
+                          onChange={(e) =>
+                            setDatosEdicion((d) => ({ ...d, telefono: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <label className="fc-label" htmlFor="motivo-accion">
-                    Motivo (mínimo 10 caracteres)
+                    Motivo ({accion === "editar" ? "mínimo 5" : "mínimo 10"} caracteres)
                   </label>
                   <input
                     id="motivo-accion"
@@ -559,7 +650,13 @@ function Ficha({
                     <button
                       type="button"
                       className="fc-btn fc-btn--primario"
-                      disabled={trabajando || motivoAccion.trim().length < 10}
+                      disabled={
+                        trabajando ||
+                        motivoAccion.trim().length < (accion === "editar" ? 5 : 10) ||
+                        (accion === "editar" &&
+                          (datosEdicion.razon_social.trim().length < 2 ||
+                            !datosEdicion.email.trim()))
+                      }
                       onClick={() => void confirmar()}
                     >
                       {trabajando ? "Registrando…" : "Confirmar"}

@@ -1,8 +1,8 @@
 /** Tutoriales (maqueta líneas 1103-1158), con los cinco temas de subTut. */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type Tema = "empezar" | "comprobantes" | "declarar" | "inventario" | "plan";
+export type Tema = "empezar" | "comprobantes" | "declarar" | "inventario" | "plan";
 
 const TEMAS: Array<{ id: Tema; label: string; titulo: string }> = [
   { id: "empezar", label: "Empezar", titulo: "Cómo usar el sistema" },
@@ -12,8 +12,24 @@ const TEMAS: Array<{ id: Tema; label: string; titulo: string }> = [
   { id: "plan", label: "Tu plan", titulo: "Tu plan" },
 ];
 
-export function Tutoriales() {
-  const [tema, setTema] = useState<Tema>("empezar");
+interface Props {
+  filtroExterno?: Tema;
+  onFiltro?: (t: Tema) => void;
+}
+
+export function Tutoriales({ filtroExterno, onFiltro }: Props = {}) {
+  const [tema, setTemaInterno] = useState<Tema>(filtroExterno ?? "empezar");
+
+  useEffect(() => {
+    if (filtroExterno && filtroExterno !== tema) setTemaInterno(filtroExterno);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroExterno]);
+
+  function setTema(t: Tema) {
+    setTemaInterno(t);
+    onFiltro?.(t);
+  }
+
   const activo = TEMAS.find((t) => t.id === tema)!;
 
   return (

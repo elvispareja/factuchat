@@ -18,6 +18,14 @@ class EstadoTenantIn(BaseModel):
     motivo: str = Field(min_length=5, max_length=300)
 
 
+class EditarClienteIn(BaseModel):
+    razon_social: str = Field(min_length=2, max_length=300)
+    nombre_comercial: str | None = Field(default=None, max_length=300)
+    email: EmailStr
+    telefono: str | None = Field(default=None, max_length=20)
+    motivo: str = Field(min_length=5, max_length=300)
+
+
 class PromoCodeIn(BaseModel):
     codigo: str = Field(min_length=3, max_length=50, pattern=r"^[A-Z0-9_-]+$")
     descripcion: str | None = Field(default=None, max_length=500)

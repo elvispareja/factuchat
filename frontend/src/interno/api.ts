@@ -287,6 +287,16 @@ export const sa = {
     api.get<FichaCliente>(`/sa/clientes/${id}?motivo=${encodeURIComponent(motivo)}`),
   cambiarEstado: (id: string, estado: string, motivo: string) =>
     api.post<void>(`/sa/clientes/${id}/estado`, { estado, motivo }),
+  editarCliente: (
+    id: string,
+    datos: {
+      razon_social: string;
+      nombre_comercial: string | null;
+      email: string;
+      telefono: string | null;
+      motivo: string;
+    },
+  ) => api.put<void>(`/sa/clientes/${id}`, datos),
   impersonar: (id: string, motivo: string) =>
     api.post<SesionImpersonacion>(`/sa/clientes/${id}/impersonar`, { motivo }),
   salirImpersonacion: (id: string) => api.post<void>(`/sa/impersonaciones/${id}/salir`),

@@ -11,7 +11,7 @@ import { Retenciones } from "./Retenciones";
 import { ETIQUETA_TIPO, dinero, fechaCorta, tonoEstado } from "../util/formato";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
 
-type Filtro = "todos" | "factura" | "credito" | "debito" | "retencion" | "guia";
+export type Filtro = "todos" | "factura" | "credito" | "debito" | "retencion" | "guia";
 
 const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "todos", label: "Todos", tipos: [] },
@@ -22,10 +22,32 @@ const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "guia", label: "Guías de remisión", tipos: ["GUIA_REMISION"] },
 ];
 
-export function Comprobantes({ onVerPlanes }: { onVerPlanes: () => void }) {
+interface Props {
+  onVerPlanes: () => void;
+  /** Filtro pedido desde la barra lateral (al tocar un ítem del submenú). */
+  filtroExterno?: Filtro;
+  /** Avisa a la barra lateral qué filtro quedó activo, para resaltarlo ahí. */
+  onFiltro?: (f: Filtro) => void;
+  /** Avisa a la barra lateral cuántos hay por filtro, para el conteo del
+   *  submenú (maqueta: "Todos 9", "Facturas 6", …). */
+  onConteos?: (c: Record<string, number>) => void;
+}
+
+export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }: Props) {
   const { permite } = usePlan();
-  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [filtro, setFiltroInterno] = useState<Filtro>(filtroExterno ?? "todos");
   const [busqueda, setBusqueda] = useState("");
+
+  // La barra lateral es la fuente de verdad cuando manda un filtro nuevo
+  useEffect(() => {
+    if (filtroExterno && filtroExterno !== filtro) setFiltroInterno(filtroExterno);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroExterno]);
+
+  function setFiltro(f: Filtro) {
+    setFiltroInterno(f);
+    onFiltro?.(f);
+  }
   const [docs, setDocs] = useState<TComprobante[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +85,11 @@ export function Comprobantes({ onVerPlanes }: { onVerPlanes: () => void }) {
     }
     return cuenta;
   }, [docs]);
+
+  useEffect(() => {
+    onConteos?.(cuentaPorFiltro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cuentaPorFiltro]);
 
   // La bandeja de retenciones recibidas exige la bandera `archivos` del plan
   if (filtro === "retencion" && !permite("archivos")) {

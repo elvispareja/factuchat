@@ -26,6 +26,7 @@ from app.schemas.superadmin import (
     AltaClienteIn,
     AvisosIn,
     CambioPrecioIn,
+    EditarClienteIn,
     EstadoTenantIn,
     ImpersonarIn,
     PromoCodeIn,
@@ -253,6 +254,31 @@ def ficha(
             "vence": f["cert_vence"].isoformat() if f["cert_vence"] else None,
         },
     }
+
+
+@router.put("/clientes/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
+def editar_cliente(
+    tenant_id: uuid.UUID,
+    body: EditarClienteIn,
+    request: Request,
+    user: AuthUser = Depends(PUEDE_ACTUAR),
+    db: Session = Depends(get_db),
+):
+    _sa(
+        db,
+        "SELECT sa_editar_cliente(:t, :rs, :nc, :em, :tel, :m, :ip, :ua)",
+        {
+            "t": str(tenant_id),
+            "rs": body.razon_social,
+            "nc": body.nombre_comercial,
+            "em": body.email,
+            "tel": body.telefono,
+            "m": body.motivo,
+            "ip": client_ip(request),
+            "ua": _ua(request),
+        },
+    )
+    return None
 
 
 @router.post("/clientes/{tenant_id}/estado", status_code=status.HTTP_204_NO_CONTENT)
