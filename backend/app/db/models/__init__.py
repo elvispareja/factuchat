@@ -24,14 +24,27 @@ from app.db.models.core import (
     UserSession,
 )
 from app.db.models.interno import Impersonacion
-from app.db.models.negocio import ClienteFinal, Comprobante, Producto
+from app.db.models.negocio import (
+    Atributo,
+    AtributoValor,
+    Categoria,
+    ClienteFinal,
+    Comprobante,
+    Producto,
+    ProductoAtributo,
+    ProductoVariante,
+    VarianteAtributo,
+)
 from app.db.models.tienda import AceptacionTerminos, Pedido, SolicitudContacto
 
 __all__ = [
     "AceptacionTerminos",
     "AnalisisIA",
+    "Atributo",
+    "AtributoValor",
     "AuditLog",
     "BuzonCorreo",
+    "Categoria",
     "Certificado",
     "ClienteFinal",
     "Comprobante",
@@ -45,6 +58,8 @@ __all__ = [
     "Pedido",
     "Plan",
     "Producto",
+    "ProductoAtributo",
+    "ProductoVariante",
     "PromoCode",
     "PromoUse",
     "Recarga",
@@ -55,5 +70,6 @@ __all__ = [
     "Tenant",
     "User",
     "UserSession",
+    "VarianteAtributo",
     "WhatsappMsg",
 ]

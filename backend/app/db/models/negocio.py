@@ -38,8 +38,132 @@ class ClienteFinal(UUIDPk, Timestamps, Base):
     email: Mapped[str | None] = mapped_column(String(320))
     telefono: Mapped[str | None] = mapped_column(String(20))
     direccion: Mapped[str | None] = mapped_column(Text)
+    # Texto libre: el catálogo de provincias/cantones vive en el frontend.
+    provincia: Mapped[str | None] = mapped_column(String(100))
+    ciudad: Mapped[str | None] = mapped_column(String(100))
 
     __table_args__ = (UniqueConstraint("tenant_id", "tipo_identificacion", "identificacion"),)
+
+
+class Categoria(UUIDPk, Timestamps, Base):
+    """Categorías del catálogo del tenant, para agrupar productos y atributos."""
+
+    __tablename__ = "categorias"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    nombre: Mapped[str] = mapped_column(String(150))
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    activo: Mapped[bool] = mapped_column(default=True)
+
+    __table_args__ = (UniqueConstraint("tenant_id", "nombre"),)
+
+
+class Atributo(UUIDPk, Timestamps, Base):
+    """Atributos configurables por categoría (Marca, Color, Talla...), cada uno
+    con sus propios valores en AtributoValor. Pertenece a UNA categoría
+    (CASCADE con ella)."""
+
+    __tablename__ = "atributos"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    categoria_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("categorias.id", ondelete="CASCADE"), index=True
+    )
+    nombre: Mapped[str] = mapped_column(String(100))
+    activo: Mapped[bool] = mapped_column(default=True)
+
+    __table_args__ = (UniqueConstraint("categoria_id", "nombre"),)
+
+
+class AtributoValor(UUIDPk, Timestamps, Base):
+    """Valores posibles de un atributo (ej. Nike/Adidas para Marca, Rojo/Azul
+    para Color). Pertenece a UN atributo (CASCADE con él)."""
+
+    __tablename__ = "atributo_valores"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    atributo_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("atributos.id", ondelete="CASCADE"), index=True
+    )
+    valor: Mapped[str] = mapped_column(String(150))
+    activo: Mapped[bool] = mapped_column(default=True)
+
+    __table_args__ = (UniqueConstraint("atributo_id", "valor"),)
+
+
+class ProductoAtributo(UUIDPk, Timestamps, Base):
+    """Tabla puente: QUÉ VALORES tiene disponibles este producto. Un atributo
+    puede repetirse con distinto valor (Talla=38, Talla=39): los que traen dos
+    o más valores son los que generan las variantes."""
+
+    __tablename__ = "producto_atributos"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    producto_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("productos.id", ondelete="CASCADE"), index=True
+    )
+    atributo_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("atributos.id", ondelete="CASCADE"), index=True
+    )
+    atributo_valor_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("atributo_valores.id", ondelete="CASCADE"), index=True
+    )
+
+    __table_args__ = (UniqueConstraint("producto_id", "atributo_id", "atributo_valor_id"),)
+
+
+class ProductoVariante(UUIDPk, Timestamps, Base):
+    """Una combinación concreta a la venta (talla 38 roja), con su propio SKU y
+    su propio stock. `precio_sin_iva` NULL hereda el del producto: cubre "la
+    talla 45 cuesta más" sin obligar a rellenar precios uno por uno."""
+
+    __tablename__ = "producto_variantes"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    producto_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("productos.id", ondelete="CASCADE"), index=True
+    )
+    codigo: Mapped[str] = mapped_column(String(25))  # el SKU que va al comprobante
+    precio_sin_iva: Mapped[Decimal | None] = mapped_column(Numeric(14, 6))
+    stock: Mapped[Decimal] = mapped_column(Numeric(14, 6), default=Decimal("0"))
+    activo: Mapped[bool] = mapped_column(default=True)
+
+    valores: Mapped[list["VarianteAtributo"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
+
+    __table_args__ = (UniqueConstraint("tenant_id", "codigo"),)
+
+
+class VarianteAtributo(UUIDPk, Timestamps, Base):
+    """Los valores que definen una variante: una talla y un color, no dos."""
+
+    __tablename__ = "variante_atributos"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    variante_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("producto_variantes.id", ondelete="CASCADE"), index=True
+    )
+    atributo_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("atributos.id", ondelete="CASCADE"), index=True
+    )
+    atributo_valor_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("atributo_valores.id", ondelete="CASCADE"), index=True
+    )
+
+    __table_args__ = (UniqueConstraint("variante_id", "atributo_id"),)
 
 
 class Producto(UUIDPk, Timestamps, Base):
@@ -61,8 +185,26 @@ class Producto(UUIDPk, Timestamps, Base):
     stock: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     stock_minimo: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     mostrar_en_tienda: Mapped[bool] = mapped_column(default=False)
-    imagen_url: Mapped[str | None] = mapped_column(String(500))
+    # Ruta en disco de la imagen, no la imagen: los binarios en Postgres hinchan
+    # la base y complican los backups. Nunca sale hacia el navegador (delataría
+    # la estructura interna del servidor); lo que se expone es `tiene_imagen`.
+    imagen_path: Mapped[str | None] = mapped_column(String(500))
     activo: Mapped[bool] = mapped_column(default=True)
+    categoria_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("categorias.id", ondelete="SET NULL")
+    )
+
+    @property
+    def tiene_imagen(self) -> bool:
+        """Lo único que el frontend necesita saber: si pedir la miniatura."""
+        return bool(self.imagen_path)
+
+    atributos: Mapped[list["ProductoAtributo"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
+    variantes: Mapped[list["ProductoVariante"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
 
     __table_args__ = (UniqueConstraint("tenant_id", "codigo"),)
 

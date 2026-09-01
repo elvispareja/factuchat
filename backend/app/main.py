@@ -16,6 +16,7 @@ from app.api.routes import (
     admin,
     auth,
     buzon,
+    categorias,
     certificados,
     clientes,
     comprobantes,
@@ -97,6 +98,9 @@ def create_app() -> FastAPI:
     app.include_router(certificados.router, prefix=api)
     app.include_router(panel.router, prefix=api)
     # --- Operación: exige firma
+    app.include_router(categorias.router, prefix=api, dependencies=con_firma)
+    app.include_router(categorias.router_atributos, prefix=api, dependencies=con_firma)
+    app.include_router(categorias.router_valores, prefix=api, dependencies=con_firma)
     app.include_router(clientes.router, prefix=api, dependencies=con_firma)
     app.include_router(comprobantes.router, prefix=api, dependencies=con_firma)
     app.include_router(productos.router, prefix=api, dependencies=con_firma)
