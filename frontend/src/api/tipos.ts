@@ -46,6 +46,38 @@ export interface Comprobante {
   total: string;
   mensajes: string[];
   intentos: number;
+  /** Columnas CLIENTE y DETALLE del historial. Salen del snapshot del payload
+   *  (lo que se le mandó al SRI), no de un JOIN: por eso siguen siendo fieles
+   *  aunque el cliente se renombre o se borre. `cliente` en null = la venta se
+   *  hizo a consumidor final. */
+  cliente: string | null;
+  cliente_identificacion: string | null;
+  cliente_tipo_id: string | null;
+  detalle: string | null;
+}
+
+/** Una opción del panel de pago.
+ *
+ *  OJO: `codigo` NO es clave única. Un plazo (una venta a crédito) no es una
+ *  forma de pago de la tabla 24, así que se expresa repitiendo el mismo código
+ *  con un plazo_dias distinto. Hoy todas las opciones son al contado, pero la
+ *  identidad de un chip sigue siendo el par (codigo, plazo_dias) —que es lo que
+ *  se manda al crear la factura—, no el código suelto. */
+export interface OpcionPago {
+  codigo: string;
+  etiqueta: string;
+  plazo_dias: number | null;
+}
+
+/** Vista PREVIA del número que le tocaría al próximo comprobante. El servidor
+ *  no lo reserva (reservar dejaría huecos cada vez que alguien abre el modal y
+ *  lo cierra), así que si alguien emite entre medias el definitivo será otro:
+ *  el de verdad lo devuelve `emitir`. */
+export interface SiguienteNumero {
+  numero: string;
+  establecimiento: string;
+  punto_emision: string;
+  secuencial: number;
 }
 
 export type TipoIdentificacion =
@@ -63,6 +95,24 @@ export interface ClienteFinal {
   email: string | null;
   telefono: string | null;
   direccion: string | null;
+  provincia: string | null;
+  ciudad: string | null;
+  /** Solo los trae GET /clientes (`ClienteFinalListado`), no la ficha ni el
+   *  POST/PUT: ahí devolver 0 sería mentir sobre un dato de dinero. `facturado`
+   *  viaja como string (Decimal de Pydantic) — parsear, nunca concatenar. */
+  facturado?: string;
+  comprobantes?: number;
+}
+
+/** Una combinación concreta a la venta (talla 38 roja) con su SKU y su stock.
+ *  `precio_sin_iva` en null = hereda el precio del producto. */
+export interface ProductoVariante {
+  id: string;
+  codigo: string;
+  precio_sin_iva: string | null;
+  stock: string;
+  activo: boolean;
+  valores: Array<{ atributo_id: string; atributo_valor_id: string }>;
 }
 
 export interface Producto {
@@ -78,6 +128,34 @@ export interface Producto {
   stock: string;
   stock_minimo: string | null;
   mostrar_en_tienda: boolean;
+  /** El servidor NO manda la ruta del archivo, solo si lo hay: la imagen se
+   *  pide aparte con GET /productos/{id}/imagen. */
+  tiene_imagen: boolean;
+  activo: boolean;
+  categoria_id: string | null;
+  /** Qué valores tiene disponibles el producto (puede repetir atributo_id). */
+  atributos: Array<{ atributo_id: string; atributo_valor_id: string }>;
+  variantes: ProductoVariante[];
+}
+
+export interface Categoria {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+}
+
+export interface Atributo {
+  id: string;
+  categoria_id: string;
+  nombre: string;
+  activo: boolean;
+}
+
+export interface AtributoValor {
+  id: string;
+  atributo_id: string;
+  valor: string;
   activo: boolean;
 }
 

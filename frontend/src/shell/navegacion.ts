@@ -41,11 +41,14 @@ export const SUBMENU_COMPROBANTES: SubitemMenu[] = [
   { id: "guia", label: "Guías de remisión" },
 ];
 
-/** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio. */
+/** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio.
+ *  "categorias" vive DENTRO de este menú (no es una sección propia): abre la
+ *  administración de categorías y marcas sin salir de Artículos/Servicios. */
 export const SUBMENU_CATALOGO: SubitemMenu[] = [
   { id: "todos", label: "Todos" },
   { id: "articulo", label: "Artículos" },
   { id: "servicio", label: "Servicios" },
+  { id: "categorias", label: "Categorías" },
 ];
 
 /** Los cinco temas de Tutoriales.tsx, mismo criterio. */
