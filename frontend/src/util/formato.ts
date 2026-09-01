@@ -1,5 +1,16 @@
 /** Formato de moneda y fechas para Ecuador (USD, es-EC). */
 
+/** Quita los espacios de un teléfono.
+ *
+ *  Copiar el número desde WhatsApp trae separadores («+593 99 000 0000») y, a
+ *  menudo, espacios duros invisibles. Se quedaban dentro del valor guardado, y
+ *  además cuentan para el límite de 20 caracteres del servidor, así que un
+ *  número perfectamente válido podía rebotar por largo. `\s` cubre también el
+ *  espacio no separable, que es el que suele venir al pegar. */
+export function telefonoLimpio(valor: string): string {
+  return valor.replace(/\s+/g, "");
+}
+
 /** Ecuador está dolarizado y escribe el dinero como el dólar: coma para los
  *  miles y punto para los decimales ($1,208.50). La configuración regional
  *  «es-EC» de los navegadores hace lo contrario —$9,99— y dejaba la pantalla
@@ -50,6 +61,22 @@ export function tonoEstado(estado: string): { label: string; clase: string } {
       return { label: estado, clase: "fc-estado--neutro" };
   }
 }
+
+/** Inicial para el avatar. `[...]` y no `[0]` porque una razón social puede
+ *  empezar por un carácter fuera del plano básico y `[0]` partiría el par. */
+export function inicial(nombre: string): string {
+  return [...nombre.trim()][0]?.toUpperCase() ?? "?";
+}
+
+/** El tipo de identificación, legible. Lo usan la libreta de clientes y la
+ *  columna CLIENTE del historial («RUC 0992745103001», «Cédula 0923737159»). */
+export const ETIQUETA_ID: Record<string, string> = {
+  RUC: "RUC",
+  CEDULA: "Cédula",
+  PASAPORTE: "Pasaporte",
+  CONSUMIDOR_FINAL: "Consumidor final",
+  ID_EXTERIOR: "Identificación del exterior",
+};
 
 export const ETIQUETA_TIPO: Record<string, string> = {
   FACTURA: "Factura",

@@ -146,6 +146,11 @@ def construir_factura(emisor: dict[str, Any], f: dict[str, Any]) -> bytes:
         p = _e(pagos, "pago")
         _e(p, "formaPago", pago["forma"])
         _e(p, "total", fmt2(pago["total"]))
+        # Venta a crédito: la tabla 24 no tiene código para «crédito», el plazo
+        # va aquí (orden del esquema: formaPago, total, plazo, unidadTiempo).
+        if pago.get("plazo"):
+            _e(p, "plazo", str(int(pago["plazo"])))
+            _e(p, "unidadTiempo", "dias")
 
     _detalles_venta(root, f["items"])
     _info_adicional(root, f.get("info_adicional"))

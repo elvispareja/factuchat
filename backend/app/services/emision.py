@@ -180,6 +180,7 @@ def crear_factura(
     items_in: list[dict],
     forma_pago: str,
     info_adicional: dict[str, str] | None = None,
+    plazo_dias: int | None = None,
 ) -> Comprobante:
     """Crea el BORRADOR (PENDIENTE, sin secuencial). No envía nada al SRI:
     la emisión exige confirmación explícita aparte (A06)."""
@@ -252,6 +253,7 @@ def crear_factura(
                 ],
             },
             "forma_pago": forma_pago,
+            "plazo_dias": plazo_dias,
             "info_adicional": info_adicional or {},
         },
         origen="PANEL",
@@ -259,6 +261,43 @@ def crear_factura(
     db.add(comprobante)
     db.flush()
     return comprobante
+
+
+def _establecimiento(db: Session, codigo: str) -> Establecimiento:
+    estab = db.scalars(
+        select(Establecimiento).where(
+            Establecimiento.codigo == codigo,
+            Establecimiento.activo.is_(True),
+        )
+    ).first()
+    if estab is None:
+        raise EmisionError(f"Establecimiento {codigo} no existe o está inactivo")
+    return estab
+
+
+def siguiente_numero(
+    db: Session,
+    establecimiento_codigo: str,
+    punto_emision: str,
+    tipo: TipoComprobante,
+) -> int:
+    """Secuencial que le TOCARÍA al próximo comprobante. SOLO LEE.
+
+    Nada de FOR UPDATE ni de crear la fila del secuencial: esto alimenta el pie
+    del modal antes de emitir, y reservar aquí dejaría un hueco cada vez que
+    alguien abre el modal y lo cierra —y los huecos de numeración son un
+    problema con el SRI—. Es una previsión, no una reserva: con dos emisiones
+    en paralelo el número real lo fija asignar_secuencial.
+    """
+    estab = _establecimiento(db, establecimiento_codigo)
+    actual = db.scalars(
+        select(Secuencial.secuencial_actual).where(
+            Secuencial.establecimiento_id == estab.id,
+            Secuencial.punto_emision == punto_emision,
+            Secuencial.tipo_comprobante == tipo.value,
+        )
+    ).first()
+    return int(actual or 0) + 1
 
 
 def asignar_secuencial(
@@ -269,14 +308,7 @@ def asignar_secuencial(
     tipo: TipoComprobante,
 ) -> tuple[Establecimiento, int]:
     """Incremento atómico del secuencial (FOR UPDATE) por estab+pto+tipo."""
-    estab = db.scalars(
-        select(Establecimiento).where(
-            Establecimiento.codigo == establecimiento_codigo,
-            Establecimiento.activo.is_(True),
-        )
-    ).first()
-    if estab is None:
-        raise EmisionError(f"Establecimiento {establecimiento_codigo} no existe o está inactivo")
+    estab = _establecimiento(db, establecimiento_codigo)
 
     # FOR UPDATE no puede bloquear una fila que aún no existe: se crea primero
     # de forma idempotente (ON CONFLICT DO NOTHING) y solo después se bloquea.
@@ -458,7 +490,13 @@ def datos_para_xml(tenant: Tenant, comprobante: Comprobante) -> tuple[dict, dict
                 for g in p["totales"]["impuestos"]
             ],
         },
-        "pagos": [{"forma": p["forma_pago"], "total": Decimal(p["totales"]["importe_total"])}],
+        "pagos": [
+            {
+                "forma": p["forma_pago"],
+                "total": Decimal(p["totales"]["importe_total"]),
+                "plazo": p.get("plazo_dias"),
+            }
+        ],
         "info_adicional": p.get("info_adicional") or None,
     }
     return emisor, factura

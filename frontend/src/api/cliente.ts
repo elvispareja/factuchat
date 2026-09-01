@@ -232,6 +232,10 @@ export const api = {
   autenticar,
   descargar,
   get: <T>(ruta: string) => peticion<T>(ruta),
+  /** Bytes de un archivo que el servidor entrega con Authorization, para
+   *  mostrarlo (no descargarlo): un `<img src="/api/v1/…">` no lleva el token
+   *  y volvería 401, así que la miniatura se pinta desde un blob. */
+  blob: (ruta: string) => peticionCruda(ruta).then((r) => r.blob()),
   post: <T>(ruta: string, cuerpo?: unknown) =>
     peticion<T>(ruta, { method: "POST", body: cuerpo ? JSON.stringify(cuerpo) : undefined }),
   put: <T>(ruta: string, cuerpo: unknown) =>

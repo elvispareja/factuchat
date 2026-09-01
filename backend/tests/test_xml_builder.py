@@ -97,6 +97,41 @@ class TestFactura:
         assert campo.get("nombre") == "Email"
         assert campo.text == "juana@mail.ec"
 
+    def test_venta_a_credito_lleva_plazo(self):
+        """«Crédito 30 días» no es una forma de pago de la tabla 24 sino un
+        plazo: 01 con <plazo>/<unidadTiempo>, en el orden del esquema."""
+        root = _x(
+            xb.construir_factura(
+                EMISOR,
+                {
+                    **BASE_DOC,
+                    "comprador": COMPRADOR,
+                    "items": [ITEM],
+                    "totales": TOTALES,
+                    "pagos": [{"forma": "01", "total": Decimal("23.00"), "plazo": 30}],
+                },
+            )
+        )
+        pago = root.find("infoFactura/pagos/pago")
+        assert [hijo.tag for hijo in pago] == ["formaPago", "total", "plazo", "unidadTiempo"]
+        assert _t(root, "infoFactura/pagos/pago/plazo") == "30"
+        assert _t(root, "infoFactura/pagos/pago/unidadTiempo") == "dias"
+
+    def test_pago_al_contado_sin_plazo(self):
+        root = _x(
+            xb.construir_factura(
+                EMISOR,
+                {
+                    **BASE_DOC,
+                    "comprador": COMPRADOR,
+                    "items": [ITEM],
+                    "totales": TOTALES,
+                    "pagos": [{"forma": "01", "total": Decimal("23.00"), "plazo": None}],
+                },
+            )
+        )
+        assert root.find("infoFactura/pagos/pago/plazo") is None
+
     def test_consumidor_final(self):
         root = _x(
             xb.construir_factura(
