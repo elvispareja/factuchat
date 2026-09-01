@@ -19,7 +19,7 @@ import respx
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.db.models import AuditLog, Comprobante
+from app.db.models import AuditLog, Comprobante, Tenant
 from app.sri.client import SRITransientError
 from app.sri.firma import huella_sha256
 from app.tasks.emision import ejecutar_pipeline
@@ -176,13 +176,45 @@ class TestFacturaAutorizada:
         assert b"<factura" in xml and b"Signature" in xml
         assert comp.sha256_xml == huella_sha256(xml)
 
-        # 6. RIDE descargable en PDF
+        # 6. RIDE descargable en PDF. Sin GTK (Windows) WeasyPrint no carga y
+        #    render_ride_factura cae al respaldo de xhtml2pdf, así que el PDF
+        #    sale en cualquier equipo y este paso ya no se salta.
         r = client.get(
             f"/api/v1/comprobantes/{draft['id']}/ride",
             headers=auth_headers(ana_tokens["access_token"]),
         )
         assert r.status_code == 200
         assert r.content.startswith(b"%PDF")
+
+        # 6b. El PDF sale, pero el que valga como RIDE depende de lo que lleve
+        #     dentro. Se comprueba sobre el HTML —misma plantilla y mismo
+        #     contexto que el PDF— porque extraer texto del PDF depende del
+        #     motor y aquí solo interesa que el contenido obligatorio esté.
+        from app.services.emision import datos_para_xml
+        from app.sri.ride import _env
+        from app.tasks.emision import _contexto_ride
+
+        tenant_obj = admin_db.get(Tenant, comp.tenant_id)
+        contexto = _contexto_ride(tenant_obj, comp, datos_para_xml(tenant_obj, comp)[0])
+        html = _env.get_template("ride_factura.html").render(**contexto, barcode_svg="")
+        for obligatorio in (
+            tenant_obj.ruc,
+            comp.clave_acceso,
+            comp.numero_autorizacion,
+            "001-001-000000001",
+            "PRUEBAS",
+            "NORMAL",  # tipo de emisión, ya no escrito a mano en la plantilla
+            "SUBTOTAL SIN IMPUESTOS",
+            "FORMA DE PAGO",
+            "VALOR TOTAL",
+            contexto["totales"]["importe_total"],
+        ):
+            assert obligatorio in html, f"El RIDE se quedó sin {obligatorio!r}"
+        # Subtotal y valor POR TARIFA, no solo el global (lo pide la normativa)
+        for imp in contexto["totales"]["impuestos"]:
+            assert f"SUBTOTAL {imp['tarifa']}%" in html
+            assert f"IVA {imp['tarifa']}%" in html
+            assert imp["base"] in html
 
         # 7. Correo al cliente final con RIDE + XML adjuntos (modo outbox)
         outbox = Path(get_settings().email_outbox_dir)

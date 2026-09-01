@@ -23,6 +23,7 @@ from app.core.ratelimit import get_redis
 from app.db.models import Certificado, Comprobante, Tenant
 from app.db.models.enums import EstadoComprobante
 from app.db.session import apply_rls_context, get_sessionmaker
+from app.schemas.comprobantes import OPCIONES_PAGO
 from app.services.emision import datos_para_xml, ruta_almacen, transicionar
 from app.sri import client as sri_client
 from app.sri.client import SRIError, SRITransientError, mensajes_a_json
@@ -36,6 +37,11 @@ logger = logging.getLogger("factuchat.emision")
 # Vida del candado de emisión: mayor que el peor caso de una pasada completa
 # (dos llamadas al SRI con timeout de 30 s + firma + RIDE)
 _LOCK_TTL_S = 300
+
+# El RIDE muestra la forma de pago en palabras, no el código de la tabla 24. Se
+# reusa el catálogo que ya alimenta al front; un código antiguo fuera de él (la
+# tabla tiene 8 y se ofrecen 3) cae al propio código antes que dejar el hueco.
+_ETIQUETA_PAGO = {o.codigo: o.etiqueta for o in OPCIONES_PAGO}
 
 
 class EmisionAbortada(Exception):
@@ -222,6 +228,40 @@ def _paso_autorizacion(tenant_id: str, comprobante_id: str) -> None:
             logger.warning("Comprobante %s NO AUTORIZADO", clave)
 
 
+def _contexto_ride(tenant: Tenant, comp: Comprobante, emisor: dict) -> dict:
+    """Datos que la normativa exige que muestre la representación impresa.
+
+    Sale del payload, que es el snapshot de lo que se mandó al SRI: el RIDE
+    tiene que decir lo mismo que el XML autorizado, no lo que hoy diga el
+    tenant. La dirección del establecimiento, la forma de pago y la información
+    adicional son contenido obligatorio del RIDE aunque no se vean en el panel.
+    """
+    p = comp.payload
+    return {
+        "emisor": emisor | {"obligado_contabilidad": tenant.obligado_contabilidad},
+        "dir_establecimiento": p.get("dir_establecimiento") or "",
+        "establecimiento": comp.establecimiento,
+        "punto_emision": comp.punto_emision,
+        "secuencial": comp.secuencial,
+        "ambiente": comp.ambiente.value,
+        # El builder emite siempre <tipoEmision>1</tipoEmision>; si algún día hay
+        # contingencia, sale de aquí y la plantilla ya no lo lleva escrito a mano.
+        "tipo_emision": "NORMAL",
+        "clave_acceso": comp.clave_acceso,
+        "numero_autorizacion": comp.numero_autorizacion,
+        "fecha_autorizacion": (
+            comp.autorizado_at.strftime("%d/%m/%Y %H:%M") if comp.autorizado_at else ""
+        ),
+        "fecha_emision": comp.fecha_emision.strftime("%d/%m/%Y"),
+        "comprador": p["comprador"],
+        "items": p["items"],
+        "totales": p["totales"],
+        "forma_pago": _ETIQUETA_PAGO.get(p.get("forma_pago", ""), p.get("forma_pago", "")),
+        "plazo_dias": p.get("plazo_dias"),
+        "info_adicional": p.get("info_adicional") or {},
+    }
+
+
 def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
     with _sesion_tenant(tenant_id) as db:
         comp = _cargar(db, comprobante_id)
@@ -238,25 +278,25 @@ def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
             pdf = ruta.read_bytes()
         else:
             emisor, _factura = datos_para_xml(tenant, comp)
-            contexto = {
-                "emisor": emisor | {"obligado_contabilidad": tenant.obligado_contabilidad},
-                "establecimiento": comp.establecimiento,
-                "punto_emision": comp.punto_emision,
-                "secuencial": comp.secuencial,
-                "ambiente": comp.ambiente.value,
-                "clave_acceso": comp.clave_acceso,
-                "numero_autorizacion": comp.numero_autorizacion,
-                "fecha_autorizacion": (
-                    comp.autorizado_at.strftime("%d/%m/%Y %H:%M") if comp.autorizado_at else ""
-                ),
-                "fecha_emision": comp.fecha_emision.strftime("%d/%m/%Y"),
-                "comprador": comp.payload["comprador"],
-                "items": comp.payload["items"],
-                "totales": comp.payload["totales"],
-            }
-            pdf = render_ride_factura(contexto)
-            ruta.write_bytes(pdf)
-            comp.ride_path = str(ruta)
+            try:
+                pdf = render_ride_factura(_contexto_ride(tenant, comp, emisor))
+            except (OSError, ImportError) as e:
+                # Generar el PDF puede fallar por el entorno: WeasyPrint necesita
+                # librerías nativas de GTK, y su respaldo (xhtml2pdf) solo está
+                # en desarrollo, así que en producción sin GTK sale un
+                # ImportError, que NO es OSError y antes escapaba y reventaba la
+                # tarea.
+                #
+                # Llegados aquí el SRI YA autorizó el comprobante y el XML
+                # firmado —lo único con validez legal— está guardado. Quedarse
+                # sin el PDF no puede invalidar la emisión, ni dejar el
+                # comprobante a medias, NI privar al comprador de su factura: se
+                # sigue, y el correo sale con el XML solo.
+                logger.warning("RIDE no generado para %s: %s", comp.clave_acceso, e)
+                pdf = None
+            else:
+                ruta.write_bytes(pdf)
+                comp.ride_path = str(ruta)
 
         email = comp.payload["comprador"].get("email")
         clave = comp.clave_acceso
@@ -268,6 +308,12 @@ def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
         from app.core.mailer import enviar_correo
 
         xml_bytes = Path(xml_path).read_bytes()
+        # El XML va siempre; el PDF, solo si se pudo generar. Mandar la factura
+        # sin su representación impresa es peor que mandarla completa, pero
+        # muchísimo mejor que no mandarla: el XML autorizado es el documento.
+        adjuntos = [(f"{clave}.xml", xml_bytes, "text", "xml")]
+        if pdf is not None:
+            adjuntos.insert(0, (f"{clave}.pdf", pdf, "application", "pdf"))
         # Si el envío falla, la excepción sube y Celery reintenta: correo_enviado_at
         # sigue vacío, así que el reintento vuelve a intentarlo (el RIDE ya escrito
         # no bloquea el correo, son guardias independientes).
@@ -278,10 +324,7 @@ def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
                 f"<p>Adjuntamos su factura electrónica autorizada por el SRI.</p>"
                 f"<p>Clave de acceso: {clave}</p>"
             ),
-            adjuntos=[
-                (f"{clave}.pdf", pdf, "application", "pdf"),
-                (f"{clave}.xml", xml_bytes, "text", "xml"),
-            ],
+            adjuntos=adjuntos,
         )
         with _sesion_tenant(tenant_id) as db:
             comp = _cargar(db, comprobante_id)

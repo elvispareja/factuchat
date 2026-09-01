@@ -3,81 +3,415 @@
 <head>
 <meta charset="utf-8">
 <style>
-  @page { size: A4; margin: 12mm; }
-  body { font-family: "DejaVu Sans", sans-serif; font-size: 9pt; color: #111; }
-  .cabecera { display: flex; justify-content: space-between; gap: 6mm; }
-  .caja { border: 1px solid #444; border-radius: 2mm; padding: 3mm; margin-bottom: 3mm; }
-  .titulo { font-size: 12pt; font-weight: bold; }
-  .etiqueta { color: #555; }
-  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
-  th, td { border: 1px solid #777; padding: 1.5mm; text-align: left; }
-  th { background: #eee; }
-  td.num, th.num { text-align: right; }
-  .totales { width: 60mm; margin-left: auto; }
-  .totales td { border: 1px solid #777; }
-  .barcode svg { width: 100%; height: 14mm; }
-  .clave { font-size: 7.5pt; letter-spacing: 0.3px; word-break: break-all; }
+  /* RIDE de la factura. Identidad visual de Factuchat: los colores son los de
+     frontend/src/design/tokens.css y la tabla imita el patrón .fc-tabla de
+     componentes.css (cabecera en versalitas sobre fondo tenue, solo filetes
+     horizontales). Van en hexadecimal literal a propósito: el respaldo de
+     xhtml2pdf no entiende var(), así que un token CSS aquí se quedaría sin
+     color. Equivalencias: #123d2f verde-marca · #22c55e verde-acento ·
+     #16794a verde-medio · #faf9f5 fondo · #f4f6f3 superficie-tenue ·
+     #e4e9e2 borde · #3e5a4e texto-suave · #5a7267 texto-tenue.
+
+     TODO el maquetado es con <table>, no con flexbox: el respaldo de Windows
+     no implementa flexbox y la cabecera le salía apilada, ocupando dos páginas
+     una factura de una. Con tablas las dos columnas salen igual en los dos
+     motores. */
+
+  /* Sin caja de margen con el número de página: el parser de CSS de xhtml2pdf
+     no ignora un @bottom-center dentro de @page, revienta (TypeError en
+     _parseAtPage). La numeración no es contenido obligatorio del RIDE y no
+     vale romper el respaldo ni partir los estilos en dos ficheros. */
+  /* 11mm: con 14 una factura de una sola línea se partía en dos páginas. */
+  @page { size: A4; margin: 11mm; }
+
+  /* DejaVu Sans es la ÚNICA fuente que el Dockerfile instala (fonts-dejavu-core),
+     así que en producción el PDF sale siempre igual, máquina a máquina. No se
+     incrustan las de la marca (Instrument Sans / Familjen Grotesk): son .woff2
+     en frontend/public y reportlab no lee woff2, con lo que el respaldo se
+     quedaría sin ellas de todos modos. Sus dígitos ya son de ancho fijo. */
+  body {
+    font-family: "DejaVu Sans", Verdana, Geneva, sans-serif;
+    font-size: 8.5pt;
+    line-height: 1.25;
+    color: #123d2f;
+    margin: 0;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  td, th { vertical-align: top; }
+
+  .etiqueta {
+    color: #5a7267;
+    font-size: 6.8pt;
+    font-weight: bold;
+  }
+  .dato { color: #123d2f; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* --- Cabecera: emisor | documento ------------------------------------- */
+  .emisor {
+    width: 57%;
+    padding: 2mm 5mm 2mm 0;
+  }
+  .razon-social {
+    font-size: 13pt;
+    font-weight: bold;
+    line-height: 1.1;
+  }
+  .comercial {
+    font-size: 9pt;
+    color: #16794a;
+  }
+  /* Filete de acento a lo ancho de la columna: xhtml2pdf no aplica width a un
+     div, así que un tramo corto saldría distinto en cada motor. */
+  .regla-acento {
+    border-top: 1mm solid #22c55e;
+    margin: 1.5mm 0;
+    font-size: 0;
+    line-height: 0;
+  }
+  .emisor .linea { padding-top: 0.4mm; }
+
+  /* Caja del documento: el verde de marca del panel. Aquí es donde el cliente
+     busca el número, así que es lo único con inversión de color de la página. */
+  .documento {
+    width: 43%;
+    background-color: #123d2f;
+    color: #f1f5f0;
+    padding: 4mm;
+  }
+  .documento .etiqueta { color: #8fb3a0; }
+  .documento .dato { color: #f1f5f0; }
+  .tipo-doc {
+    font-size: 11pt;
+    font-weight: bold;
+    letter-spacing: 1pt;
+    color: #f1f5f0;
+  }
+  .numero-doc {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #5ce68f;
+    padding: 0.5mm 0 2mm;
+  }
+  .documento .linea { padding-top: 0.8mm; }
+
+  /* --- Franja de autorización -------------------------------------------- */
+  /* A ancho completo y no metida en una columna: la clave son 49 dígitos y su
+     código de barras es lo que permite verificar el comprobante en el SRI. */
+  .autorizacion {
+    margin-top: 2mm;
+    /* La clave y su código de barras van juntos o no sirven de nada: es lo que
+       se usa para verificar el comprobante en la web del SRI. */
+    page-break-inside: avoid;
+  }
+  .clave {
+    font-size: 9pt;
+    font-weight: bold;
+    letter-spacing: 0.4pt;
+    word-break: break-all;
+  }
+  /* El SVG sale de _barcode_svg con tamaño intrínseco (82 × 10 mm) y SIN
+     viewBox, así que se dibuja a su tamaño real: no se le pone width/height
+     porque estirarlo deformaría los módulos y lo dejaría sin escanear. Si
+     hiciera falta más grande, se sube module_width en app/sri/ride.py. */
+  /* Reportlab dibuja el código FUERA del flujo: no ocupa alto, así que el hueco
+     que necesita se reserva con el relleno inferior de `.autorizacion` (ver
+     arriba). Aquí solo se le separa de la clave. */
+  .autorizacion td {
+    background-color: #faf9f5;
+    border: 0.3mm solid #e4e9e2;
+    border-left: 1.2mm solid #22c55e;
+    /* Arriba y a los lados, el mismo aire que `.bloque` (2mm 4mm) para que la
+       franja no cante frente a las demás tarjetas. Abajo hace falta más: es lo
+       que reserva el sitio del código de barras, que reportlab dibuja fuera del
+       flujo y no ocupa alto propio. 9 = los 8mm de barras y 1 de holgura. */
+    padding: 2mm 4mm 9mm;
+  }
+
+
+  /* --- Bloques de datos --------------------------------------------------- */
+  .bloque {
+    border: 0.3mm solid #e4e9e2;
+    background-color: #ffffff;
+    padding: 2mm 4mm;
+    margin-top: 2mm;
+  }
+  .titulo-bloque {
+    font-size: 7pt;
+    font-weight: bold;
+    letter-spacing: 0.8pt;
+    color: #16794a;
+    padding-bottom: 1mm;
+  }
+  .bloque td { padding-right: 4mm; }
+
+  /* --- Detalle ------------------------------------------------------------ */
+  /* `fixed`: con el reparto automático, los anchos de las columnas son una
+     sugerencia y una descripción larga sin espacios (los nombres importados
+     suelen venir con guiones bajos, y el campo admite 300 caracteres) estira su
+     celda y empuja las cifras fuera del papel. Con `fixed` mandan los anchos
+     declarados, y el texto que no cabe se parte en vez de desbordar. */
+  .detalle { margin-top: 3mm; table-layout: fixed; width: 100%; }
+  .detalle td { word-wrap: break-word; overflow-wrap: break-word; }
+  /* Identifica el comprobante en cada página. Discreta: es una guía, no un dato
+     que compita con la cabecera real del documento. */
+  .detalle tr.continuacion th {
+    background-color: transparent;
+    font-weight: normal;
+    font-size: 6pt;
+    letter-spacing: 0;
+    color: #5a7267;
+    padding: 0 0 1mm;
+    border-bottom: none;
+  }
+  .detalle th {
+    text-align: left;
+    font-size: 6.8pt;
+    font-weight: bold;
+    letter-spacing: 0.6pt;
+    color: #3e5a4e;
+    background-color: #f4f6f3;
+    padding: 2mm 2.5mm;
+    border-bottom: 0.4mm solid #123d2f;
+    /* Los rótulos no se parten: «P. UNITARIO» caía en dos líneas y desalineaba
+       la cabecera con el resto. Las columnas de abajo llevan sus anchos. */
+    white-space: nowrap;
+  }
+  .detalle td {
+    padding: 1.8mm 2.5mm;
+    border-bottom: 0.25mm solid #e4e9e2;
+  }
+  .detalle th.num, .detalle td.num { text-align: right; }
+  .detalle .codigo { color: #5a7267; font-size: 7.5pt; }
+
+  /* --- Totales ------------------------------------------------------------ */
+  .pie { margin-top: 3mm; }
+  /* Que los totales no se partan ni se queden solos en la última página. */
+  .pie, .totales, .cierre { page-break-inside: avoid; break-inside: avoid; }
+  .pie-izq { width: 52%; padding-right: 6mm; }
+  .totales td {
+    padding: 1.3mm 3mm;
+    border-bottom: 0.25mm solid #e4e9e2;
+  }
+  .totales .concepto { color: #3e5a4e; }
+  .totales .subtotal-general td {
+    font-weight: bold;
+    border-bottom: 0.4mm solid #123d2f;
+  }
+  /* line-height explícito y contenido: xhtml2pdf dibuja el fondo de la celda
+     con la altura de línea del cuerpo, así que un cuerpo mucho mayor se salía
+     de la banda oscura por abajo. */
+  /* Tabla propia, no una fila más de `.totales`: ver la nota del HTML. */
+  .total-final { width: 100%; margin-top: 2mm; }
+  .total-final td {
+    background-color: #123d2f;
+    color: #f1f5f0;
+    font-size: 10pt;
+    font-weight: bold;
+    line-height: 1.4;
+    padding: 2.5mm 3mm;
+    border: none;
+  }
+  .total-final .importe { color: #5ce68f; }
+
+  .cierre {
+    margin-top: 3mm;
+    border-top: 0.25mm solid #e4e9e2;
+    padding-top: 1.5mm;
+    font-size: 6.5pt;
+    color: #5a7267;
+  }
 </style>
 </head>
 <body>
-  <div class="cabecera">
-    <div class="caja" style="flex:1">
-      <div class="titulo">{{ emisor.razon_social }}</div>
-      {% if emisor.nombre_comercial %}<div>{{ emisor.nombre_comercial }}</div>{% endif %}
-      <div><span class="etiqueta">RUC:</span> {{ emisor.ruc }}</div>
-      <div><span class="etiqueta">Matriz:</span> {{ emisor.dir_matriz }}</div>
-      <div><span class="etiqueta">Obligado a llevar contabilidad:</span>
-        {{ "SI" if emisor.obligado_contabilidad else "NO" }}</div>
-    </div>
-    <div class="caja" style="flex:1">
-      <div class="titulo">FACTURA</div>
-      <div>No. {{ establecimiento }}-{{ punto_emision }}-{{ "%09d"|format(secuencial) }}</div>
-      <div><span class="etiqueta">Ambiente:</span>
-        {{ "PRUEBAS" if ambiente == "PRUEBAS" else "PRODUCCIÓN" }}</div>
-      <div><span class="etiqueta">Emisión:</span> NORMAL</div>
-      <div><span class="etiqueta">Fecha autorización:</span> {{ fecha_autorizacion }}</div>
-      <div><span class="etiqueta">No. autorización:</span></div>
-      <div class="clave">{{ numero_autorizacion }}</div>
-      <div class="barcode">{{ barcode_svg | safe }}</div>
-      <div class="clave">{{ clave_acceso }}</div>
-    </div>
-  </div>
 
-  <div class="caja">
-    <div><span class="etiqueta">Razón social:</span> {{ comprador.razon_social }}</div>
-    <div><span class="etiqueta">Identificación:</span> {{ comprador.identificacion }}</div>
-    <div><span class="etiqueta">Fecha de emisión:</span> {{ fecha_emision }}</div>
-  </div>
+  <table class="cabecera">
+    <tr>
+      <td class="emisor">
+        <div class="razon-social">{{ emisor.razon_social }}</div>
+        {% if emisor.nombre_comercial %}
+        <div class="comercial">{{ emisor.nombre_comercial }}</div>
+        {% endif %}
+        <div class="regla-acento">&nbsp;</div>
+        <div class="linea"><span class="etiqueta">RUC</span>
+          <span class="dato">{{ emisor.ruc }}</span></div>
+        <div class="linea"><span class="etiqueta">DIRECCIÓN MATRIZ</span>
+          <span class="dato">{{ emisor.dir_matriz }}</span></div>
+        {% if dir_establecimiento %}
+        <div class="linea"><span class="etiqueta">DIRECCIÓN SUCURSAL</span>
+          <span class="dato">{{ dir_establecimiento }}</span></div>
+        {% endif %}
+        <div class="linea"><span class="etiqueta">OBLIGADO A LLEVAR CONTABILIDAD</span>
+          <span class="dato">{{ "SÍ" if emisor.obligado_contabilidad else "NO" }}</span></div>
+      </td>
 
-  <table>
-    <thead>
+      <td class="documento">
+        <div class="tipo-doc">FACTURA</div>
+        <div class="numero-doc">
+          {{ establecimiento }}-{{ punto_emision }}-{{ "%09d"|format(secuencial) }}
+        </div>
+        <div class="linea"><span class="etiqueta">AMBIENTE</span>
+          <span class="dato">{{ "PRUEBAS" if ambiente == "PRUEBAS" else "PRODUCCIÓN" }}</span></div>
+        <div class="linea"><span class="etiqueta">EMISIÓN</span>
+          <span class="dato">{{ tipo_emision }}</span></div>
+        <div class="linea"><span class="etiqueta">FECHA Y HORA DE AUTORIZACIÓN</span>
+          <span class="dato">{{ fecha_autorizacion }}</span></div>
+      </td>
+    </tr>
+  </table>
+
+  {# UNA tabla de una celda, no un div con varios hijos: xhtml2pdf le da caja
+     propia a cada bloque hijo de un div con fondo, así que la franja salía
+     partida en tres recuadros —etiqueta, clave y código— cada uno repitiendo el
+     fondo y el filete. Es el mismo motivo por el que el resto de la plantilla
+     se maqueta con tablas. #}
+  <table class="autorizacion">
+    <tr>
+      <td>
+        {# En línea con <br/>, no en <div>: xhtml2pdf ignora el margen de un
+           div y le da a cada uno su propio bloque, lo que separaba la etiqueta
+           de la clave con un hueco enorme. Así los junta el interlineado. #}
+        <span class="etiqueta">NÚMERO DE AUTORIZACIÓN / CLAVE DE ACCESO</span><br/>
+        <span class="clave">{{ numero_autorizacion }}</span>
+        {% if numero_autorizacion != clave_acceso %}
+        <br/><span class="clave">{{ clave_acceso }}</span>
+        {% endif %}
+        {# Sin <div>: xhtml2pdf le daría un bloque propio y abría un hueco
+           enorme entre la clave y el código. El aire de arriba lo da este
+           <br/> y el de abajo, el relleno inferior de la celda. #}
+        <br/>{{ barcode_svg | safe }}
+      </td>
+    </tr>
+  </table>
+
+
+  <div class="bloque">
+    <div class="titulo-bloque">DATOS DEL COMPRADOR</div>
+    <table>
       <tr>
-        <th>Código</th><th>Descripción</th>
-        <th class="num">Cant.</th><th class="num">P. unitario</th>
-        <th class="num">Descuento</th><th class="num">Total</th>
+        <td style="width:34%"><span class="etiqueta">RAZÓN SOCIAL / NOMBRES Y APELLIDOS</span>
+          <div class="dato">{{ comprador.razon_social }}</div></td>
+        <td style="width:22%"><span class="etiqueta">IDENTIFICACIÓN</span>
+          <div class="dato">{{ comprador.identificacion }}</div></td>
+        <td style="width:18%"><span class="etiqueta">FECHA DE EMISIÓN</span>
+          <div class="dato">{{ fecha_emision }}</div></td>
+        <td style="width:26%"><span class="etiqueta">CORREO</span>
+          <div class="dato">{{ comprador.email or "—" }}</div></td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="detalle" repeat="1">
+    <thead>
+      {# En una factura de varias páginas, la cabecera del documento se queda en
+         la primera y las siguientes salían con la tabla suelta, sin decir de qué
+         comprobante son: una hoja separada del taco sería imposible de
+         identificar. Esta fila viaja con la cabecera de la tabla (repeat="1"),
+         así que aparece en todas. #}
+      <tr class="continuacion">
+        <th colspan="6">
+          {{ emisor.ruc }} · FACTURA {{ establecimiento }}-{{ punto_emision }}-{{
+            "%09d"|format(secuencial|int) }} · CLAVE {{ clave_acceso }}
+        </th>
+      </tr>
+      <tr>
+        <th style="width:22mm">CÓDIGO</th>
+        <th>DESCRIPCIÓN</th>
+        <th class="num" style="width:16mm">CANT.</th>
+        <th class="num" style="width:25mm">P. UNITARIO</th>
+        <th class="num" style="width:20mm">DESCUENTO</th>
+        <th class="num" style="width:24mm">SUBTOTAL</th>
       </tr>
     </thead>
     <tbody>
       {% for item in items %}
       <tr>
-        <td>{{ item.codigo }}</td>
-        <td>{{ item.descripcion }}</td>
+        {# `cortable`: un código o una descripción sin espacios desbordaría la
+           columna y empujaría las cifras fuera del papel (ver ride.py). #}
+        <td class="codigo">{{ item.codigo|cortable }}</td>
+        <td>{{ item.descripcion|cortable }}</td>
         <td class="num">{{ item.cantidad }}</td>
-        <td class="num">{{ item.precio_unitario }}</td>
-        <td class="num">{{ item.descuento }}</td>
-        <td class="num">{{ item.total_sin_impuesto }}</td>
+        {# `dinero`: el payload guarda los importes sin normalizar y el precio
+           salía como «300» junto a un descuento «0.00». #}
+        <td class="num">{{ item.precio_unitario|dinero }}</td>
+        <td class="num">{{ item.descuento|dinero }}</td>
+        <td class="num">{{ item.total_sin_impuesto|dinero }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <table class="totales">
-    <tr><td>Subtotal sin impuestos</td><td class="num">{{ totales.total_sin_impuestos }}</td></tr>
-    <tr><td>Descuento</td><td class="num">{{ totales.total_descuento }}</td></tr>
-    {% for imp in totales.impuestos %}
-    <tr><td>IVA {{ imp.tarifa }}%</td><td class="num">{{ imp.valor }}</td></tr>
-    {% endfor %}
-    <tr><td><b>VALOR TOTAL</b></td><td class="num"><b>{{ totales.importe_total }}</b></td></tr>
+  <table class="pie">
+    <tr>
+      <td class="pie-izq">
+        <div class="bloque" style="margin-top:0">
+          <div class="titulo-bloque">FORMA DE PAGO</div>
+          <table>
+            <tr>
+              <td class="dato">{{ forma_pago }}{% if plazo_dias %}
+                — plazo {{ plazo_dias }} días{% endif %}</td>
+              <td class="num dato" style="width:26mm">{{ totales.importe_total }}</td>
+            </tr>
+          </table>
+        </div>
+
+        {% if info_adicional %}
+        <div class="bloque">
+          <div class="titulo-bloque">INFORMACIÓN ADICIONAL</div>
+          <table>
+            {% for nombre, valor in info_adicional.items() %}
+            <tr>
+              <td style="width:38%"><span class="etiqueta">{{ nombre }}</span></td>
+              <td class="dato">{{ valor }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% endif %}
+      </td>
+
+      <td>
+        <table class="totales">
+          {% for imp in totales.impuestos %}
+          <tr>
+            <td class="concepto">SUBTOTAL {{ imp.tarifa }}%</td>
+            <td class="num">{{ imp.base }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="subtotal-general">
+            <td class="concepto">SUBTOTAL SIN IMPUESTOS</td>
+            <td class="num">{{ totales.total_sin_impuestos }}</td>
+          </tr>
+          <tr>
+            <td class="concepto">TOTAL DESCUENTO</td>
+            <td class="num">{{ totales.total_descuento }}</td>
+          </tr>
+          {% for imp in totales.impuestos %}
+          <tr>
+            <td class="concepto">IVA {{ imp.tarifa }}%</td>
+            <td class="num">{{ imp.valor }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        {# El total va FUERA de la tabla: xhtml2pdf calcula mal el alto de una
+           fila con fondo y la banda se comía la línea del IVA por arriba y el
+           aviso legal por abajo. Como bloque propio ocupa lo que dice ocupar. #}
+        <table class="total-final">
+          <tr>
+            <td>VALOR TOTAL</td>
+            <td class="num importe">{{ totales.importe_total|dinero }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
+
+  <div class="cierre">
+    Representación impresa del documento electrónico autorizado por el Servicio
+    de Rentas Internas. Verifique este comprobante con la clave de acceso en
+    www.sri.gob.ec — Emitido con Factuchat.
+  </div>
+
 </body>
 </html>

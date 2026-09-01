@@ -6,3 +6,6 @@ ruff==0.16.4
 mypy==2.3.1
 pip-audit==2.10.1
 respx==0.23.1
+# Respaldo del RIDE para desarrollo en Windows, donde WeasyPrint no puede cargar
+# GTK. En producción (Docker sobre Linux) manda WeasyPrint y esto no se instala.
+xhtml2pdf==0.2.17
