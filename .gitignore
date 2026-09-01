@@ -2,6 +2,14 @@
 .env
 .env.*
 !.env.example
+# Sin punto: un "env" suelto es igual de peligroso y el patrón de arriba no lo cubre
+env
+deploy/env
+
+# Binarios sueltos: un instalador arrastrado aquí por error pesa cientos de MB y
+# sacarlo del historial luego exige reescribirlo
+*.exe
+*.msi
 *.p12
 *.pem
 *.key
