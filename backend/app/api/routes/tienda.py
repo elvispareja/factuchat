@@ -71,6 +71,31 @@ def vitrina(user: AuthUser = Depends(SOLO_CLIENTE), db: Session = Depends(get_db
             "maneja_inventario": p.maneja_inventario,
             "stock": str(p.stock),
             "agotado": p.maneja_inventario and p.stock <= 0,
+            # La miniatura se pide a GET /productos/{id}/imagen, igual que en el
+            # catálogo: aquí solo se dice si la hay.
+            "tiene_imagen": p.tiene_imagen,
+            # Lo que de verdad se vende cuando el artículo viene en tallas: el
+            # pedido manda variante_id y el stock se mira y se descuenta ahí.
+            "variantes": [
+                {
+                    "id": str(v.id),
+                    "codigo": v.codigo,
+                    "precio_sin_iva": str(
+                        v.precio_sin_iva if v.precio_sin_iva is not None else p.precio_sin_iva
+                    ),
+                    "stock": str(v.stock),
+                    "agotado": p.maneja_inventario and v.stock <= 0,
+                    "valores": [
+                        {
+                            "atributo_id": str(x.atributo_id),
+                            "atributo_valor_id": str(x.atributo_valor_id),
+                        }
+                        for x in v.valores
+                    ],
+                }
+                for v in p.variantes
+                if v.activo
+            ],
         }
         for p in tienda.vitrina(db)
     ]

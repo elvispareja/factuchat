@@ -15,7 +15,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import ClienteFinal, Pedido, Producto
+from app.db.models import ClienteFinal, Pedido, Producto, ProductoVariante
 from app.db.models.enums import EstadoPedido, MetodoPago, TipoIdentificacion
 from app.services.emision import LIMITE_CONSUMIDOR_FINAL, EmisionError, calcular_items
 
@@ -66,25 +66,41 @@ def crear_pedido(
         cantidad = Decimal(str(linea.get("cantidad", 1)))
         if cantidad <= 0:
             raise TiendaError("La cantidad debe ser mayor que cero")
-        if producto.maneja_inventario and producto.stock is not None and cantidad > producto.stock:
-            raise TiendaError(f"Solo quedan {producto.stock:g} unidades de {producto.nombre}")
+
+        # Lo que se vende es la variante concreta (talla 38 roja) cuando la
+        # línea la nombra: suyos son el código que va a la factura, el stock y,
+        # si lo tiene, el precio (NULL hereda el del producto).
+        variante = None
+        if linea.get("variante_id"):
+            variante = db.get(ProductoVariante, uuid.UUID(str(linea["variante_id"])))
+            if variante is None or not variante.activo or variante.producto_id != producto.id:
+                raise TiendaError("Esa variante ya no está disponible")
+
+        codigo = variante.codigo if variante else producto.codigo
+        precio = producto.precio_sin_iva
+        if variante is not None and variante.precio_sin_iva is not None:
+            precio = variante.precio_sin_iva
+        disponible = variante.stock if variante is not None else producto.stock
+        if producto.maneja_inventario and disponible is not None and cantidad > disponible:
+            raise TiendaError(f"Solo quedan {disponible:g} unidades de {producto.nombre}")
 
         items_para_calcular.append(
             {
-                "codigo": producto.codigo,
+                "codigo": codigo,
                 "descripcion": producto.nombre,
                 "cantidad": str(cantidad),
-                "precio_unitario": str(producto.precio_sin_iva),
+                "precio_unitario": str(precio),
                 "codigo_iva": producto.codigo_iva,
             }
         )
         detalle.append(
             {
                 "producto_id": str(producto.id),
-                "codigo": producto.codigo,
+                "variante_id": str(variante.id) if variante else None,
+                "codigo": codigo,
                 "nombre": producto.nombre,
                 "cantidad": str(cantidad),
-                "precio_sin_iva": str(producto.precio_sin_iva),
+                "precio_sin_iva": str(precio),
                 "codigo_iva": producto.codigo_iva,
             }
         )
@@ -202,7 +218,15 @@ def _descontar_inventario(db: Session, pedido: Pedido) -> None:
         producto = db.get(Producto, uuid.UUID(item["producto_id"]))
         if producto is None or not producto.maneja_inventario:
             continue
-        producto.stock = (producto.stock or Decimal("0")) - Decimal(item["cantidad"])
+        cantidad = Decimal(item["cantidad"])
+        # El inventario vive en la variante cuando la venta fue de una variante:
+        # descontarlo del producto dejaría la talla 38 vendiéndose para siempre.
+        if item.get("variante_id"):
+            variante = db.get(ProductoVariante, uuid.UUID(item["variante_id"]))
+            if variante is not None:
+                variante.stock = (variante.stock or Decimal("0")) - cantidad
+            continue
+        producto.stock = (producto.stock or Decimal("0")) - cantidad
 
 
 def anular(db: Session, pedido: Pedido, motivo: str) -> Pedido:

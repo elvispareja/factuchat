@@ -11,6 +11,9 @@ from app.db.models.enums import MetodoPago
 
 class LineaPedidoIn(BaseModel):
     producto_id: uuid.UUID
+    # Qué combinación exacta se vende (talla 38 roja). Los productos sin
+    # variantes —la mayoría— siguen mandando solo producto_id.
+    variante_id: uuid.UUID | None = None
     cantidad: Decimal = Field(gt=0, le=Decimal("99999"))
     # El PRECIO no se acepta desde fuera: se lee del catálogo. Aceptarlo dejaría
     # cobrar lo que quisiera quien llame a la API.
