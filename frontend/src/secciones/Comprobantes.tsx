@@ -14,7 +14,7 @@ import { CrearComprobante } from "./NuevaFactura";
 import { ETIQUETA_ID, dinero, tonoEstado } from "../util/formato";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
 
-export type Filtro = "todos" | "factura" | "credito" | "debito" | "retencion" | "guia";
+export type Filtro = "todos" | "factura" | "credito" | "debito" | "retencion";
 
 const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "todos", label: "Todos", tipos: [] },
@@ -22,7 +22,6 @@ const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "credito", label: "Notas de crédito", tipos: ["NOTA_CREDITO"] },
   { id: "debito", label: "Notas de débito", tipos: ["NOTA_DEBITO"] },
   { id: "retencion", label: "Retenciones", tipos: ["RETENCION"] },
-  { id: "guia", label: "Guías de remisión", tipos: ["GUIA_REMISION"] },
 ];
 
 interface Props {

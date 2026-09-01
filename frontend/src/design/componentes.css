@@ -421,6 +421,15 @@
   width: 100%;
   max-width: 560px;
   margin: auto;
+  /* El panel se queda dentro de la ventana y desplaza POR DENTRO. Sin este
+     tope crecía sin límite —una matriz de variantes, un catálogo largo— y en
+     una pantalla baja se salía por arriba y por abajo, donde el scroll del
+     fondo no llega. `auto` en los márgenes lo mantiene centrado mientras cabe;
+     cuando no cabe, valen 0 y arranca pegado arriba, que es justo lo que hace
+     falta para poder recorrerlo entero. */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio-tarjeta-grande);

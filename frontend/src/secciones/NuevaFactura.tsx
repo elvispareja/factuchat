@@ -1,11 +1,10 @@
 /** Crear comprobante: el selector de tipo (pantalla 1) y el modal de nueva
  *  factura (pantalla 2).
  *
- *  SOLO la factura existe. Las otras cuatro tarjetas se pintan como en la
+ *  SOLO la factura existe. Las otras tres tarjetas se pintan como en la
  *  maqueta, pero atenuadas y sin destino: el servidor no tiene rutas ni
- *  esquemas para nota de crédito, nota de débito, guía de remisión ni
- *  retención emitida, y un formulario que finge funcionar es peor que un
- *  «Próximamente» honesto.
+ *  esquemas para nota de crédito, nota de débito ni retención, y un formulario
+ *  que finge funcionar es peor que un «Próximamente» honesto.
  *
  *  El panel NO lleva overflow ni max-height propios: `.fc-modal` desplaza el
  *  fondo y `.fc-modal__panel` se centra con `margin: auto` (ver el comentario
@@ -59,7 +58,6 @@ const ICONO_CHEVRON = "m9 6 6 6-6 6";
 const ICONO_DOC = "M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h4";
 const ICONO_MENOS = "M6 3h8l4 4v14H6zM14 3v4h4M9 14h6";
 const ICONO_MAS = "M6 3h8l4 4v14H6zM14 3v4h4M12 11v6M9 14h6";
-const ICONO_CAMION = "M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a1.6 1.6 0 100-3.2A1.6 1.6 0 007 19zM17.5 19a1.6 1.6 0 100-3.2 1.6 1.6 0 000 3.2z";
 const ICONO_PORCENTAJE = "M5 4h14v17l-2.3-1.6L14.4 21l-2.4-1.6L9.6 21l-2.3-1.6L5 21zM9 15l6-6M9.2 9.2h.01M14.8 14.8h.01";
 
 /* --- Pantalla 1: elegir el tipo de documento -------------------------------- */
@@ -101,14 +99,6 @@ const TIPOS: Array<{
     texto: "Cobrar un recargo o interés sobre una factura.",
     tono: "ambar",
     icono: ICONO_MAS,
-    disponible: false,
-  },
-  {
-    id: "GUIA_REMISION",
-    titulo: "Guía de remisión",
-    texto: "Vas a trasladar mercadería.",
-    tono: "gris",
-    icono: ICONO_CAMION,
     disponible: false,
   },
   {

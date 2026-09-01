@@ -38,7 +38,6 @@ export const SUBMENU_COMPROBANTES: SubitemMenu[] = [
   { id: "credito", label: "Notas de crédito" },
   { id: "debito", label: "Notas de débito" },
   { id: "retencion", label: "Retenciones" },
-  { id: "guia", label: "Guías de remisión" },
 ];
 
 /** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio.
