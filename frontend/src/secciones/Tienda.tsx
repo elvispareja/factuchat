@@ -4,8 +4,9 @@
  * de la maqueta manda: "Solo tu equipo accede, con los precios y el stock de
  * Artículos/Servicios." */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/cliente";
+import type { Atributo, AtributoValor } from "../api/tipos";
 import { usePlan } from "../plan/PlanContexto";
 import { MuroPlan } from "../plan/Bloqueos";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
@@ -43,6 +44,18 @@ interface Pedido {
   creado: string;
 }
 
+/** Una combinación a la venta (talla 38 roja). El servidor ya resolvió el
+ *  precio heredado: si la variante no tenía precio propio, aquí llega el del
+ *  producto, así que la vitrina nunca vuelve a decidir de dónde sale. */
+interface VarianteVitrina {
+  id: string;
+  codigo: string;
+  precio_sin_iva: string;
+  stock: string;
+  agotado: boolean;
+  valores: Array<{ atributo_id: string; atributo_valor_id: string }>;
+}
+
 interface ArticuloVitrina {
   id: string;
   codigo: string;
@@ -53,6 +66,38 @@ interface ArticuloVitrina {
   maneja_inventario: boolean;
   stock: string;
   agotado: boolean;
+  variantes: VarianteVitrina[];
+}
+
+/** La vitrina manda los atributos como ids; los nombres («Talla», «38») viven
+ *  en el catálogo de atributos. `orden` conserva el del catálogo, para que las
+ *  tallas salgan 38, 39, 40 y no en el orden en que se crearon las variantes. */
+type Indice = Record<string, { nombre: string; orden: number }>;
+type Nombres = { atributo: Indice; valor: Indice };
+
+interface LineaPedido {
+  /** La variante si la hay, el producto si no: identifica la fila del pedido. */
+  clave: string;
+  producto_id: string;
+  variante_id: string | null;
+  nombre: string;
+  codigo: string;
+  precio: string;
+  cantidad: number;
+  /** Stock disponible; null cuando el artículo no lleva conteo. */
+  tope: number | null;
+}
+
+const tiene = (v: VarianteVitrina, atributoId: string, valorId: string) =>
+  v.valores.some((x) => x.atributo_id === atributoId && x.atributo_valor_id === valorId);
+
+function Estado({ clase, texto }: { clase: string; texto: string }) {
+  return (
+    <span className={`fc-estado ${clase}`}>
+      <span className="fc-estado__punto" />
+      {texto}
+    </span>
+  );
 }
 
 export function Tienda({ onVerPlanes }: { onVerPlanes: () => void }) {
@@ -243,14 +288,52 @@ function Pedidos() {
 
 function MiTienda() {
   const [articulos, setArticulos] = useState<ArticuloVitrina[] | null>(null);
+  const [nombres, setNombres] = useState<Nombres>({ atributo: {}, valor: {} });
   const [error, setError] = useState<string | null>(null);
+  const [lineas, setLineas] = useState<LineaPedido[]>([]);
+  // Vive aquí y no en el panel: al crearse el pedido el panel se vacía y
+  // desaparece, y con él se iría el aviso de que la venta quedó registrada.
+  const [creado, setCreado] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<ArticuloVitrina[]>("/tienda/vitrina")
-      .then(setArticulos)
-      .catch((e) => setError(e instanceof Error ? e.message : "Error"));
+    void (async () => {
+      try {
+        const arts = await api.get<ArticuloVitrina[]>("/tienda/vitrina");
+        // Solo se piden los nombres si hay algo que nombrar. Si fallan, el
+        // selector sigue funcionando con etiquetas pobres en vez de caerse.
+        if (arts.some((a) => (a.variantes ?? []).length > 0)) {
+          const [atrs, vals] = await Promise.all([
+            api.get<Atributo[]>("/atributos").catch(() => [] as Atributo[]),
+            api.get<AtributoValor[]>("/atributo-valores").catch(() => [] as AtributoValor[]),
+          ]);
+          setNombres({
+            atributo: Object.fromEntries(
+              atrs.map((x, i) => [x.id, { nombre: x.nombre, orden: i }]),
+            ),
+            valor: Object.fromEntries(vals.map((x, i) => [x.id, { nombre: x.valor, orden: i }])),
+          });
+        }
+        setArticulos(arts);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error");
+      }
+    })();
   }, []);
+
+  function agregar(linea: LineaPedido) {
+    setCreado(null);
+    setLineas((prev) => {
+      const i = prev.findIndex((x) => x.clave === linea.clave);
+      if (i < 0) return [...prev, linea];
+      const copia = [...prev];
+      const cantidad = copia[i].cantidad + 1;
+      copia[i] = {
+        ...copia[i],
+        cantidad: copia[i].tope !== null ? Math.min(cantidad, copia[i].tope) : cantidad,
+      };
+      return copia;
+    });
+  }
 
   if (error) return <ErrorSeccion mensaje={error} />;
   if (!articulos) return <Cargando />;
@@ -264,6 +347,16 @@ function MiTienda() {
           tus clientes no necesitan entrar aquí.
         </p>
       </section>
+
+      {creado && (
+        <p className="fc-tarjeta" style={{ fontSize: 13, color: "var(--exito-texto)" }}>
+          Pedido {creado} creado. Está en la pestaña Pedidos.
+        </p>
+      )}
+
+      {lineas.length > 0 && (
+        <PedidoEnCurso lineas={lineas} setLineas={setLineas} onCreado={setCreado} />
+      )}
 
       {articulos.length === 0 ? (
         <section className="fc-tarjeta">
@@ -281,42 +374,344 @@ function MiTienda() {
           }}
         >
           {articulos.map((a) => (
-            <article
-              key={a.id}
-              className="fc-tarjeta"
-              style={{ padding: "16px 18px 18px", opacity: a.agotado ? 0.55 : 1 }}
-            >
-              <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{a.nombre}</div>
-              <div className="fc-mono" style={{ fontSize: 11.5, color: "var(--texto-tenue)" }}>
-                {a.codigo}
-              </div>
-              <div className="fc-cifra" style={{ fontSize: 20, margin: "10px 0 2px" }}>
-                {dinero(a.precio_sin_iva)}
-              </div>
-              <div style={{ fontSize: 11.5, color: "var(--texto-tenue)", marginBottom: 10 }}>
-                sin impuesto · IVA {Number(a.porcentaje_iva)}%
-              </div>
-              {a.agotado ? (
-                <span className="fc-estado fc-estado--error">
-                  <span className="fc-estado__punto" />
-                  Agotado
-                </span>
-              ) : a.maneja_inventario ? (
-                <span className="fc-estado fc-estado--exito">
-                  <span className="fc-estado__punto" />
-                  {Number(a.stock)} disponibles
-                </span>
-              ) : (
-                <span className="fc-estado fc-estado--neutro">
-                  <span className="fc-estado__punto" />
-                  Servicio
-                </span>
-              )}
-            </article>
+            <TarjetaArticulo key={a.id} a={a} nombres={nombres} onAgregar={agregar} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+/** Una tarjeta de la vitrina. Con variantes hay que elegir la combinación antes
+ *  de añadirla: el precio, el stock y el código que va a la factura son los de
+ *  la variante, no los del producto. */
+function TarjetaArticulo({
+  a,
+  nombres,
+  onAgregar,
+}: {
+  a: ArticuloVitrina;
+  nombres: Nombres;
+  onAgregar: (l: LineaPedido) => void;
+}) {
+  const [sel, setSel] = useState<Record<string, string>>({});
+
+  // Los ejes del selector salen de las propias variantes: Talla=[38,39], Color=[Rojo,Negro].
+  const ejes = useMemo(() => {
+    const porAtributo = new Map<string, string[]>();
+    for (const v of a.variantes ?? []) {
+      for (const x of v.valores) {
+        const vals = porAtributo.get(x.atributo_id) ?? [];
+        if (!vals.includes(x.atributo_valor_id)) vals.push(x.atributo_valor_id);
+        porAtributo.set(x.atributo_id, vals);
+      }
+    }
+    return [...porAtributo]
+      .map(([id, valores]) => ({
+        id,
+        nombre: nombres.atributo[id]?.nombre ?? "Opción",
+        valores: valores
+          .map((vid) => ({ id: vid, nombre: nombres.valor[vid]?.nombre ?? vid.slice(0, 8) }))
+          .sort((x, y) => (nombres.valor[x.id]?.orden ?? 0) - (nombres.valor[y.id]?.orden ?? 0)),
+      }))
+      .sort((x, y) => (nombres.atributo[x.id]?.orden ?? 0) - (nombres.atributo[y.id]?.orden ?? 0));
+  }, [a, nombres]);
+
+  const completa = ejes.length > 0 && ejes.every((e) => sel[e.id]);
+  const elegida = useMemo(
+    () =>
+      completa
+        ? ((a.variantes ?? []).find((v) => ejes.every((e) => tiene(v, e.id, sel[e.id]))) ?? null)
+        : null,
+    [a, ejes, sel, completa],
+  );
+
+  /** Un valor se ofrece si queda alguna variante CON stock que lo lleve y que
+   *  encaje con lo ya elegido en los otros ejes: con Rojo puesto, la talla 38
+   *  sale deshabilitada si solo quedaba en negro. */
+  function disponible(ejeId: string, valorId: string) {
+    return (a.variantes ?? []).some(
+      (v) =>
+        !v.agotado &&
+        tiene(v, ejeId, valorId) &&
+        ejes.every((e) => e.id === ejeId || !sel[e.id] || tiene(v, e.id, sel[e.id])),
+    );
+  }
+
+  // Con variantes el stock del producto es 0 por diseño: quien manda es el de
+  // las combinaciones, o la tarjeta entera saldría agotada siempre.
+  const agotado = ejes.length > 0 ? (a.variantes ?? []).every((v) => v.agotado) : a.agotado;
+
+  const precios = (a.variantes ?? []).map((v) => Number(v.precio_sin_iva));
+  const precio = elegida
+    ? dinero(elegida.precio_sin_iva)
+    : precios.length > 0
+      ? Math.max(...precios) > Math.min(...precios)
+        ? `${dinero(Math.min(...precios))} – ${dinero(Math.max(...precios))}`
+        : dinero(Math.min(...precios))
+      : dinero(a.precio_sin_iva);
+
+  function estado(): { clase: string; texto: string } {
+    if (agotado) return { clase: "fc-estado--error", texto: "Agotado" };
+    if (ejes.length > 0) {
+      if (!completa) {
+        const que = ejes.map((e) => e.nombre.toLowerCase()).join(" y ");
+        return { clase: "fc-estado--neutro", texto: `Elige ${que}` };
+      }
+      if (!elegida || elegida.agotado)
+        return { clase: "fc-estado--error", texto: "Esa combinación no está disponible" };
+      return {
+        clase: "fc-estado--exito",
+        texto: a.maneja_inventario ? `${Number(elegida.stock)} disponibles` : "Disponible",
+      };
+    }
+    if (a.maneja_inventario)
+      return { clase: "fc-estado--exito", texto: `${Number(a.stock)} disponibles` };
+    if (a.tipo === "SERVICIO") return { clase: "fc-estado--neutro", texto: "Servicio" };
+    // Artículo sin conteo de unidades: al comprador no le importa que no
+    // llevemos inventario, solo que puede pedirlo. Antes caía aquí y se
+    // anunciaba como «Servicio».
+    return { clase: "fc-estado--exito", texto: "Disponible" };
+  }
+
+  const puedeAnadir = !agotado && (ejes.length === 0 || Boolean(elegida && !elegida.agotado));
+  const tono = estado();
+
+  function anadir() {
+    const detalle = ejes
+      .map((e) => e.valores.find((v) => v.id === sel[e.id])?.nombre)
+      .filter(Boolean)
+      .join(" / ");
+    onAgregar({
+      clave: elegida ? elegida.id : a.id,
+      producto_id: a.id,
+      variante_id: elegida?.id ?? null,
+      nombre: elegida ? `${a.nombre} · ${detalle}` : a.nombre,
+      codigo: elegida ? elegida.codigo : a.codigo,
+      precio: elegida ? elegida.precio_sin_iva : a.precio_sin_iva,
+      cantidad: 1,
+      tope: a.maneja_inventario ? Number(elegida ? elegida.stock : a.stock) : null,
+    });
+  }
+
+  return (
+    <article className="fc-tarjeta" style={{ padding: "16px 18px 18px", opacity: agotado ? 0.55 : 1 }}>
+      <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>{a.nombre}</div>
+      <div className="fc-mono" style={{ fontSize: 11.5, color: "var(--texto-tenue)" }}>
+        {elegida ? elegida.codigo : a.codigo}
+      </div>
+      <div className="fc-cifra" style={{ fontSize: 20, margin: "10px 0 2px" }}>
+        {precio}
+      </div>
+      <div style={{ fontSize: 11.5, color: "var(--texto-tenue)", marginBottom: 10 }}>
+        sin impuesto · IVA {Number(a.porcentaje_iva)}%
+      </div>
+
+      {/* Un desplegable por atributo: no crece con las combinaciones, así que
+          treinta tallas no deforman la tarjeta. */}
+      {ejes.map((e) => (
+        <label key={e.id} style={{ display: "block", marginBottom: 8 }}>
+          <span className="fc-label" style={{ fontSize: 11, marginBottom: 4 }}>
+            {e.nombre}
+          </span>
+          <select
+            className="fc-campo"
+            style={{ padding: "8px 10px", fontSize: 13 }}
+            value={sel[e.id] ?? ""}
+            onChange={(ev) => setSel((prev) => ({ ...prev, [e.id]: ev.target.value }))}
+          >
+            <option value="">Elegir…</option>
+            {e.valores.map((v) => {
+              const hay = disponible(e.id, v.id);
+              return (
+                <option key={v.id} value={v.id} disabled={!hay}>
+                  {v.nombre}
+                  {hay ? "" : " · agotado"}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      ))}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <Estado clase={tono.clase} texto={tono.texto} />
+        <button
+          type="button"
+          className="fc-btn fc-btn--contorno"
+          style={{ padding: "6px 14px", fontSize: 12.5, marginLeft: "auto" }}
+          disabled={!puedeAnadir}
+          onClick={anadir}
+        >
+          Añadir
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/** El pedido que se está armando. Cada línea manda `variante_id` cuando la
+ *  venta es de una combinación: de ahí saca el servidor el precio, el código
+ *  del comprobante y el stock que descuenta. */
+function PedidoEnCurso({
+  lineas,
+  setLineas,
+  onCreado,
+}: {
+  lineas: LineaPedido[];
+  setLineas: React.Dispatch<React.SetStateAction<LineaPedido[]>>;
+  onCreado: (numero: string) => void;
+}) {
+  const [metodos, setMetodos] = useState<Array<{ id: string; label: string; activo: boolean }>>([]);
+  const [metodo, setMetodo] = useState("");
+  const [comprador, setComprador] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<Array<{ id: string; label: string; activo: boolean }>>("/tienda/metodos")
+      .then((ms) => {
+        const activos = ms.filter((m) => m.activo);
+        setMetodos(activos);
+        setMetodo((prev) => prev || (activos[0]?.id ?? ""));
+      })
+      .catch(() => setMetodos([]));
+  }, []);
+
+  const total = lineas.reduce((s, l) => s + Number(l.precio) * l.cantidad, 0);
+
+  async function crear() {
+    setEnviando(true);
+    setError(null);
+    try {
+      const pedido = await api.post<{ numero: string }>("/tienda/pedidos", {
+        items: lineas.map((l) => ({
+          producto_id: l.producto_id,
+          variante_id: l.variante_id,
+          cantidad: String(l.cantidad),
+        })),
+        metodo_pago: metodo,
+        comprador_nombre: comprador.trim() || null,
+      });
+      setComprador("");
+      onCreado(pedido.numero);
+      setLineas([]); // último: desmonta este panel
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos crear el pedido");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <section className="fc-tarjeta">
+      <p className="fc-kicker">Pedido en curso</p>
+      <div style={{ overflowX: "auto", marginTop: 12 }}>
+        <table className="fc-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Artículo</th>
+              <th scope="col">Código</th>
+              <th scope="col" className="fc-num">Cantidad</th>
+              <th scope="col" className="fc-num">Precio</th>
+              <th scope="col" />
+            </tr>
+          </thead>
+          <tbody>
+            {lineas.map((l) => (
+              <tr key={l.clave}>
+                <td>{l.nombre}</td>
+                <td className="fc-mono">{l.codigo}</td>
+                <td className="fc-num">
+                  <input
+                    className="fc-campo"
+                    type="number"
+                    min={1}
+                    max={l.tope ?? undefined}
+                    step="1"
+                    style={{ width: 78, padding: "6px 8px", fontSize: 13 }}
+                    value={l.cantidad}
+                    aria-label={`Cantidad de ${l.nombre}`}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setLineas((prev) =>
+                        prev.map((x) =>
+                          x.clave === l.clave
+                            ? { ...x, cantidad: Number.isFinite(n) && n >= 1 ? n : 1 }
+                            : x,
+                        ),
+                      );
+                    }}
+                  />
+                </td>
+                <td className="fc-num">{dinero(Number(l.precio) * l.cantidad)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="fc-btn fc-btn--contorno"
+                    style={{ padding: "6px 12px", fontSize: 12.5 }}
+                    onClick={() => setLineas((prev) => prev.filter((x) => x.clave !== l.clave))}
+                  >
+                    Quitar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+          marginTop: 14,
+        }}
+      >
+        <label style={{ flex: "1 1 180px" }}>
+          <span className="fc-label">Comprador (opcional)</span>
+          <input
+            className="fc-campo"
+            value={comprador}
+            onChange={(e) => setComprador(e.target.value)}
+            placeholder="Consumidor final"
+          />
+        </label>
+        <label style={{ flex: "1 1 180px" }}>
+          <span className="fc-label">Cómo cobras</span>
+          <select className="fc-campo" value={metodo} onChange={(e) => setMetodo(e.target.value)}>
+            {metodos.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div style={{ marginLeft: "auto", textAlign: "right" }}>
+          <div style={{ fontSize: 11.5, color: "var(--texto-tenue)" }}>Subtotal sin IVA</div>
+          <div className="fc-cifra" style={{ fontSize: 20 }}>
+            {dinero(total)}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="fc-btn fc-btn--primario"
+          disabled={enviando || !metodo}
+          onClick={() => void crear()}
+        >
+          {enviando ? "Creando…" : "Crear pedido"}
+        </button>
+      </div>
+
+      {error && (
+        <p className="fc-error" role="alert">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 

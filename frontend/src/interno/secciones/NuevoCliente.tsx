@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { sa, type PlanInterno } from "../api";
+import { telefonoLimpio } from "../../util/formato";
 
 const PASOS = ["Datos del contribuyente", "Confirmación"];
 
@@ -144,7 +145,7 @@ export function NuevoCliente({ onCerrar, onCreado }: Props) {
 
   return createPortal(
     <div
-      className="fc-modal"
+      className="fc-modal fc-modal--interno"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onCerrar();
@@ -210,7 +211,7 @@ export function NuevoCliente({ onCerrar, onCreado }: Props) {
                 <Campo
                   etiqueta="WhatsApp"
                   valor={telefono}
-                  onCambio={setTelefono}
+                  onCambio={(v) => setTelefono(telefonoLimpio(v))}
                   placeholder="+593 99 000 0000"
                 />
               </div>

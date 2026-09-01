@@ -7,7 +7,7 @@
  *  paginación de 25 en 25.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   sa,
@@ -18,7 +18,7 @@ import {
 } from "../api";
 import { Cargando, ErrorSeccion } from "../../ui/Estados";
 import { NuevoCliente } from "./NuevoCliente";
-import { dinero, fechaCorta } from "../../util/formato";
+import { dinero, fechaCorta, telefonoLimpio } from "../../util/formato";
 import { sesion } from "../../api/cliente";
 
 /** Los cinco estados de cartera de la maqueta. El servidor los deriva; aquí
@@ -70,6 +70,7 @@ export function ClientesInternos({ operador, onImpersonar, onResumen }: Props) {
   const [filtroPlan, setFiltroPlan] = useState("Todos");
   const [pagina, setPagina] = useState(1);
   const [abierto, setAbierto] = useState<ClienteInterno | null>(null);
+  const [editando, setEditando] = useState<ClienteInterno | null>(null);
   const [dandoAlta, setDandoAlta] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
@@ -256,18 +257,34 @@ export function ClientesInternos({ operador, onImpersonar, onResumen }: Props) {
               <div>Cupo del mes</div>
               <div>Alta</div>
               <div>Último comp.</div>
+              <div>{operador.puede_actuar ? "Acciones" : ""}</div>
             </div>
 
             {visibles.map((c) => (
-              <button
+              // La fila NO es un role="button": ARIA declara presentacionales a
+              // los hijos de ese rol, así que el botón «Editar» de dentro
+              // desaparecería del árbol de accesibilidad. Quien abre la ficha es
+              // el nombre, que sí es un botón de verdad; el onClick de la fila
+              // queda solo como comodidad de ratón.
+              <div
                 key={c.id}
-                type="button"
-                className="fc-sa-fila"
+                className="fc-sa-fila fc-sa-fila--clicable"
                 onClick={() => setAbierto(c)}
-                aria-label={`Abrir la ficha de ${c.razon_social}`}
               >
                 <div className="fc-sa-fila__ruc">{c.ruc}</div>
-                <div className="fc-sa-fila__nombre">{c.razon_social}</div>
+                <div>
+                  <button
+                    type="button"
+                    className="fc-sa-fila__nombre fc-sa-fila__abrir"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAbierto(c);
+                    }}
+                    aria-label={`Abrir la ficha de ${c.razon_social}`}
+                  >
+                    {c.razon_social}
+                  </button>
+                </div>
                 <div className="fc-sa-fila__plan">{c.plan ?? "—"}</div>
                 <div>
                   <span className="fc-sa-pill" data-estado={c.estado_cartera}>
@@ -277,7 +294,22 @@ export function ClientesInternos({ operador, onImpersonar, onResumen }: Props) {
                 <Cupo usados={c.usados} cupo={c.cupo} />
                 <div className="fc-sa-fila__dato">{fechaCorta(c.alta.slice(0, 10))}</div>
                 <div className="fc-sa-fila__dato">{momentoCorto(c.ultimo_comp)}</div>
-              </button>
+                <div>
+                  {operador.puede_actuar && (
+                    <button
+                      type="button"
+                      className="fc-btn fc-btn--texto fc-sa-fila__editar"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditando(c);
+                      }}
+                      aria-label={`Editar los datos de ${c.razon_social}`}
+                    >
+                      Editar
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
 
             {visibles.length === 0 && (
@@ -334,6 +366,19 @@ export function ClientesInternos({ operador, onImpersonar, onResumen }: Props) {
           }}
         />
       )}
+
+      {editando && (
+        <EdicionRapida
+          cliente={editando}
+          onCerrar={() => setEditando(null)}
+          onGuardado={(mensaje) => {
+            setEditando(null);
+            setAviso(mensaje);
+            window.setTimeout(() => setAviso(null), 6000);
+            void cargar();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -360,6 +405,255 @@ function Cupo({ usados, cupo }: { usados: number; cupo: number }) {
         />
       </div>
     </div>
+  );
+}
+
+/** Edición rápida desde el listado, sin entrar a la ficha.
+ *
+ *  PRIMERO EL MOTIVO, DESPUÉS LOS CAMPOS, y no al revés. `sa_editar_cliente`
+ *  (migración 0019) hace un UPDATE de las cuatro columnas SIEMPRE: lo que se
+ *  mande vacío se guarda vacío. El listado (`ClienteInterno`) trae razón
+ *  social y correo, pero NO nombre comercial ni teléfono, así que abrir el
+ *  formulario con esos dos en blanco sería borrarlos de un guardado. Los
+ *  valores actuales solo los da `sa.ficha`, que exige motivo y lo audita
+ *  —el mismo motivo que la edición necesita después, así que se pide una vez
+ *  y sirve para las dos. */
+function EdicionRapida({
+  cliente,
+  onCerrar,
+  onGuardado,
+}: {
+  cliente: ClienteInterno;
+  onCerrar: () => void;
+  onGuardado: (mensaje: string) => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const [datos, setDatos] = useState<{
+    razon_social: string;
+    nombre_comercial: string;
+    email: string;
+    telefono: string;
+  } | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  // El foco va UNA vez, al abrir. Si esto viviera en el efecto de abajo, que
+  // depende de onCerrar (una función nueva en cada render del padre), cualquier
+  // re-render mientras el operador escribe le robaría el foco del campo.
+  useEffect(() => {
+    panel.current?.focus();
+    // El fondo no debe desplazarse con la rueda mientras el modal está abierto
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCerrar();
+    };
+    document.addEventListener("keydown", alPulsar);
+    return () => document.removeEventListener("keydown", alPulsar);
+  }, [onCerrar]);
+
+  async function traerDatos() {
+    setCargando(true);
+    setError(null);
+    try {
+      const f = await sa.ficha(cliente.id, motivo.trim());
+      setDatos({
+        razon_social: f.razon_social,
+        nombre_comercial: f.nombre_comercial ?? "",
+        email: f.email,
+        telefono: f.telefono ?? "",
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos traer los datos actuales");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function guardar() {
+    if (!datos) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      await sa.editarCliente(cliente.id, {
+        razon_social: datos.razon_social.trim(),
+        nombre_comercial: datos.nombre_comercial.trim() || null,
+        email: datos.email.trim(),
+        telefono: datos.telefono.trim() || null,
+        motivo: motivo.trim(),
+      });
+      onGuardado(`Datos actualizados: ${datos.razon_social.trim()}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos guardar los cambios");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  const motivoOk = motivo.trim().length >= 5;
+  const puedeGuardar =
+    !!datos && datos.razon_social.trim().length >= 2 && !!datos.email.trim() && motivoOk;
+
+  return createPortal(
+    <div
+      // --interno: este modal se pinta por portal fuera del shell, y sin la
+      // clase se quedaría con el diseño del panel de cliente
+      className="fc-modal fc-modal--interno"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCerrar();
+      }}
+    >
+      <div
+        ref={panel}
+        className="fc-modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Editar datos del cliente"
+        tabIndex={-1}
+      >
+        <div className="fc-modal__cabecera">
+          <div>
+            <p className="fc-kicker">Editar datos</p>
+            <h2 className="fc-modal__titulo">{cliente.razon_social}</h2>
+          </div>
+          <button type="button" className="fc-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M5 5l14 14M19 5L5 19" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="fc-modal__cuerpo fc-scroll" style={{ paddingTop: 16 }}>
+          <label className="fc-label" htmlFor="er-motivo">
+            Motivo (mínimo 5 caracteres)
+          </label>
+          <input
+            id="er-motivo"
+            className="fc-campo"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ej.: el cliente pidió corregir el teléfono de contacto"
+            disabled={guardando}
+          />
+          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 0" }}>
+            Queda registrado en auditoría con tu nombre y tu motivo. Con él traemos también los
+            datos actuales, para no pisar lo que no cambies.
+          </p>
+
+          {datos && (
+            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+              <div>
+                <label className="fc-label" htmlFor="er-razon-social">
+                  Razón social
+                </label>
+                <input
+                  id="er-razon-social"
+                  className="fc-campo"
+                  value={datos.razon_social}
+                  onChange={(e) => setDatos((d) => d && { ...d, razon_social: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="fc-label" htmlFor="er-nombre-comercial">
+                  Nombre comercial (opcional)
+                </label>
+                <input
+                  id="er-nombre-comercial"
+                  className="fc-campo"
+                  value={datos.nombre_comercial}
+                  onChange={(e) => setDatos((d) => d && { ...d, nombre_comercial: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="fc-label" htmlFor="er-email">
+                  Correo
+                </label>
+                <input
+                  id="er-email"
+                  type="email"
+                  className="fc-campo"
+                  value={datos.email}
+                  onChange={(e) => setDatos((d) => d && { ...d, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="fc-label" htmlFor="er-telefono">
+                  Teléfono (opcional)
+                </label>
+                <input
+                  id="er-telefono"
+                  className="fc-campo"
+                  value={datos.telefono}
+                  onChange={(e) =>
+                    setDatos((d) => d && { ...d, telefono: telefonoLimpio(e.target.value) })
+                  }
+                />
+              </div>
+              <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: 0 }}>
+                El RUC no se puede cambiar.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <p className="fc-error" role="alert" style={{ marginTop: 12 }}>
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="fc-modal__pie">
+          <span style={{ fontSize: 12, color: "var(--texto-tenue)" }}>RUC {cliente.ruc}</span>
+          <div style={{ display: "flex", gap: 9 }}>
+            <button
+              type="button"
+              className="fc-btn fc-btn--contorno"
+              onClick={onCerrar}
+              disabled={guardando}
+            >
+              Cancelar
+            </button>
+            {datos ? (
+              <button
+                type="button"
+                className="fc-btn fc-btn--primario"
+                disabled={guardando || !puedeGuardar}
+                onClick={() => void guardar()}
+              >
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="fc-btn fc-btn--primario"
+                disabled={cargando || !motivoOk}
+                onClick={() => void traerDatos()}
+              >
+                {cargando ? "Trayendo datos…" : "Continuar"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
