@@ -5,16 +5,17 @@ y sirven de prueba viva del aislamiento multi-tenant (checklist F1).
 """
 
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AuthUser, require_roles, tenant_de
-from app.db.models import ClienteFinal
-from app.db.models.enums import Rol
+from app.db.models import ClienteFinal, Comprobante
+from app.db.models.enums import EstadoComprobante, Rol, TipoComprobante
 from app.db.session import get_db
-from app.schemas.clientes import ClienteFinalIn, ClienteFinalOut
+from app.schemas.clientes import ClienteFinalIn, ClienteFinalListado, ClienteFinalOut
 from app.services import carga_masiva
 from app.services.planes import (
     LimitePlanError,
@@ -27,14 +28,50 @@ from app.services.planes import (
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
 
-@router.get("", response_model=list[ClienteFinalOut])
+@router.get("", response_model=list[ClienteFinalListado])
 def listar(
     user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
     db: Session = Depends(get_db),
 ):
-    # Sin filtro manual por tenant: RLS ya limita a las filas del tenant autenticado.
-    rows = db.scalars(select(ClienteFinal).order_by(ClienteFinal.razon_social)).all()
-    return rows
+    # Dos filtros, y los dos hacen falta:
+    #   · AUTORIZADO — es lo que el SRI aceptó; un borrador, un rechazado o un
+    #     devuelto no son dinero emitido.
+    #   · tipo FACTURA — sin esto se suman los 6 tipos del SRI, y entonces una
+    #     nota de crédito que ANULA una venta la SUMA otra vez (dobla el importe
+    #     en vez de dejarlo en cero), y retenciones y guías de remisión, que no
+    #     son ventas, cuentan como comprobantes facturados.
+    # Es el mismo criterio que ranking_clientes() en services/reportes.py, que
+    # también mide por cliente: la libreta y el ranking de Inicio no pueden dar
+    # cifras distintas del mismo negocio.
+    facturado = (
+        select(
+            Comprobante.cliente_final_id.label("cliente_id"),
+            func.sum(Comprobante.total).label("facturado"),
+            func.count().label("comprobantes"),
+        )
+        .where(
+            Comprobante.estado == EstadoComprobante.AUTORIZADO,
+            Comprobante.tipo == TipoComprobante.FACTURA,
+        )
+        .group_by(Comprobante.cliente_final_id)
+        .subquery()
+    )
+    # Sin filtro manual por tenant: RLS ya limita a las filas del tenant
+    # autenticado, en la tabla y en el agregado. Un solo viaje a la base: con un
+    # SELECT por cliente serían 500 consultas en una libreta de 500.
+    rows = db.execute(
+        select(ClienteFinal, facturado.c.facturado, facturado.c.comprobantes)
+        .outerjoin(facturado, facturado.c.cliente_id == ClienteFinal.id)
+        .order_by(ClienteFinal.razon_social)
+    ).all()
+    return [
+        ClienteFinalListado(
+            **ClienteFinalOut.model_validate(cliente).model_dump(),
+            facturado=total or Decimal("0"),
+            comprobantes=cuantos or 0,
+        )
+        for cliente, total, cuantos in rows
+    ]
 
 
 def _error_plan(e: LimitePlanError) -> HTTPException:

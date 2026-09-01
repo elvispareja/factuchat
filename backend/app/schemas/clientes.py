@@ -1,6 +1,7 @@
 """Esquemas de clientes finales con validación de RUC/cédula (OWASP A05)."""
 
 import uuid
+from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -14,6 +15,10 @@ class ClienteFinalIn(BaseModel):
     email: EmailStr | None = None
     telefono: str | None = Field(default=None, max_length=20)
     direccion: str | None = Field(default=None, max_length=1000)
+    # Sin validar que la ciudad pertenezca a la provincia: el catálogo está en
+    # el frontend y comprobarlo aquí obligaría a mantenerlo en dos sitios.
+    provincia: str | None = Field(default=None, max_length=100)
+    ciudad: str | None = Field(default=None, max_length=100)
 
     @field_validator("identificacion")
     @classmethod
@@ -48,3 +53,13 @@ class ClienteFinalOut(BaseModel):
     email: str | None
     telefono: str | None
     direccion: str | None
+    provincia: str | None = None
+    ciudad: str | None = None
+
+
+class ClienteFinalListado(ClienteFinalOut):
+    """Fila del listado: añade lo facturado. Solo en GET /clientes; en la ficha
+    devolver 0 sería mentir sobre un dato de dinero."""
+
+    facturado: Decimal
+    comprobantes: int
