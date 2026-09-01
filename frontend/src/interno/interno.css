@@ -412,11 +412,11 @@
   overflow-x: auto;
 }
 .fc-sa-tabla__ancho {
-  min-width: 960px;
+  min-width: 1060px;
 }
 .fc-sa-fila {
   display: grid;
-  grid-template-columns: 128px 1.5fr 118px 116px 150px 92px 110px;
+  grid-template-columns: 128px 1.5fr 118px 116px 150px 92px 110px 88px;
   gap: 12px;
   align-items: center;
 }
@@ -432,9 +432,11 @@
   text-transform: uppercase;
   color: var(--texto-tenue);
 }
-/* La fila entera abre la ficha, como en la maqueta: es un botón para que
-   funcione también con teclado y con lector de pantalla. */
-button.fc-sa-fila {
+/* La fila entera abre la ficha, como en la maqueta. Ya no es un <button>
+   —dentro lleva el botón «Editar» y un botón no puede anidar otro—, sino un
+   div con role="button" y su onKeyDown: sigue funcionando con teclado y con
+   lector de pantalla, que era el motivo de elegir <button> en su día. */
+.fc-sa-fila--clicable {
   width: 100%;
   text-align: left;
   background: none;
@@ -445,7 +447,7 @@ button.fc-sa-fila {
   font: inherit;
   transition: background 0.15s;
 }
-button.fc-sa-fila:hover {
+.fc-sa-fila--clicable:hover {
   background: rgba(34, 197, 94, 0.05);
 }
 .fc-sa-fila__ruc {
@@ -457,6 +459,29 @@ button.fc-sa-fila:hover {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--verde-marca);
+}
+/* El nombre es el botón que abre la ficha: se despinta para que siga leyéndose
+   como texto de la tabla, pero conserva el foco visible del teclado. */
+.fc-sa-fila__abrir {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--verde-marca);
+}
+.fc-sa-fila__abrir:hover {
+  text-decoration: underline;
+}
+/* WCAG 2.5.8 pide 24x24 de área pulsable: sin este relleno, un clic unos
+   píxeles fuera del texto cae en la fila y abre la ficha (un acceso auditado)
+   en vez del modal de edición. */
+.fc-sa-fila__editar {
+  padding: 6px 10px;
+  margin: -6px 0;
 }
 .fc-sa-fila__plan {
   font-size: 12.5px;
@@ -566,7 +591,18 @@ button.fc-sa-fila:hover {
   to { opacity: 1; transform: none; }
 }
 
-.fc-modal {
+/* El modal del panel INTERNO. Lleva su propia clase `fc-modal--interno` porque
+   `.fc-modal` y `.fc-modal__panel` también existen en design/componentes.css, y
+   esta hoja se empaqueta DESPUÉS (PanelInterno se importa en App.tsx sin carga
+   diferida, así que su CSS entra en el mismo archivo y gana en la cascada). Sin
+   separarlos, el `overflow: hidden` de aquí abajo se aplicaba también a los
+   modales del panel de CLIENTE, que no tienen cabecera/cuerpo/pie: todo lo que
+   pasaba de 90vh se recortaba sin dejar barra alguna para llegar a ello.
+
+   Un modificador y NO un ancestro `.fc-sa-shell`: estos modales se pintan con
+   createPortal sobre document.body, o sea FUERA del shell, así que acotar por
+   ancestro no casaría nunca y los dejaría sin estilos. */
+.fc-modal--interno.fc-modal {
   position: fixed;
   inset: 0;
   z-index: 500;
@@ -577,7 +613,7 @@ button.fc-sa-fila:hover {
   padding: 20px;
   animation: saFade 0.2s ease both;
 }
-.fc-modal__panel {
+.fc-modal--interno .fc-modal__panel {
   width: 640px;
   max-width: 100%;
   /* En una pantalla baja el asistente no cabe entero. En vez de dejar que
@@ -738,57 +774,10 @@ button.fc-sa-fila:hover {
   color: var(--texto-suave);
 }
 
-/* Paso 2: zona de carga del .p12 */
-.fc-p12 {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1.5px dashed #a9c4b4;
-  background: var(--superficie-suave);
-  border-radius: 14px;
-  padding: 22px;
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    background 0.2s;
-  margin-bottom: 12px;
-  text-align: center;
-  flex-wrap: wrap;
-}
-.fc-p12:hover {
-  border-color: var(--verde-acento);
-  background: rgba(34, 197, 94, 0.05);
-}
-.fc-p12 input[type="file"] {
-  display: none;
-}
-.fc-p12__elegido {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid var(--exito-borde);
-  border-radius: var(--radio-pildora);
-  padding: 6px 13px;
-  margin-bottom: 12px;
-  font-family: var(--fuente-mono);
-  font-size: 11.5px;
-  color: var(--verde-marca);
-}
-.fc-p12__ok {
-  display: flex;
-  gap: 11px;
-  background: rgba(34, 197, 94, 0.07);
-  border: 1px solid var(--exito-borde);
-  border-radius: 13px;
-  padding: 13px 15px;
-  margin-bottom: 14px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--verde-marca);
-  animation: saIn 0.25s ease-out both;
-}
+/* La zona de carga del .p12 se mudó a `.fc-dropzone` (design/componentes.css):
+   la usaba SubirFirma, que es panel de CLIENTE, y ahora también la imagen del
+   producto. `.fc-p12__elegido` y `.fc-p12__ok` se van con ella porque no las
+   referenciaba nadie. */
 /* Casilla «aún no tiene firma» */
 .fc-casilla {
   display: flex;

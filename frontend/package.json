@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "tsc -b --noEmit"
+    "lint": "tsc -b --noEmit && node scripts/css-sin-colisiones.mjs && node scripts/comprobar-totales.mts"
   },
   "dependencies": {
     "react": "^18.3.1",

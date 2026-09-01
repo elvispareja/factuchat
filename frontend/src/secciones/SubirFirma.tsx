@@ -111,7 +111,7 @@ export function SubirFirma() {
           y nadie de Factuchat puede verlos: por eso no te los pedimos al crear tu cuenta.
         </p>
 
-        <label className="fc-p12" style={{ marginBottom: 14 }}>
+        <label className="fc-dropzone" style={{ marginBottom: 14 }}>
           <svg
             width="18"
             height="18"

@@ -213,7 +213,8 @@
   border-color: var(--error-punto);
   background: #fef4f3;
 }
-.fc-campo:read-only {
+.fc-campo:read-only,
+.fc-campo:disabled {
   background: var(--superficie-tenue);
 }
 .fc-error {
@@ -285,6 +286,21 @@
 .fc-mono {
   font-family: var(--fuente-mono);
   font-size: 12.5px;
+}
+
+/* Círculo con la inicial del cliente, a la izquierda de su nombre. */
+.fc-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--exito-bg);
+  color: var(--verde-medio);
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1;
 }
 
 /* --- Encabezado de sección ----------------------------------------------- */
@@ -374,27 +390,73 @@
 }
 
 /* --- Modal genérico -------------------------------------------------------
-   Ficha/formulario sobre el panel (p. ej. Catálogo → Nuevo producto). */
+   Ficha/formulario sobre el panel (p. ej. Catálogo → Nuevo producto).
+
+   Aquí desplaza el FONDO, no el panel, y el panel se centra con `margin: auto`
+   en vez de con `place-items: center`. El motivo: un hijo centrado dentro de
+   una capa `position: fixed` que no desborda reparte a partes iguales lo que
+   no cabe, así que la mitad de arriba se va a coordenadas negativas —donde
+   ninguna barra de desplazamiento llega— y la de abajo se sale de la ventana.
+   Con el formulario de producto abierto en «matriz de variantes» eso dejaba la
+   cabecera y los botones Guardar/Cancelar irrecuperables.
+
+   `margin: auto` no tiene ese defecto: los márgenes automáticos solo se
+   reparten espacio POSITIVO y valen 0 cuando falta sitio. Un modal corto sigue
+   saliendo centrado; uno más alto que la ventana arranca pegado al borde de
+   arriba y se recorre entero con la barra del fondo. */
 .fc-modal {
   position: fixed;
   inset: 0;
   z-index: 500;
   background: rgba(12, 35, 24, 0.5);
   backdrop-filter: blur(3px);
-  display: grid;
-  place-items: center;
+  display: flex;
+  overflow-y: auto;
+  /* Al llegar al final no se arrastra la página de detrás */
+  overscroll-behavior: contain;
   padding: 20px;
   animation: dbFade 0.2s ease both;
 }
 .fc-modal__panel {
   width: 100%;
   max-width: 560px;
-  max-height: min(90vh, 100%);
-  overflow-y: auto;
+  margin: auto;
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio-tarjeta-grande);
   padding: 26px;
   box-shadow: var(--sombra-elevada);
   animation: dbSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* --- Zona de carga de archivo (clic o arrastrar y soltar) -----------------
+   La comparten la firma .p12 y la imagen del producto. Vive aquí, y no en
+   interno.css de donde salió, porque el panel de CLIENTE no puede depender de
+   la hoja de estilos del panel interno. */
+.fc-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed #a9c4b4;
+  background: var(--superficie-suave);
+  border-radius: 14px;
+  padding: 22px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: center;
+  flex-wrap: wrap;
+}
+.fc-dropzone:hover,
+.fc-dropzone[data-arrastrando="true"] {
+  border-color: var(--verde-acento);
+  background: rgba(34, 197, 94, 0.05);
+}
+.fc-dropzone input[type="file"] {
+  display: none;
+}
+/* El icono y los rótulos no reciben eventos de puntero: si no, arrastrar por
+   encima de ellos dispara un `dragleave` en la zona y el resaltado parpadea. */
+.fc-dropzone > *:not(input) {
+  pointer-events: none;
 }
