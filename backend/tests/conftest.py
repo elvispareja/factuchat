@@ -229,6 +229,42 @@ def clean_redis():
     yield
 
 
+# Las tablas que gastan CUPO DE PLAN. Un módulo que crea clientes o comprobantes
+# y no los recoge se los deja puestos al siguiente, y el cupo del plan gratuito
+# es pequeño: llegado cierto punto un test que no tiene nada que ver empieza a
+# recibir 402 «llegaste al límite de tu plan» y falla según EN QUÉ ORDEN se corra
+# la suite. Pasó de verdad: `test_superadmin` fallaba en la suite entera y pasaba
+# a solas. Se limpia por módulo y no por test porque muchos comparten la misma
+# siembra dentro de su fichero.
+_TABLAS_CON_CUPO = ("comprobantes", "clientes_finales")  # en orden de borrado (FK)
+
+
+def _ids(conn, tabla: str) -> set:
+    return {r[0] for r in conn.execute(text(f"SELECT id FROM {tabla}"))}  # noqa: S608
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _sin_restos(admin_engine):
+    """Cada módulo se lleva lo que creó. Ver `_TABLAS_CON_CUPO`.
+
+    Compara ids antes y después en vez de fiarse de que cada test apunte lo
+    suyo: lo creado a través de la API —una nota emitida, un cliente dado de
+    alta por la ruta— no pasa por ninguna lista que se pueda repasar.
+    """
+    with admin_engine.connect() as c:
+        antes = {t: _ids(c, t) for t in _TABLAS_CON_CUPO}
+    yield
+    with admin_engine.connect() as c:
+        for tabla in _TABLAS_CON_CUPO:
+            nuevos = list(_ids(c, tabla) - antes[tabla])
+            if nuevos:
+                c.execute(
+                    text(f"DELETE FROM {tabla} WHERE id = ANY(:ids)"),  # noqa: S608
+                    {"ids": nuevos},
+                )
+        c.commit()
+
+
 @pytest.fixture()
 def admin_db(admin_engine):
     """Sesión de administración (sin RLS) para VERIFICAR efectos en los tests."""
