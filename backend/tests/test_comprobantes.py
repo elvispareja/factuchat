@@ -32,7 +32,7 @@ def _cab(tokens: dict) -> dict:
     return auth_headers(tokens["access_token"])
 
 
-def _crear_cliente(client, tokens, tipo: str = "RUC") -> dict:
+def _crear_cliente(client, tokens, tipo: str = "RUC", **extra) -> dict:
     sufijo = random.randint(10_000_000, 99_999_999)
     r = client.post(
         "/api/v1/clientes",
@@ -40,6 +40,7 @@ def _crear_cliente(client, tokens, tipo: str = "RUC") -> dict:
             "tipo_identificacion": tipo,
             "identificacion": f"09{sufijo}001" if tipo == "RUC" else f"09{sufijo}",
             "razon_social": "Comercial del Pacífico S.A.",
+            **extra,
         },
         headers=_cab(tokens),
     )
@@ -213,3 +214,182 @@ class TestFormasDePago:
         ).one()
         assert payload["forma_pago"] == "01"
         assert payload["plazo_dias"] == 30  # llega al XML como <plazo>30</plazo>
+
+
+class TestEmisorDeLaRevision:
+    """«Revisa tu factura» se lee como el documento que va a salir, así que
+    necesita la cabecera del emisor. Viaja en /panel/estado, que el panel ya
+    pide al montar."""
+
+    def _estado(self, client, tokens) -> dict:
+        r = client.get("/api/v1/panel/estado", headers=_cab(tokens))
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    def test_estado_trae_la_cabecera_que_imprime_el_ride(self, client, ana_tokens):
+        assert self._estado(client, ana_tokens)["emisor"] == {
+            "razon_social": "Empresa A S.A.S.",
+            "nombre_comercial": None,
+            "ruc": "1790012345001",
+            "direccion_matriz": "Av. Amazonas N23-45, Quito",
+            "obligado_contabilidad": False,
+        }
+
+    def test_no_se_escapa_nada_del_certificado(self, client, ana_tokens):
+        """De la firma solo si está cargada y cuándo vence: ni el .p12, ni su
+        clave, ni la ruta en disco salen del servidor."""
+        estado = self._estado(client, ana_tokens)
+        assert set(estado) == {"plan", "firma", "emisor"}
+        assert set(estado["firma"]) == {"cargada", "vence"}
+
+    def test_cada_negocio_ve_el_suyo(self, client, bob_tokens):
+        emisor = self._estado(client, bob_tokens)["emisor"]
+        assert emisor["ruc"] == "1790099999001"
+        assert emisor["razon_social"] == "Empresa B Cia. Ltda."
+
+
+class TestCorreoDeEnvio:
+    """«Se enviará a: …» con su lápiz. Corregir ese correo cambia a dónde va
+    ESTA factura, no la ficha del cliente."""
+
+    def _comprador(self, admin_db, comprobante_id: str) -> dict:
+        admin_db.rollback()
+        payload = admin_db.scalars(
+            select(Comprobante.payload).where(Comprobante.id == comprobante_id)
+        ).one()
+        return payload["comprador"]
+
+    def test_correo_alternativo_no_toca_la_ficha_del_cliente(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, email="dueno@empresa-cliente.ec")
+        borrador = _crear_factura(
+            client,
+            ana_tokens,
+            cliente_id=cliente["id"],
+            email_envio="contador@estudio-contable.ec",
+        )
+
+        assert self._comprador(admin_db, borrador["id"])["email"] == "contador@estudio-contable.ec"
+        ficha = client.get(f"/api/v1/clientes/{cliente['id']}", headers=_cab(ana_tokens))
+        assert ficha.json()["email"] == "dueno@empresa-cliente.ec"
+
+    def test_sin_correo_alternativo_sigue_yendo_al_del_cliente(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, email="dueno@empresa-cliente.ec")
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"])
+
+        assert self._comprador(admin_db, borrador["id"])["email"] == "dueno@empresa-cliente.ec"
+
+    def test_consumidor_final_tambien_puede_pedir_copia(self, client, ana_tokens, admin_db):
+        borrador = _crear_factura(client, ana_tokens, email_envio="paso@por.aqui.ec")
+
+        assert self._comprador(admin_db, borrador["id"])["email"] == "paso@por.aqui.ec"
+
+    def test_lo_que_no_es_un_correo_se_rechaza(self, client, ana_tokens):
+        r = client.post(
+            "/api/v1/comprobantes/facturas",
+            json={"items": [LAPTOP], "forma_pago": "01", "email_envio": "arroba-nada"},
+            headers=_cab(ana_tokens),
+        )
+        assert r.status_code == 422, r.text
+
+
+class TestBorrarElCorreoNoEnviaNada:
+    """Vaciar el correo en la revisión NO es «usa el de siempre».
+
+    La pantalla promete que sin correo la factura se emite pero no se manda a
+    nadie. Antes el vacío se omitía del cuerpo, el servidor lo tomaba por «no
+    indicado» y acababa enviándola al de la ficha: lo aprobado no era lo hecho.
+    """
+
+    def test_vacio_significa_no_mandar(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, email="dueno@empresa.ec")
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"], email_envio="")
+
+        admin_db.rollback()
+        payload = admin_db.scalars(
+            select(Comprobante.payload).where(Comprobante.id == borrador["id"])
+        ).one()
+        assert payload["comprador"]["email"] is None, "no se manda copia a nadie"
+
+        # Y la ficha del cliente conserva el suyo, que es de otro asunto.
+        r = client.get(f"/api/v1/clientes/{cliente['id']}", headers=_cab(ana_tokens))
+        assert r.json()["email"] == "dueno@empresa.ec"
+
+    def test_sin_indicar_sigue_usando_el_del_cliente(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, email="dueno@empresa.ec")
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"])
+
+        admin_db.rollback()
+        payload = admin_db.scalars(
+            select(Comprobante.payload).where(Comprobante.id == borrador["id"])
+        ).one()
+        assert payload["comprador"]["email"] == "dueno@empresa.ec"
+
+
+class TestDireccionDelComprador:
+    """«+ agregar dirección»: por omisión la de la ficha, cambiable para ESTA
+    factura. El snapshot guarda lo que se emitió, que es lo que reimprime el
+    RIDE meses después, cuando la ficha del cliente ya se movió."""
+
+    def _comprador(self, admin_db, comprobante_id: str) -> dict:
+        admin_db.rollback()
+        return admin_db.scalars(
+            select(Comprobante.payload).where(Comprobante.id == comprobante_id)
+        ).one()["comprador"]
+
+    def test_sin_indicar_nada_sale_la_de_la_ficha(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, direccion="Av. Amazonas N23-45, Quito")
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"])
+
+        assert (
+            self._comprador(admin_db, borrador["id"])["direccion"] == "Av. Amazonas N23-45, Quito"
+        )
+
+    def test_la_de_esta_factura_manda_sobre_la_ficha(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens, direccion="Av. Amazonas N23-45, Quito")
+        borrador = _crear_factura(
+            client,
+            ana_tokens,
+            cliente_id=cliente["id"],
+            direccion_envio="Bodega 4, vía a Daule, Guayaquil",
+        )
+
+        # Se guarda la EMITIDA, no la de la ficha…
+        emitida = self._comprador(admin_db, borrador["id"])["direccion"]
+        assert emitida == "Bodega 4, vía a Daule, Guayaquil"
+        # …y la ficha sigue con la suya, que es de otro asunto.
+        ficha = client.get(f"/api/v1/clientes/{cliente['id']}", headers=_cab(ana_tokens))
+        assert ficha.json()["direccion"] == "Av. Amazonas N23-45, Quito"
+
+    def test_vacio_significa_esta_factura_sin_direccion(self, client, ana_tokens, admin_db):
+        """Borrar el campo plegable no es «pon la de siempre»."""
+        cliente = _crear_cliente(client, ana_tokens, direccion="Av. Amazonas N23-45, Quito")
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"], direccion_envio="")
+
+        assert "direccion" not in self._comprador(admin_db, borrador["id"])
+
+    def test_cliente_sin_direccion_no_inventa_ninguna(self, client, ana_tokens, admin_db):
+        cliente = _crear_cliente(client, ana_tokens)
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"])
+
+        assert "direccion" not in self._comprador(admin_db, borrador["id"])
+
+    def test_consumidor_final_tambien_puede_ponerla(self, client, ana_tokens, admin_db):
+        borrador = _crear_factura(client, ana_tokens, direccion_envio="Calle Sur 1, Ambato")
+
+        assert self._comprador(admin_db, borrador["id"])["direccion"] == "Calle Sur 1, Ambato"
+
+    def test_la_de_la_ficha_se_recorta_al_tope_del_xsd(self, client, ana_tokens, admin_db):
+        """La ficha admite 1000 caracteres y <direccionComprador> 300: sin el
+        recorte la factura se caería en recepción, no al crear el borrador."""
+        cliente = _crear_cliente(client, ana_tokens, direccion="A" * 900)
+        borrador = _crear_factura(client, ana_tokens, cliente_id=cliente["id"])
+
+        assert len(self._comprador(admin_db, borrador["id"])["direccion"]) == 300
+
+    def test_la_tecleada_a_mano_se_rechaza_si_pasa_de_300(self, client, ana_tokens):
+        r = client.post(
+            "/api/v1/comprobantes/facturas",
+            json={"items": [LAPTOP], "forma_pago": "01", "direccion_envio": "A" * 301},
+            headers=_cab(ana_tokens),
+        )
+        assert r.status_code == 422, r.text

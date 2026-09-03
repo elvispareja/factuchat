@@ -438,6 +438,58 @@
   animation: dbSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* --- Modal en tres partes: cabecera / cuerpo / pie -------------------------
+   El panel de arriba desplaza ENTERO, así que en uno alto —la nueva factura con
+   diez líneas— hay que bajar hasta el final para llegar al botón de emitir, y el
+   título se pierde por arriba. Con esto el panel es una columna que no crece más
+   que la ventana, cabecera y pie no encogen (`flex-shrink: 0`) y solo el cuerpo
+   desplaza (`min-height: 0`, sin lo cual un hijo flex se niega a encogerse por
+   debajo de su contenido y el overflow no llega a activarse nunca).
+
+   `--fijo` es un MODIFICADOR a propósito: el `overflow: hidden` que necesita
+   esta estructura, puesto sobre `.fc-modal__panel` a secas, recorta cualquier
+   otro modal sin dejar barra con la que llegar a lo que queda fuera (le pasó al
+   panel de cliente cuando esta misma regla vivía en interno.css y ganaba en la
+   cascada). Solo lo llevan los modales que de verdad tienen las tres partes; los
+   demás siguen siendo un div plano que desplaza entero.
+
+   Las tres piezas viven aquí, y no en interno.css, porque las comparten el panel
+   interno y el de cliente: repetirlas en las dos hojas es justo la colisión que
+   vigila `npm run lint`. */
+.fc-modal__panel--fijo {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  /* El relleno pasa a las tres partes: si se queda en el panel, el pie fijo
+     tiene un borde superior que no llega a los lados y el cuerpo desplaza su
+     contenido por debajo de un margen en blanco. */
+  padding: 0;
+}
+.fc-modal__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+.fc-modal__cuerpo {
+  padding: 0 24px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.fc-modal__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 24px 22px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
 /* --- Zona de carga de archivo (clic o arrastrar y soltar) -----------------
    La comparten la firma .p12 y la imagen del producto. Vive aquí, y no en
    interno.css de donde salió, porque el panel de CLIENTE no puede depender de

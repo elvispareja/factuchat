@@ -37,6 +37,16 @@ export function fechaLarga(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : FECHA.format(d);
 }
 
+/** Hoy en Ecuador, en ISO (`2026-09-01`).
+ *
+ *  El servidor fecha los comprobantes con `America/Guayaquil`
+ *  (emision.TZ_ECUADOR), así que la revisión tiene que enseñar ESA fecha: en un
+ *  móvil configurado en otra zona —o en Madrid a las 3 de la mañana— la fecha
+ *  local es otro día y la pantalla prometería una fecha de emisión falsa. */
+const ISO_ECUADOR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil" });
+
+export const hoyEnEcuador = (): string => ISO_ECUADOR.format(new Date());
+
 const FECHA_CORTA = new Intl.DateTimeFormat("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 export function fechaCorta(iso: string): string {

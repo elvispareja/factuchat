@@ -5,6 +5,7 @@ polling. La emisión exige confirmación explícita: crear borrador ≠ emitir (
 """
 
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -20,12 +21,20 @@ from app.schemas.comprobantes import (
     OPCIONES_PAGO,
     ComprobanteOut,
     EmitirIn,
+    FacturaAcreditableOut,
     FacturaIn,
+    ItemAcreditableOut,
+    NotaCreditoIn,
+    NotaDebitoIn,
     OpcionPagoOut,
     SiguienteNumeroOut,
 )
 from app.services import emision
-from app.services.emision import CODIGO_IDENTIFICACION, EmisionError
+from app.services.emision import (
+    CODIGO_IDENTIFICACION,
+    EmisionError,
+    FacturaYaAcreditadaError,
+)
 from app.services.planes import LimitePlanError
 
 router = APIRouter(prefix="/comprobantes", tags=["comprobantes"])
@@ -33,6 +42,26 @@ router = APIRouter(prefix="/comprobantes", tags=["comprobantes"])
 # Inverso de la tabla 6 del SRI: el payload guarda el código ("04"), el
 # historial pinta «RUC 0992745103001» / «Cédula 0923737159».
 TIPO_ID_POR_CODIGO = {codigo: tipo.value for tipo, codigo in CODIGO_IDENTIFICACION.items()}
+
+# Del snapshot del payload, lo que hace falta para reconstruir la línea en el
+# modal de la nota de crédito. Los importes ya calculados NO viajan: el servidor
+# los recalcula al crearla.
+#
+# El DESCUENTO sí, y es imprescindible: sin él la nota se precarga con el precio
+# de tarifa y no con lo que el cliente pagó de verdad. Una factura de 1 × $100
+# con $20 de rebaja se cobró por $92, pero la nota nacía sumando $115: pasarse
+# del pendiente apaga el botón nada más elegir la factura —no se puede ni anular
+# una venta rebajada— y en una nota PARCIAL, donde el tope mira el total de la
+# factura y no la línea, colaba y devolvía de más.
+CAMPOS_ITEM = (
+    "codigo",
+    "descripcion",
+    "cantidad",
+    "precio_unitario",
+    "descuento",
+    "codigo_iva",
+    "tarifa_iva",
+)
 
 
 def _detalle(items: list[dict]) -> str | None:
@@ -86,13 +115,32 @@ def _a_out(c: Comprobante) -> ComprobanteOut:
     )
 
 
+@contextmanager
+def _errores_de_creacion():
+    """Los tres finales posibles al crear un borrador, en un solo sitio."""
+    try:
+        yield
+    except LimitePlanError as e:
+        # Todos los topes de plan responden 402, para que el panel muestre el
+        # bloqueo con su invitación a subir de plan (fase 3.2)
+        raise HTTPException(
+            status.HTTP_402_PAYMENT_REQUIRED,
+            detail={"mensaje": e.mensaje, "funcion": e.funcion, "plan_sugerido": e.plan_sugerido},
+        ) from e
+    except FacturaYaAcreditadaError as e:
+        # No es un dato mal escrito: la factura está entera y ya no admite más.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+    except EmisionError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e)) from e
+
+
 @router.post("/facturas", response_model=ComprobanteOut, status_code=status.HTTP_201_CREATED)
 def crear_factura(
     body: FacturaIn,
     user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
     db: Session = Depends(get_db),
 ):
-    try:
+    with _errores_de_creacion():
         comp = emision.crear_factura(
             db,
             tenant_id=tenant_de(user),
@@ -101,17 +149,111 @@ def crear_factura(
             forma_pago=body.forma_pago,
             info_adicional=body.info_adicional,
             plazo_dias=body.plazo_dias,
+            email_envio=body.email_envio,
+            direccion_envio=body.direccion_envio,
         )
-    except LimitePlanError as e:
-        # Todos los topes de plan responden 402, para que el panel muestre el
-        # bloqueo con su invitación a subir de plan (fase 3.2)
-        raise HTTPException(
-            status.HTTP_402_PAYMENT_REQUIRED,
-            detail={"mensaje": e.mensaje, "funcion": e.funcion, "plan_sugerido": e.plan_sugerido},
-        ) from e
-    except EmisionError as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e)) from e
     return _a_out(comp)
+
+
+# ANTES de cualquier ruta con {comprobante_id}: FastAPI resuelve por orden de
+# registro y «notas-credito» acabaría entrando por la de UUID (ya pasó con
+# /formas-pago).
+@router.post("/notas-credito", response_model=ComprobanteOut, status_code=status.HTTP_201_CREATED)
+def crear_nota_credito(
+    body: NotaCreditoIn,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """Borrador de la nota que anula o corrige una factura ya emitida.
+
+    Como la factura: crea, no emite. La emisión sigue siendo
+    POST /comprobantes/{id}/emitir, que ya sirve para cualquier tipo.
+    """
+    with _errores_de_creacion():
+        comp = emision.crear_nota_credito(
+            db,
+            tenant_id=tenant_de(user),
+            cliente_final_id=body.cliente_final_id,
+            items_in=[i.model_dump() for i in body.items],
+            motivo=body.motivo,
+            factura_id=body.factura_id,
+            doc_modificado=body.doc_modificado.model_dump() if body.doc_modificado else None,
+            info_adicional=body.info_adicional,
+            email_envio=body.email_envio,
+        )
+    return _a_out(comp)
+
+
+# También ANTES de las rutas con {comprobante_id}, por lo mismo.
+@router.post("/notas-debito", response_model=ComprobanteOut, status_code=status.HTTP_201_CREATED)
+def crear_nota_debito(
+    body: NotaDebitoIn,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """Borrador de la nota que COBRA un recargo sobre una factura ya emitida.
+
+    `valor_recargo` es lo que se quiere cobrar CON IVA: el servidor lo desglosa.
+    Como la factura y la nota de crédito: crea, no emite.
+    """
+    with _errores_de_creacion():
+        comp = emision.crear_nota_debito(
+            db,
+            tenant_id=tenant_de(user),
+            cliente_final_id=body.cliente_final_id,
+            valor_recargo=body.valor_recargo,
+            motivo=body.motivo,
+            factura_id=body.factura_id,
+            doc_modificado=body.doc_modificado.model_dump() if body.doc_modificado else None,
+            info_adicional=body.info_adicional,
+            email_envio=body.email_envio,
+        )
+    return _a_out(comp)
+
+
+@router.get("/acreditables", response_model=list[FacturaAcreditableOut])
+def acreditables(
+    solo_con_saldo: bool = Query(
+        default=True,
+        description="false: también las ya acreditadas del todo (nota de débito)",
+    ),
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """Facturas sobre las que TODAVÍA se puede emitir una nota de crédito.
+
+    Con `solo_con_saldo=false`, las que admiten una nota de DÉBITO: cualquiera
+    autorizada, porque un recargo no consume saldo de la factura. Un parámetro y
+    no una ruta gemela: la fila que necesitan los dos modales es la misma
+    (número, fecha, cliente y total de la factura) y duplicarla para cambiar un
+    WHERE dejaría dos sitios donde arreglar el siguiente fallo. La nota de
+    crédito sigue llamando sin parámetro y le llega exactamente lo de antes.
+
+    Endpoint aparte y no un filtro de GET /comprobantes: el historial devuelve
+    los seis tipos con las columnas de su tabla y no sabe de saldos, así que
+    meter «acreditado» y «pendiente» en ComprobanteOut añadiría a cada fila dos
+    campos nulos para todo lo que no sea una factura autorizada, y obligaría a
+    calcular el saldo en un listado que hoy es UN SELECT sin agregados. Aquí la
+    respuesta es justo lo que pide el selector del modal, ya descontado.
+    """
+    return [
+        FacturaAcreditableOut(
+            id=c.id,
+            numero=f"{c.establecimiento}-{c.punto_emision}-{c.secuencial:09d}",
+            fecha_emision=c.fecha_emision.isoformat(),
+            cliente=(c.payload.get("comprador") or {}).get("razon_social"),
+            cliente_identificacion=(c.payload.get("comprador") or {}).get("identificacion"),
+            cliente_final_id=c.cliente_final_id,
+            total=str(c.total),
+            acreditado=str(acreditado),
+            pendiente=str(c.total - acreditado),
+            items=[
+                ItemAcreditableOut(**{k: str(i.get(k) or "") for k in CAMPOS_ITEM})
+                for i in c.payload.get("items") or []
+            ],
+        )
+        for c, acreditado in emision.facturas_acreditables(db, solo_con_saldo=solo_con_saldo)
+    ]
 
 
 @router.post("/{comprobante_id}/emitir", response_model=ComprobanteOut, status_code=202)

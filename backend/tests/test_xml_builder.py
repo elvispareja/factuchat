@@ -132,6 +132,65 @@ class TestFactura:
         )
         assert root.find("infoFactura/pagos/pago/plazo") is None
 
+    def test_direccion_del_comprador_va_en_su_sitio_de_la_secuencia(self):
+        """infoFactura es una <xs:sequence>: <direccionComprador> va entre
+        identificacionComprador y totalSinImpuestos o el SRI devuelve el
+        comprobante en recepción. Se comprueba la POSICIÓN, no solo el valor."""
+        root = _x(
+            xb.construir_factura(
+                EMISOR,
+                {
+                    **BASE_DOC,
+                    "comprador": {**COMPRADOR, "direccion": "Av. 6 de Diciembre N34-12, Quito"},
+                    "items": [ITEM],
+                    "totales": TOTALES,
+                    "pagos": [{"forma": "01", "total": Decimal("23.00")}],
+                },
+            )
+        )
+        tags = [hijo.tag for hijo in root.find("infoFactura")]
+        assert tags[tags.index("identificacionComprador") + 1] == "direccionComprador"
+        assert tags[tags.index("direccionComprador") + 1] == "totalSinImpuestos"
+        assert _t(root, "infoFactura/direccionComprador") == "Av. 6 de Diciembre N34-12, Quito"
+
+    def test_sin_direccion_no_se_emite_el_elemento(self):
+        """Es opcional: omitido y vacío no son lo mismo."""
+        root = _x(
+            xb.construir_factura(
+                EMISOR,
+                {
+                    **BASE_DOC,
+                    "comprador": COMPRADOR,  # sin clave «direccion»
+                    "items": [ITEM],
+                    "totales": TOTALES,
+                    "pagos": [{"forma": "01", "total": Decimal("23.00")}],
+                },
+            )
+        )
+        assert root.find("infoFactura/direccionComprador") is None
+
+    def test_las_notas_no_llevan_direccion_aunque_el_snapshot_la_traiga(self):
+        """infoNotaCredito/infoNotaDebito no tienen el campo en su esquema."""
+        comprador = {**COMPRADOR, "direccion": "Av. 6 de Diciembre N34-12, Quito"}
+        doc = {
+            **BASE_DOC,
+            "comprador": comprador,
+            "doc_modificado": {
+                "cod_doc": "01",
+                "numero": "001-001-000000100",
+                "fecha": date(2026, 8, 1),
+            },
+            "totales": TOTALES,
+        }
+        nc = _x(xb.construir_nota_credito(EMISOR, {**doc, "motivo": "Devolución", "items": [ITEM]}))
+        nd = _x(
+            xb.construir_nota_debito(
+                EMISOR, {**doc, "motivos": [{"razon": "Mora", "valor": Decimal("5.00")}]}
+            )
+        )
+        assert nc.find("infoNotaCredito/direccionComprador") is None
+        assert nd.find("infoNotaDebito/direccionComprador") is None
+
     def test_consumidor_final(self):
         root = _x(
             xb.construir_factura(

@@ -113,7 +113,16 @@ export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }
         onCrear={() => setCreando(true)}
       />
       {creando && (
-        <CrearComprobante onCerrar={() => setCreando(false)} onRecargar={cargar} />
+        <CrearComprobante
+          onCerrar={() => setCreando(false)}
+          onRecargar={cargar}
+          // La retención recibida no se emite: el selector solo la señala y
+          // manda aquí, que es la misma sección un chip más allá.
+          onRetenciones={() => {
+            setCreando(false);
+            setFiltro("retencion");
+          }}
+        />
       )}
     </>
   );

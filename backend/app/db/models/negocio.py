@@ -236,6 +236,12 @@ class Comprobante(UUIDPk, Timestamps, Base):
     cliente_final_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("clientes_finales.id", ondelete="SET NULL")
     )
+    # Nota de crédito → la factura que anula o corrige, cuando esa factura está
+    # en el sistema (si se tecleó a mano, queda en None y solo hay el número del
+    # payload). La FK NO respeta RLS: el tenant se valida en el servicio.
+    comprobante_modificado_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("comprobantes.id", ondelete="CASCADE"), index=True
+    )
     fecha_emision: Mapped[date]
     subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     iva: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))

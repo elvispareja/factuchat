@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import AuthUser, require_roles, tenant_de
@@ -279,7 +280,21 @@ def crear(
     producto = Producto(tenant_id=tenant_id)
     _aplicar(producto, body, plan.permite("stock"))
     db.add(producto)
-    db.flush()  # asigna producto.id, que necesitan atributos y variantes
+    # El código es único por negocio, y el índice cuenta TAMBIÉN los dados de
+    # baja, que no salen en el listado. Sin esta captura el choque llega al
+    # manejador general y sale un 500 «Error interno» que no dice nada. Pasó a
+    # ser probable cuando la factura empezó a dar de alta artículos sola con un
+    # código inventado en el navegador: ese código se compara contra lo que
+    # devuelve GET /productos, donde un artículo desactivado no aparece.
+    try:
+        db.flush()  # asigna producto.id, que necesitan atributos y variantes
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=f"Ya tienes un artículo con el código «{body.codigo}», "
+            "puede que dado de baja. Usa otro código.",
+        ) from e
 
     _sincronizar_atributos(tenant_id, producto, body)
     _sincronizar_variantes(tenant_id, producto, body)

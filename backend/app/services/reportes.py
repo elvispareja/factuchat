@@ -47,6 +47,18 @@ MESES = [
 ]
 
 
+# Lo que suma como venta. La NOTA DE DÉBITO va aquí, con la factura: no es un
+# documento aparte, es un cobro MÁS sobre una venta ya hecha (un interés de mora,
+# un gasto que se repercute) y su IVA es IVA generado que hay que declarar. Si se
+# queda fuera, el negocio cobra ese impuesto y el panel le dice que no lo debe.
+# La nota de crédito es la que va aparte, porque resta.
+TIPOS_VENTA = [
+    TipoComprobante.FACTURA,
+    TipoComprobante.NOTA_DEBITO,
+    TipoComprobante.LIQUIDACION_COMPRA,
+]
+
+
 def noveno_digito(ruc: str) -> str:
     return ruc[8] if len(ruc) >= 9 else "1"
 
@@ -117,7 +129,7 @@ def resumen_fiscal(
         ).scalar_one()
         return Decimal(str(valor))
 
-    ventas = [TipoComprobante.FACTURA, TipoComprobante.LIQUIDACION_COMPRA]
+    ventas = TIPOS_VENTA
     subtotal_ventas = _suma(ventas, Comprobante.subtotal)
     iva_ventas = _suma(ventas, Comprobante.iva)
     total_ventas = _suma(ventas, Comprobante.total)
@@ -166,7 +178,7 @@ def ventas_por_dia(db: Session, tenant_id: uuid.UUID, desde: date, hasta: date) 
         .where(
             Comprobante.tenant_id == tenant_id,
             Comprobante.estado == EstadoComprobante.AUTORIZADO,
-            Comprobante.tipo == TipoComprobante.FACTURA,
+            Comprobante.tipo.in_(TIPOS_VENTA),
             Comprobante.fecha_emision >= desde,
             Comprobante.fecha_emision < hasta,
         )
@@ -191,7 +203,7 @@ def ranking_clientes(
         .where(
             Comprobante.tenant_id == tenant_id,
             Comprobante.estado == EstadoComprobante.AUTORIZADO,
-            Comprobante.tipo == TipoComprobante.FACTURA,
+            Comprobante.tipo.in_(TIPOS_VENTA),
             Comprobante.fecha_emision >= desde,
             Comprobante.fecha_emision < hasta,
         )

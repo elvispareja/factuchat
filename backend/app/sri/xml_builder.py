@@ -135,6 +135,16 @@ def construir_factura(emisor: dict[str, Any], f: dict[str, Any]) -> bytes:
     _e(info, "tipoIdentificacionComprador", f["comprador"]["tipo_identificacion_codigo"])
     _e(info, "razonSocialComprador", f["comprador"]["razon_social"])
     _e(info, "identificacionComprador", f["comprador"]["identificacion"])
+    # OPCIONAL, y su sitio es ESTE: entre identificacionComprador y
+    # totalSinImpuestos (secuencia de infoFactura, ficha técnica 2.31). El XSD la
+    # declara como <xs:sequence>, no como <xs:all>: un elemento fuera de orden no
+    # es un detalle de estilo, el SRI devuelve el comprobante en recepción (error
+    # 35, «ARCHIVO NO CUMPLE ESTRUCTURA XML»). Solo la factura lo lleva; las notas
+    # tienen su propio infoNotaCredito/infoNotaDebito y ahí no existe.
+    # Si no hay dirección el elemento NO se emite: omitir no es lo mismo que
+    # mandarlo vacío, y vacío incumple el minLength del tipo.
+    if f["comprador"].get("direccion"):
+        _e(info, "direccionComprador", f["comprador"]["direccion"])
     _e(info, "totalSinImpuestos", fmt2(f["totales"]["total_sin_impuestos"]))
     _e(info, "totalDescuento", fmt2(f["totales"]["total_descuento"]))
     _total_con_impuestos(info, f["totales"]["impuestos"])

@@ -630,14 +630,10 @@
   box-shadow: 0 40px 90px -30px rgba(12, 35, 24, 0.6);
   animation: saIn 0.28s ease-out both;
 }
-.fc-modal__cabecera {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px 24px 0;
-  flex-shrink: 0;
-}
+/* `.fc-modal__cabecera`, `.fc-modal__cuerpo` y `.fc-modal__pie` salieron de aquí
+   a design/componentes.css: el panel de cliente monta la misma estructura de
+   tres partes en «Revisa tu factura», y tenerlas en las dos hojas es la colisión
+   que corta `npm run lint`. Aquí queda solo lo propio del panel interno. */
 .fc-modal__titulo {
   font-family: var(--fuente-titulo);
   font-size: 20px;
@@ -661,21 +657,10 @@
 .fc-modal__cerrar:hover {
   border-color: var(--verde-marca);
 }
-.fc-modal__cuerpo {
-  padding: 0 24px;
+/* La entrada del cuerpo es del asistente interno (sus pasos se sustituyen en
+   sitio), no de la estructura: acotada, para no colisionar con la hoja común. */
+.fc-modal--interno .fc-modal__cuerpo {
   animation: saIn 0.2s ease-out both;
-  overflow-y: auto;
-  min-height: 0;
-  flex: 1 1 auto;
-}
-.fc-modal__pie {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 18px 24px 22px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
 }
 
 /* Raíl de pasos: el círculo se pinta oscuro en el paso actual y en los ya

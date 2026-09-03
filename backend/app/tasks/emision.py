@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.core.context import RequestContext
 from app.core.ratelimit import get_redis
 from app.db.models import Certificado, Comprobante, Tenant
-from app.db.models.enums import EstadoComprobante
+from app.db.models.enums import EstadoComprobante, TipoComprobante
 from app.db.session import apply_rls_context, get_sessionmaker
 from app.schemas.comprobantes import OPCIONES_PAGO
 from app.services.emision import datos_para_xml, ruta_almacen, transicionar
@@ -29,7 +29,7 @@ from app.sri import client as sri_client
 from app.sri.client import SRIError, SRITransientError, mensajes_a_json
 from app.sri.firma import FirmaError, descifrar_p12, firmar_comprobante, huella_sha256
 from app.sri.ride import render_ride_factura
-from app.sri.xml_builder import construir_factura
+from app.sri.xml_builder import construir_factura, construir_nota_credito, construir_nota_debito
 from app.worker import celery_app
 
 logger = logging.getLogger("factuchat.emision")
@@ -42,6 +42,20 @@ _LOCK_TTL_S = 300
 # reusa el catálogo que ya alimenta al front; un código antiguo fuera de él (la
 # tabla tiene 8 y se ofrecen 3) cae al propio código antes que dejar el hueco.
 _ETIQUETA_PAGO = {o.codigo: o.etiqueta for o in OPCIONES_PAGO}
+
+# Lo ÚNICO que el pipeline necesita saber del tipo de comprobante: qué builder de
+# XML le toca y cómo se llama el documento en el RIDE y en el correo. Firma,
+# recepción, autorización y reintentos son idénticos para todos.
+_BUILDER = {
+    TipoComprobante.FACTURA: construir_factura,
+    TipoComprobante.NOTA_CREDITO: construir_nota_credito,
+    TipoComprobante.NOTA_DEBITO: construir_nota_debito,
+}
+_NOMBRE_DOC = {
+    TipoComprobante.FACTURA: "FACTURA",
+    TipoComprobante.NOTA_CREDITO: "NOTA DE CRÉDITO",
+    TipoComprobante.NOTA_DEBITO: "NOTA DE DÉBITO",
+}
 
 
 class EmisionAbortada(Exception):
@@ -95,7 +109,10 @@ def _paso_firmar(tenant_id: str, comprobante_id: str) -> None:
             return
 
         emisor, factura = datos_para_xml(tenant, comp)
-        xml = construir_factura(emisor, factura)
+        constructor = _BUILDER.get(comp.tipo)
+        if constructor is None:
+            raise EmisionAbortada(f"Todavía no se emiten comprobantes de tipo {comp.tipo.value}")
+        xml = constructor(emisor, factura)
         try:
             p12, password = descifrar_p12(cert.p12_data_enc, cert.p12_password_enc)
         except Exception:
@@ -239,6 +256,11 @@ def _contexto_ride(tenant: Tenant, comp: Comprobante, emisor: dict) -> dict:
     p = comp.payload
     return {
         "emisor": emisor | {"obligado_contabilidad": tenant.obligado_contabilidad},
+        # El RIDE es la representación IMPRESA: si dijera «FACTURA» sobre una
+        # nota de crédito, el papel mentiría respecto del XML autorizado.
+        "tipo_doc": _NOMBRE_DOC.get(comp.tipo, comp.tipo.value),
+        "doc_modificado": p.get("doc_modificado"),
+        "motivo": p.get("motivo"),
         "dir_establecimiento": p.get("dir_establecimiento") or "",
         "establecimiento": comp.establecimiento,
         "punto_emision": comp.punto_emision,
@@ -302,6 +324,7 @@ def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
         clave = comp.clave_acceso
         xml_path = comp.xml_path
         razon_social = tenant.razon_social
+        nombre_doc = _NOMBRE_DOC.get(comp.tipo, comp.tipo.value).lower()
         correo_pendiente = comp.correo_enviado_at is None
 
     if email and xml_path and correo_pendiente:
@@ -319,9 +342,9 @@ def _paso_ride_y_correo(tenant_id: str, comprobante_id: str) -> None:
         # no bloquea el correo, son guardias independientes).
         enviar_correo(
             destinatario=email,
-            asunto=f"Su factura electrónica de {razon_social}",
+            asunto=f"Su {nombre_doc} electrónica de {razon_social}",
             cuerpo_html=(
-                f"<p>Adjuntamos su factura electrónica autorizada por el SRI.</p>"
+                f"<p>Adjuntamos su {nombre_doc} electrónica autorizada por el SRI.</p>"
                 f"<p>Clave de acceso: {clave}</p>"
             ),
             adjuntos=adjuntos,
@@ -423,8 +446,18 @@ def _buscar_atascados(limite: int) -> list[tuple[str, str]]:
     with engine.connect() as conn:
         filas = conn.execute(
             text(
+                # PENDIENTE con secuencial CUENTA como atascado: `emitir` asigna
+                # el número y encola, así que un pendiente numerado es uno que
+                # nadie recogió —worker caído, mensaje perdido— y sin esto no
+                # tiene salida por ningún lado: el barrido no lo veía, /emitir
+                # responde «ya fue emitido» y /reintentar solo acepta los que el
+                # SRI devolvió. Se quedaba con el número quemado para siempre.
+                # El pendiente SIN secuencial es un borrador que nadie mandó, y
+                # ese no se toca.
                 "SELECT tenant_id::text, id::text FROM comprobantes"
-                " WHERE estado IN ('FIRMADO', 'ENVIADO_SRI') AND updated_at < :corte"
+                " WHERE updated_at < :corte AND ("
+                "   estado IN ('FIRMADO', 'ENVIADO_SRI')"
+                "   OR (estado = 'PENDIENTE' AND secuencial IS NOT NULL))"
                 " ORDER BY updated_at LIMIT :limite"
             ),
             {"corte": corte, "limite": limite},

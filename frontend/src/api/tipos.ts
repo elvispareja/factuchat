@@ -56,6 +56,40 @@ export interface Comprobante {
   detalle: string | null;
 }
 
+/** Una línea de la factura que la nota de crédito modifica. Todo viaja como
+ *  cadena (Decimal del servidor): parsear, nunca concatenar. */
+export interface ItemAcreditable {
+  codigo: string;
+  descripcion: string;
+  cantidad: string;
+  precio_unitario: string;
+  /** Lo REBAJADO en esa línea al facturar. La nota de crédito se precarga con
+   *  él: sin eso reflejaría el precio de tarifa y no lo que el cliente pagó. */
+  descuento: string;
+  codigo_iva: string;
+  /** Tarifa del `codigo_iva`, en porcentaje («15»). */
+  tarifa_iva: string;
+}
+
+/** Una factura que TODAVÍA admite nota de crédito (GET /comprobantes/acreditables).
+ *
+ *  El servidor solo devuelve las autorizadas con saldo, así que elegir una de
+ *  aquí nunca acaba en un rechazo por «ya está anulada». `pendiente` es el tope
+ *  del importe de la nueva nota: el total menos lo que ya se le devolvió. */
+export interface FacturaAcreditable {
+  id: string;
+  numero: string;
+  fecha_emision: string;
+  /** Razón social del snapshot; `cliente_final_id` en null = consumidor final. */
+  cliente: string | null;
+  cliente_identificacion: string | null;
+  cliente_final_id: string | null;
+  total: string;
+  acreditado: string;
+  pendiente: string;
+  items: ItemAcreditable[];
+}
+
 /** Una opción del panel de pago.
  *
  *  OJO: `codigo` NO es clave única. Un plazo (una venta a crédito) no es una

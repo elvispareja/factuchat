@@ -247,7 +247,10 @@
       </td>
 
       <td class="documento">
-        <div class="tipo-doc">FACTURA</div>
+        <div class="tipo-doc">{{ tipo_doc | default("FACTURA", true) }}</div>
+        {% if doc_modificado %}
+        <div class="dato">Modifica: {{ doc_modificado.numero }}</div>
+        {% endif %}
         <div class="numero-doc">
           {{ establecimiento }}-{{ punto_emision }}-{{ "%09d"|format(secuencial) }}
         </div>
@@ -299,6 +302,19 @@
         <td style="width:26%"><span class="etiqueta">CORREO</span>
           <div class="dato">{{ comprador.email or "—" }}</div></td>
       </tr>
+      {% if comprador.direccion %}
+      {# FILA propia a todo lo ancho, no una quinta columna: la dirección es lo
+         más largo de la tarjeta y meterla en la misma retícula deja las otras
+         cuatro tan estrechas que «RAZÓN SOCIAL / NOMBRES Y APELLIDOS» y el
+         correo se parten en tres renglones. Como fila aparte, cuando no hay
+         dirección la tarjeta queda exactamente como estaba.
+         `cortable` (ver ride.py) porque xhtml2pdf ignora table-layout:fixed y
+         overflow-wrap: una dirección sin espacios desbordaría el recuadro. #}
+      <tr>
+        <td colspan="4" style="padding-top:1.5mm"><span class="etiqueta">DIRECCIÓN</span>
+          <div class="dato">{{ comprador.direccion|cortable }}</div></td>
+      </tr>
+      {% endif %}
     </table>
   </div>
 
@@ -311,7 +327,7 @@
          así que aparece en todas. #}
       <tr class="continuacion">
         <th colspan="6">
-          {{ emisor.ruc }} · FACTURA {{ establecimiento }}-{{ punto_emision }}-{{
+          {{ emisor.ruc }} · {{ tipo_doc | default("FACTURA", true) }} {{ establecimiento }}-{{ punto_emision }}-{{
             "%09d"|format(secuencial|int) }} · CLAVE {{ clave_acceso }}
         </th>
       </tr>
@@ -345,6 +361,16 @@
   <table class="pie">
     <tr>
       <td class="pie-izq">
+        {# La nota de crédito no tiene forma de pago: en su lugar imprime el
+           motivo, que es lo que la ley exige que se lea en el papel. #}
+        {% if motivo %}
+        <div class="bloque" style="margin-top:0">
+          <div class="titulo-bloque">MOTIVO</div>
+          <table>
+            <tr><td class="dato">{{ motivo }}</td></tr>
+          </table>
+        </div>
+        {% else %}
         <div class="bloque" style="margin-top:0">
           <div class="titulo-bloque">FORMA DE PAGO</div>
           <table>
@@ -355,6 +381,7 @@
             </tr>
           </table>
         </div>
+        {% endif %}
 
         {% if info_adicional %}
         <div class="bloque">
