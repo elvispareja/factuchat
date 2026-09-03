@@ -20,6 +20,7 @@ from app.buzon.parser import BuzonParseError, leer
 from app.core.config import get_settings
 from app.db.models import AnalisisIA, BuzonCorreo, RetencionRecibida, Tenant
 from app.services import planes, reportes, retenciones
+from tests import buzon_utils
 from tests.buzon_utils import (
     clave_de_prueba,
     correo,
@@ -72,8 +73,11 @@ class SriSimulado:
         if self.caido:
             return httpx.Response(503, text="mantenimiento")
         clave = _clave_consultada(peticion)
+        # Devuelve EL MISMO documento que se fabricó con esa clave: el SRI de
+        # verdad reenvía su copia, y la verificación la contrasta contra la fila.
+        guardado = buzon_utils.REGISTRO.get(clave)
         cuerpo = (
-            autorizacion_autorizado(clave)
+            autorizacion_autorizado(clave, comprobante=guardado.decode() if guardado else None)
             if self.veredicto == "AUTORIZADO"
             else autorizacion_rechazado(clave)
         )
@@ -1297,3 +1301,66 @@ class TestVariosComprobantes:
         saldo = retenciones.saldo(admin_db, TENANT_A)
         assert saldo.documentos == 2
         assert saldo.iva == Decimal("108.64")  # 54.32 × 2
+
+
+class TestNoBastaConQueLaClaveExista:
+    """El papel tiene que ser EL QUE EL SRI TIENE, no uno con esa clave escrita.
+
+    Mientras la retención solo llegaba por correo, el que escribía el XML era un
+    tercero y el contribuyente era la víctima. Desde que se puede subir a mano,
+    quien escribe el papel es quien cobra el crédito: con la clave de una
+    factura suya —impresa en cada RIDE que emite— podía fabricarse una retención
+    a su nombre por el importe que quisiera y bajarse el IVA a pagar.
+    """
+
+    def _falsificada(self, clave: str, **cambios) -> bytes:
+        """El XML legítimo queda registrado como «lo que tiene el SRI»; el que
+        se presenta es otro con la misma clave."""
+        legitimo = xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)
+        assert buzon_utils.REGISTRO[clave] == legitimo
+        falso = xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave, **cambios)
+        buzon_utils.REGISTRO[clave] = legitimo  # el SRI sigue teniendo el bueno
+        return falso
+
+    def _verificar(self, admin_db, xml: bytes) -> RetencionRecibida:
+        from app.buzon import ingesta, verificacion
+
+        tenant = admin_db.get(Tenant, TENANT_A)
+        fila = ingesta.registrar_manual(admin_db, tenant, xml)
+        admin_db.flush()
+        verificacion.verificar(admin_db, fila, "PRUEBAS")
+        admin_db.commit()  # si no, el borrado de la fixture choca con la fila viva
+        return fila
+
+    def test_un_importe_inflado_no_cuenta(self, buzon_encendido, admin_db):
+        clave = clave_de_prueba(7100501)
+        fila = self._verificar(
+            admin_db, self._falsificada(clave, valor_iva=Decimal("9999999.99"))
+        )
+        assert fila.verificada is False
+        assert "importes" in fila.verificacion["detalle"].lower()
+
+    def test_un_agente_inventado_no_cuenta(self, buzon_encendido, admin_db):
+        clave = clave_de_prueba(7100502)
+        fila = self._verificar(
+            admin_db, self._falsificada(clave, ruc_agente="1790099999001")
+        )
+        assert fila.verificada is False
+
+    def test_la_clave_de_otro_documento_no_sirve(self, buzon_encendido, admin_db):
+        """La clave de una FACTURA está autorizada, pero no es una retención."""
+        clave = clave_de_prueba(7100503)
+        presentada = xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)
+        # DESPUÉS de fabricarla, porque `xml_retencion` registra la suya: lo que
+        # el SRI tiene con esa clave es una factura, no una retención.
+        buzon_utils.REGISTRO[clave] = b'<factura id="comprobante" version="1.1.0"/>'
+        fila = self._verificar(admin_db, presentada)
+        assert fila.verificada is False
+
+    def test_la_legitima_si_cuenta(self, buzon_encendido, admin_db):
+        """La contraprueba: sin esto, un fallo de lectura daría todo por falso."""
+        clave = clave_de_prueba(7100504)
+        fila = self._verificar(
+            admin_db, xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)
+        )
+        assert fila.verificada is True, fila.verificacion

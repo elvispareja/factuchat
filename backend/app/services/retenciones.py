@@ -6,9 +6,12 @@ Dos reglas de negocio que no se pueden mezclar:
     se declara cada mes o semestre; la de renta es crédito para la declaración
     ANUAL de impuesto a la renta. Sumarlas y restarlas juntas del IVA a pagar
     daría un número fiscalmente falso, y el cliente declararía de menos.
-  · **El flag manda.** Con BUZON_ACTIVO apagado el saldo es cero a todos los
-    efectos: no se le puede cambiar el IVA a pagar a nadie por un módulo que
-    todavía no se ha encendido.
+  · **El flag manda, sobre el BUZÓN.** Con BUZON_ACTIVO apagado no cuenta —ni
+    se ve— nada de lo que entró por correo: no se le puede cambiar el IVA a
+    pagar a nadie por un módulo que todavía no se ha encendido. Lo que el propio
+    contribuyente registró A MANO es otra cosa: lo subió él, sabe que está ahí,
+    y esconderlo o dejarlo fuera del saldo le haría declarar de más. El
+    interruptor apaga la automatización, no el archivador del cliente.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from app.db.models import RetencionRecibida
 from app.services import parametros
 
 ORIGENES = ("BUZON", "MANUAL", "WHATSAPP")
+ORIGEN_MANUAL = "MANUAL"
 
 
 @dataclass
@@ -46,8 +50,18 @@ def activo(db: Session) -> bool:
     return parametros.buzon_activo(db)
 
 
-def _base(tenant_id: uuid.UUID, desde: date | None, hasta: date | None, solo_verificadas: bool):
+def _base(
+    tenant_id: uuid.UUID,
+    desde: date | None,
+    hasta: date | None,
+    solo_verificadas: bool,
+    solo_manual: bool = False,
+):
     filtros = [RetencionRecibida.tenant_id == tenant_id]
+    if solo_manual:
+        # Módulo apagado: el buzón no existe todavía, pero lo que el cliente
+        # registró a mano sigue siendo suyo.
+        filtros.append(RetencionRecibida.origen == ORIGEN_MANUAL)
     if solo_verificadas:
         # Al SALDO solo entra lo que el SRI confirmó. Un XML lo escribe
         # cualquiera, y este número baja el impuesto que el cliente declara.
@@ -65,17 +79,15 @@ def saldo(
     desde: date | None = None,
     hasta: date | None = None,
 ) -> SaldoRetenciones:
-    """Crédito acumulado en el período. Cero si el módulo está apagado."""
-    if not activo(db):
-        return SaldoRetenciones(Decimal("0"), Decimal("0"), 0, 0)
-
+    """Crédito acumulado en el período. Con el módulo apagado, solo lo manual."""
+    solo_manual = not activo(db)
     fila = db.execute(
         select(
             func.coalesce(func.sum(RetencionRecibida.total_renta), 0),
             func.coalesce(func.sum(RetencionRecibida.total_iva), 0),
             func.count(RetencionRecibida.id),
             func.count(func.distinct(RetencionRecibida.ruc_agente)),
-        ).where(*_base(tenant_id, desde, hasta, solo_verificadas=True))
+        ).where(*_base(tenant_id, desde, hasta, True, solo_manual))
     ).one()
     return SaldoRetenciones(
         renta=Decimal(str(fila[0])),
@@ -92,13 +104,11 @@ def listar(
     hasta: date | None = None,
     limite: int = 200,
 ) -> list[RetencionRecibida]:
-    if not activo(db):
-        return []
     consulta = (
         select(RetencionRecibida)
         # La bandeja SÍ muestra las pendientes: el cliente tiene derecho a ver
         # que su documento llegó, aunque todavía no cuente para el saldo.
-        .where(*_base(tenant_id, desde, hasta, solo_verificadas=False))
+        .where(*_base(tenant_id, desde, hasta, False, not activo(db)))
         .order_by(RetencionRecibida.fecha_emision.desc().nullslast())
         .limit(limite)
     )
@@ -125,6 +135,11 @@ def a_json(r: RetencionRecibida) -> dict:
         "iva": str(r.total_iva),
         "origen": r.origen,
         "verificada": r.verificada,
+        # `verificada = False` son DOS cosas: «aún no se ha preguntado» y «el SRI
+        # ya dijo que no». La pantalla las pintaba igual, así que un documento
+        # muerto se enseñaba como si la respuesta viniera de camino, para
+        # siempre. Con esto se distinguen: hay respuesta cuando ya se preguntó.
+        "respondido": r.verificada_at is not None,
         "verificacion": (r.verificacion or {}).get("detalle"),
         "tiene_xml": bool(r.xml_path),
         "tiene_pdf": bool(r.pdf_path),

@@ -14,6 +14,13 @@ from io import BytesIO
 
 RUC_AGENTE = "0992745103001"
 
+# Lo que «tiene el SRI» de cada clave, para que el servicio simulado devuelva el
+# MISMO documento que se le pregunta. Hace falta desde que la verificación
+# contrasta la fila contra la copia del SRI y no contra el archivo que llegó:
+# un simulado que responda «autorizado» con un comprobante cualquiera dejaría de
+# parecerse al de verdad justo en lo que se quiere probar.
+REGISTRO: dict[str, bytes] = {}
+
 
 def xml_retencion(
     *,
@@ -30,7 +37,7 @@ def xml_retencion(
 ) -> bytes:
     """Un comprobante de retención con una línea de renta y otra de IVA."""
     estab, pto, sec = numero.split("-")
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <comprobanteRetencion id="comprobante" version="2.0.0">
   <infoTributaria>
     <ambiente>1</ambiente>
@@ -79,6 +86,8 @@ def xml_retencion(
     </docSustento>
   </docsSustento>
 </comprobanteRetencion>""".encode()
+    REGISTRO[clave_acceso] = xml
+    return xml
 
 
 def envolver_autorizacion(comprobante: bytes, numero_autorizacion: str = "") -> bytes:

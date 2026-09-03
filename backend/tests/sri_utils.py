@@ -82,8 +82,16 @@ RECEPCION_DEVUELTA = _envuelto(
 )
 
 
-def autorizacion_autorizado(clave: str, numero: str | None = None) -> str:
-    """En el esquema offline el número de autorización ES la clave de acceso."""
+def autorizacion_autorizado(
+    clave: str, numero: str | None = None, comprobante: str | None = None
+) -> str:
+    """En el esquema offline el número de autorización ES la clave de acceso.
+
+    `comprobante` es el XML que el SRI dice tener con esa clave. Importa: la
+    verificación de una retención lo contrasta contra la fila, porque saber que
+    una clave está autorizada no dice nada del papel que alguien enseñe con esa
+    clave escrita encima.
+    """
     numero = numero or clave
     return _envuelto(
         '<ns2:autorizacionComprobanteResponse xmlns:ns2="http://ec.gob.sri.ws.autorizacion">'
@@ -95,7 +103,7 @@ def autorizacion_autorizado(clave: str, numero: str | None = None) -> str:
         f"<numeroAutorizacion>{numero}</numeroAutorizacion>"
         "<fechaAutorizacion>2026-08-24T12:00:00-05:00</fechaAutorizacion>"
         "<ambiente>PRUEBAS</ambiente>"
-        "<comprobante><![CDATA[<factura/>]]></comprobante><mensajes/>"
+        f"<comprobante><![CDATA[{comprobante or '<factura/>'}]]></comprobante><mensajes/>"
         "</autorizacion></autorizaciones>"
         "</RespuestaAutorizacionComprobante></ns2:autorizacionComprobanteResponse>"
     )

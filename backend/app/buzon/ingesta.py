@@ -43,10 +43,20 @@ logger = logging.getLogger("factuchat.buzon")
 AAD_BUZON = b"factuchat/buzon/correo"
 
 ORIGEN_BUZON = "BUZON"
+ORIGEN_MANUAL = "MANUAL"
 
 
 class BuzonError(Exception):
     """Fallo de ingesta que NO es culpa del contenido del correo."""
+
+
+class RetencionRechazada(Exception):
+    """El XML se leyó, pero no puede acreditarse. El motivo SE LE MUESTRA al
+    cliente que lo subió: por eso está redactado para él y no para el log."""
+
+
+class RetencionDuplicada(RetencionRechazada):
+    """Esa retención ya está registrada, por la puerta que fuera."""
 
 
 def _ruta_payload(tenant_id: uuid.UUID, correo_id: uuid.UUID) -> Path:
@@ -192,27 +202,9 @@ def procesar(db: Session, tenant: Tenant, fila: BuzonCorreo, entrante: correo_mo
             # Facturas y notas recibidas se archivan; no son crédito tributario
             continue
 
-        motivo = _por_que_no_es_suya(leido, tenant)
+        motivo = _por_que_no_acredita(leido, tenant)
         if motivo:
             primer_error = primer_error or motivo
-            continue
-
-        if leido.autorizado is False:
-            # El sobre del SRI dice que NO está autorizada: no es crédito de
-            # nadie. Se archiva el correo con el motivo a la vista.
-            primer_error = primer_error or (
-                "El SRI no autorizó este comprobante, así que no suma crédito"
-            )
-            continue
-
-        if leido.fecha_emision is None:
-            # Sin fecha utilizable la retención quedaría fuera de todos los
-            # rangos: no aparecería en el saldo ni en la bandeja, y su clave ya
-            # habría ocupado el índice único, así que un reenvío tampoco la
-            # recuperaría. Mejor que quede visible como error.
-            primer_error = primer_error or (
-                "El comprobante no trae una fecha de emisión ni un período fiscal legibles"
-            )
             continue
 
         existente = _ya_registrada(db, tenant, leido)
@@ -221,7 +213,7 @@ def procesar(db: Session, tenant: Tenant, fila: BuzonCorreo, entrante: correo_mo
             continue
 
         try:
-            nueva = _crear_retencion(db, tenant, fila, leido, adjunto.datos)
+            nueva = _crear_retencion(db, tenant, fila.id, leido, adjunto.datos)
             creadas.append(nueva)
             db.info.setdefault("buzon_nuevas", []).append(nueva)
         except IntegrityError:
@@ -282,6 +274,61 @@ def _por_que_no_es_suya(leido: ComprobanteLeido, tenant: Tenant) -> str | None:
     return None
 
 
+def _por_que_no_acredita(leido: ComprobanteLeido, tenant: Tenant) -> str | None:
+    """Por qué una retención legible NO se puede acreditar. Nada si sí se puede.
+
+    Los tres motivos son de la RETENCIÓN, no del correo, así que valen igual
+    para lo que entra por el buzón y para lo que el cliente sube a mano: la
+    puerta cambia, las razones para rechazarla no.
+    """
+    motivo = _por_que_no_es_suya(leido, tenant)
+    if motivo:
+        return motivo
+    if leido.autorizado is False:
+        # El sobre del SRI dice que NO está autorizada: no es crédito de nadie.
+        return "El SRI no autorizó este comprobante, así que no suma crédito"
+    if leido.fecha_emision is None:
+        # Sin fecha utilizable la retención quedaría fuera de todos los rangos:
+        # no aparecería en el saldo ni en la bandeja, y su clave ya habría
+        # ocupado el índice único, así que un reenvío tampoco la recuperaría.
+        return "El comprobante no trae una fecha de emisión ni un período fiscal legibles"
+    return None
+
+
+def registrar_manual(db: Session, tenant: Tenant, xml: bytes) -> RetencionRecibida:
+    """Registra una retención que el propio cliente sube (origen MANUAL).
+
+    Mismas garantías que por correo y por los mismos motivos: el documento tiene
+    que retener a ESTE inquilino, no puede estar ya registrada —da igual por qué
+    puerta entrara la primera vez— y nace SIN verificar, así que se ve pero no
+    suma hasta que el SRI conteste. Lo único que cambia es que no hay correo del
+    que colgarla: `buzon_correo_id` se queda a null.
+
+    Lanza `BuzonParseError` si el XML no se puede leer y `RetencionRechazada`
+    —o su hija `RetencionDuplicada`— si se lee pero no acredita: los dos traen
+    un motivo escrito para el cliente.
+    """
+    leido = leer(xml)
+    if leido.tipo != "RETENCION":
+        raise RetencionRechazada(
+            f"El archivo es un comprobante de otro tipo ({_tipo_legible(leido)}), "
+            "no una retención: no genera crédito tributario"
+        )
+    motivo = _por_que_no_acredita(leido, tenant)
+    if motivo:
+        raise RetencionRechazada(motivo)
+
+    ya = _ya_registrada(db, tenant, leido)
+    if ya is not None:
+        raise RetencionDuplicada(f"Esa retención ya estaba registrada ({ya.numero})")
+    try:
+        return _crear_retencion(db, tenant, None, leido, xml, origen=ORIGEN_MANUAL)
+    except IntegrityError as e:
+        # Dos subidas a la vez, o el buzón insertándola entre el SELECT y este
+        # INSERT: el índice único es el que decide, no el orden de llegada.
+        raise RetencionDuplicada("Esa retención ya estaba registrada") from e
+
+
 def _ya_registrada(
     db: Session, tenant: Tenant, leido: ComprobanteLeido
 ) -> RetencionRecibida | None:
@@ -314,15 +361,17 @@ def _ya_registrada(
 def _crear_retencion(
     db: Session,
     tenant: Tenant,
-    fila: BuzonCorreo,
+    correo_id: uuid.UUID | None,
     leido: ComprobanteLeido,
     xml: bytes,
+    origen: str = ORIGEN_BUZON,
 ) -> RetencionRecibida:
+    """La fila de crédito. `correo_id` es null cuando no vino de un correo."""
     base = max((linea.base for linea in leido.lineas), default=Decimal("0"))
     retencion = RetencionRecibida(
         tenant_id=tenant.id,
-        buzon_correo_id=fila.id,
-        origen=ORIGEN_BUZON,
+        buzon_correo_id=correo_id,
+        origen=origen,
         clave_acceso=leido.clave_acceso,
         numero=leido.numero or (leido.clave_acceso or "")[:30] or "sin-numero",
         ruc_agente=leido.ruc_emisor,
@@ -361,12 +410,20 @@ def _crear_retencion(
     else:
         punto.commit()
 
-    # El XML se custodia siete años, cifrado igual que el correo
-    ruta = Path(get_settings().storage_dir) / "buzon" / str(tenant.id) / f"{retencion.id}.xml.enc"
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-    ruta.write_text(aesgcm_encrypt(_clave(), xml, AAD_BUZON, "BUZON_ENC_KEY"), encoding="ascii")
-    _anotar(db, ruta)
-    retencion.xml_path = str(ruta)
+    # El XML se custodia siete años, cifrado igual que el correo. SIN clave no
+    # hay dónde dejarlo a salvo, y en claro no se guarda nunca: la fila se
+    # registra igual y `xml_path` queda a null. Lo que sostiene el crédito son
+    # los datos y la clave de acceso —con ella se le vuelve a preguntar al SRI y
+    # se rebaja el documento de su portal—, no el adjunto. Por el correo esta
+    # rama no se alcanza: `registrar` ya falla antes si falta la clave.
+    if get_settings().buzon_enc_key:
+        ruta = (
+            Path(get_settings().storage_dir) / "buzon" / str(tenant.id) / f"{retencion.id}.xml.enc"
+        )
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        ruta.write_text(aesgcm_encrypt(_clave(), xml, AAD_BUZON, "BUZON_ENC_KEY"), encoding="ascii")
+        _anotar(db, ruta)
+        retencion.xml_path = str(ruta)
     return retencion
 
 

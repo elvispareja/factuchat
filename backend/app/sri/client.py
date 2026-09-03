@@ -68,6 +68,11 @@ class RespuestaAutorizacion:
     numero_autorizacion: str = ""
     fecha_autorizacion: str = ""
     mensajes: list[MensajeSRI] = field(default_factory=list)
+    # El XML del comprobante TAL COMO LO TIENE EL SRI, que viaja dentro de la
+    # autorización. Es la única copia que no escribió quien la presenta, y por
+    # eso hace falta: saber que una clave está autorizada no dice nada sobre el
+    # papel que alguien enseña con esa clave escrita encima.
+    comprobante: str = ""
 
 
 def _verificar_host(url: str) -> None:
@@ -251,6 +256,7 @@ def consultar_autorizacion(clave_acceso: str, ambiente: str) -> RespuestaAutoriz
     estado = ""
     numero = ""
     fecha = ""
+    comprobante = ""
     for hijo in autorizacion:
         nombre = etree.QName(hijo).localname
         if nombre == "estado":
@@ -259,11 +265,15 @@ def consultar_autorizacion(clave_acceso: str, ambiente: str) -> RespuestaAutoriz
             numero = _texto(hijo)
         elif nombre == "fechaAutorizacion":
             fecha = _texto(hijo)
+        elif nombre == "comprobante":
+            # Viene en CDATA. Es el documento del SRI, no el del remitente.
+            comprobante = hijo.text or ""
     return RespuestaAutorizacion(
         estado=estado or "EN PROCESO",
         numero_autorizacion=numero,
         fecha_autorizacion=fecha,
         mensajes=_parse_mensajes(autorizacion),
+        comprobante=comprobante,
     )
 
 
