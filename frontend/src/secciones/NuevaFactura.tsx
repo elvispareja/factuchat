@@ -34,6 +34,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ErrorLimitePlan, api } from "../api/cliente";
+import { BotonDictado } from "../ui/BotonDictado";
 import type {
   AtributoValor,
   ClienteFinal,
@@ -2602,9 +2603,34 @@ export function CrearComprobante({ onCerrar, onRecargar, onRetenciones }: Props)
               no como un campo interno de la aplicación. */}
           {esNota && (
             <section>
-              <label className="fc-label" htmlFor="fc-motivo">
-                Motivo
-              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <label className="fc-label" htmlFor="fc-motivo" style={{ marginBottom: 0 }}>
+                  Motivo
+                </label>
+                {/* El motivo es una frase que uno explica en voz alta mucho
+                    antes de sentarse a teclearla. */}
+                <BotonDictado
+                  etiqueta="el motivo"
+                  disabled={congelado}
+                  onTexto={(trozo) =>
+                    setMotivo((actual) => {
+                      const limpio = trozo.trim();
+                      if (!limpio) return actual;
+                      const junto = actual ? `${actual.trimEnd()} ${limpio}` : limpio;
+                      // El campo tiene tope de 300: el dictado no se lo salta
+                      return junto.slice(0, 300);
+                    })
+                  }
+                />
+              </div>
               <textarea
                 id="fc-motivo"
                 className="fc-campo"

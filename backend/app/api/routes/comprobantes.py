@@ -110,7 +110,10 @@ def _a_out(c: Comprobante) -> ComprobanteOut:
         intentos=c.intentos,
         cliente=None if anonimo else comprador.get("razon_social"),
         cliente_identificacion=None if anonimo else comprador.get("identificacion"),
-        cliente_tipo_id=None if anonimo else TIPO_ID_POR_CODIGO.get(codigo_id),
+        # El `not codigo_id` no es adorno: viene de un JSON y puede ser None,
+        # y así lo veía mypy. Sin la guarda, un comprobante viejo sin ese campo
+        # en el payload reventaba aquí en vez de quedarse sin tipo.
+        cliente_tipo_id=(None if anonimo or not codigo_id else TIPO_ID_POR_CODIGO.get(codigo_id)),
         detalle=_detalle(payload.get("items") or []),
     )
 

@@ -198,9 +198,7 @@ class TestCaminoFeliz:
         assert fila.payload["doc_modificado"]["numero"] == _numero(factura)
         assert fila.payload["doc_modificado"]["fecha"] == "2026-02-10"
 
-    def test_factura_de_otro_sistema_solo_pide_formato(
-        self, client, ana_tokens, admin_db, siembra
-    ):
+    def test_factura_de_otro_sistema_solo_pide_formato(self, client, ana_tokens, admin_db, siembra):
         """Tecleada a mano no hay contra qué validar: se acepta con el número y
         la fecha que den, y sin enlace a ninguna factura del sistema."""
         cliente = siembra.cliente()
@@ -379,9 +377,7 @@ class TestAcreditables:
         # Sin saldo ya no es acreditable: no se ofrece lo que no se puede hacer
         assert str(factura.id) not in _acreditables(client, ana_tokens)
 
-    def test_un_borrador_de_nota_ya_reserva_su_importe(
-        self, client, ana_tokens, siembra, admin_db
-    ):
+    def test_un_borrador_de_nota_ya_reserva_su_importe(self, client, ana_tokens, siembra, admin_db):
         """La nota recién creada aún no la autorizó el SRI, pero si no contara,
         dos borradores por el total pasarían los dos y se acreditaría el doble."""
         cliente = siembra.cliente()
@@ -396,8 +392,7 @@ class TestAcreditables:
 
         admin_db.rollback()
         assert (
-            admin_db.get(Comprobante, uuid.UUID(nota["id"])).estado
-            == EstadoComprobante.PENDIENTE
+            admin_db.get(Comprobante, uuid.UUID(nota["id"])).estado == EstadoComprobante.PENDIENTE
         )
         assert _acreditables(client, ana_tokens)[str(factura.id)]["acreditado"] == "57.50"
 
@@ -538,9 +533,7 @@ class TestElXmlSaleDeLaNota:
 class TestNoSePuedeAcreditarDosVeces:
     """Los dos caminos por los que se colaba el doble de lo facturado."""
 
-    def test_teclear_el_numero_a_mano_no_saltea_el_tope(
-        self, client, ana_tokens, siembra
-    ):
+    def test_teclear_el_numero_a_mano_no_saltea_el_tope(self, client, ana_tokens, siembra):
         """«La factura es de otro sistema» no es una puerta trasera.
 
         Si el número tecleado corresponde a una factura NUESTRA, se le aplican

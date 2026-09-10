@@ -6,6 +6,7 @@ import { api } from "../api/cliente";
 import { usePlan } from "../plan/PlanContexto";
 import { Cargando } from "../ui/Estados";
 import { fechaCorta } from "../util/formato";
+import { NumerosQueFacturan } from "./NumerosQueFacturan";
 
 interface Certificado {
   subject: string | null;
@@ -27,8 +28,6 @@ export function MiCuenta({ onVerPlanes }: { onVerPlanes: () => void }) {
   }, []);
 
   if (!plan) return <Cargando />;
-
-  const puedeSegundoNumero = plan.numeros_whatsapp > 1;
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -65,25 +64,7 @@ export function MiCuenta({ onVerPlanes }: { onVerPlanes: () => void }) {
           )}
         </section>
 
-        <section className="fc-tarjeta">
-          <p className="fc-kicker">Números de WhatsApp</p>
-          <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--texto-suave)" }}>
-            Desde estos números tu equipo puede emitir comprobantes por chat.
-          </p>
-          <button
-            type="button"
-            className={puedeSegundoNumero ? "fc-btn fc-btn--contorno" : "fc-btn fc-btn--bloqueado"}
-            style={{ marginTop: 14, width: "100%" }}
-            disabled={!puedeSegundoNumero}
-            title={
-              puedeSegundoNumero ? undefined : "Un segundo número viene con el plan Emprendedor"
-            }
-          >
-            {puedeSegundoNumero
-              ? "Autorizar otro número"
-              : "Un segundo número viene con Empresario"}
-          </button>
-        </section>
+        <NumerosQueFacturan tope={plan.numeros_whatsapp} />
       </div>
 
       <section className="fc-tarjeta--oscura">

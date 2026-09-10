@@ -22,7 +22,15 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AnalisisIA, ClienteFinal, Comprobante, Plan, Producto, Suscripcion
+from app.db.models import (
+    AnalisisIA,
+    ClienteFinal,
+    Comprobante,
+    Plan,
+    Producto,
+    Suscripcion,
+    WhatsappNumero,
+)
 from app.db.models.enums import EstadoComprobante, EstadoSuscripcion
 
 # 0 = sin límite. "ia" es el cupo mensual de análisis con IA.
@@ -229,6 +237,31 @@ def exigir_cupo_productos(db: Session, tenant_id: uuid.UUID, plan: PlanVigente) 
             f"Tu plan permite hasta {tope} productos en el catálogo. "
             "Para agregar más, sube de plan.",
             funcion="prod",
+            plan_sugerido=_siguiente_plan(plan.nombre),
+        )
+
+
+def numeros_autorizados(db: Session, tenant_id: uuid.UUID) -> int:
+    return int(
+        db.execute(
+            select(func.count(WhatsappNumero.id)).where(WhatsappNumero.tenant_id == tenant_id)
+        ).scalar_one()
+    )
+
+
+def exigir_cupo_numeros(db: Session, tenant_id: uuid.UUID, plan: PlanVigente) -> None:
+    """Cuántos teléfonos pueden facturar por chat en esta cuenta.
+
+    A diferencia de clientes o productos, aquí el tope NUNCA es ilimitado: los
+    planes van de 1 a 2. Aun así se comprueba `if tope` por si algún día
+    aparece un plan sin límite, para que se comporte como los demás cupos."""
+    tope = plan.tope("nums")
+    if tope and numeros_autorizados(db, tenant_id) >= tope:
+        raise LimitePlanError(
+            f"Tu plan permite {tope} "
+            f"{'número' if tope == 1 else 'números'} para facturar por chat. "
+            "Para autorizar otro, sube de plan.",
+            funcion="nums",
             plan_sugerido=_siguiente_plan(plan.nombre),
         )
 

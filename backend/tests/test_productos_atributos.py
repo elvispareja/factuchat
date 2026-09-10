@@ -59,12 +59,16 @@ def valor_de_a(client, ana_tokens, atributo_de_a):
 
 
 class TestCaminoFeliz:
-    def test_crea_producto_con_atributos(self, client, ana_tokens, categoria_de_a, atributo_de_a, valor_de_a):
+    def test_crea_producto_con_atributos(
+        self, client, ana_tokens, categoria_de_a, atributo_de_a, valor_de_a
+    ):
         body = {
             **PRODUCTO_BASE,
             "codigo": _codigo(),
             "categoria_id": categoria_de_a["id"],
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post(
             "/api/v1/productos", json=body, headers=auth_headers(ana_tokens["access_token"])
@@ -86,7 +90,12 @@ class TestCaminoFeliz:
         self, client, ana_tokens, categoria_de_a, atributo_de_a, valor_de_a
     ):
         headers = auth_headers(ana_tokens["access_token"])
-        body = {**PRODUCTO_BASE, "codigo": _codigo(), "categoria_id": categoria_de_a["id"], "atributos": []}
+        body = {
+            **PRODUCTO_BASE,
+            "codigo": _codigo(),
+            "categoria_id": categoria_de_a["id"],
+            "atributos": [],
+        }
         r = client.post("/api/v1/productos", json=body, headers=headers)
         assert r.status_code == 201, r.text
         producto = r.json()
@@ -128,7 +137,9 @@ class TestAislamientoEntreTenants:
             **PRODUCTO_BASE,
             "codigo": _codigo(),
             "categoria_id": categoria_b["id"],
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post(
             "/api/v1/productos", json=body, headers=auth_headers(bob_tokens["access_token"])
@@ -138,7 +149,9 @@ class TestAislamientoEntreTenants:
 
 
 class TestValidacionesDeIntegridad:
-    def test_atributo_de_otra_categoria_rechazado(self, client, ana_tokens, categoria_de_a, valor_de_a):
+    def test_atributo_de_otra_categoria_rechazado(
+        self, client, ana_tokens, categoria_de_a, valor_de_a
+    ):
         headers = auth_headers(ana_tokens["access_token"])
         r = client.post(
             "/api/v1/categorias",
@@ -160,7 +173,9 @@ class TestValidacionesDeIntegridad:
         assert r.status_code == 400
         assert "no pertenece a la categoría" in r.json()["detail"]
 
-    def test_valor_de_otro_atributo_rechazado(self, client, ana_tokens, categoria_de_a, atributo_de_a):
+    def test_valor_de_otro_atributo_rechazado(
+        self, client, ana_tokens, categoria_de_a, atributo_de_a
+    ):
         headers = auth_headers(ana_tokens["access_token"])
         r = client.post(
             "/api/v1/atributos",
@@ -194,7 +209,9 @@ class TestValidacionesDeIntegridad:
             **PRODUCTO_BASE,
             "codigo": _codigo(),
             "categoria_id": None,
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post(
             "/api/v1/productos", json=body, headers=auth_headers(ana_tokens["access_token"])
@@ -225,7 +242,9 @@ class TestServiciosSinCategoria:
             "nombre": "Consultoría",
             "tipo": "SERVICIO",
             "precio_sin_iva": "10.00",
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post(
             "/api/v1/productos", json=body, headers=auth_headers(ana_tokens["access_token"])
@@ -238,7 +257,9 @@ class TestRecrearLoBorrado:
     volver a crear algo borrado chocaba contra el índice y devolvía un 500 que
     dejaba ese nombre inutilizable para siempre."""
 
-    def test_valor_borrado_se_puede_volver_a_crear(self, client, ana_tokens, atributo_de_a, valor_de_a):
+    def test_valor_borrado_se_puede_volver_a_crear(
+        self, client, ana_tokens, atributo_de_a, valor_de_a
+    ):
         headers = auth_headers(ana_tokens["access_token"])
         r = client.delete(f"/api/v1/atributo-valores/{valor_de_a['id']}", headers=headers)
         assert r.status_code == 204, r.text
@@ -257,7 +278,9 @@ class TestRecrearLoBorrado:
         )
         assert valor_de_a["valor"] in [v["valor"] for v in r.json()]
 
-    def test_atributo_borrado_se_puede_volver_a_crear(self, client, ana_tokens, categoria_de_a, atributo_de_a):
+    def test_atributo_borrado_se_puede_volver_a_crear(
+        self, client, ana_tokens, categoria_de_a, atributo_de_a
+    ):
         headers = auth_headers(ana_tokens["access_token"])
         r = client.delete(f"/api/v1/atributos/{atributo_de_a['id']}", headers=headers)
         assert r.status_code == 204, r.text
@@ -286,9 +309,7 @@ class TestNoEliminarSiEstaEnUso:
     """No se borra (baja lógica) una categoría/atributo/valor mientras algo
     activo siga apoyado en él: dejaría datos activos huérfanos o invisibles."""
 
-    def test_categoria_con_producto_activo_no_se_elimina(
-        self, client, ana_tokens, categoria_de_a
-    ):
+    def test_categoria_con_producto_activo_no_se_elimina(self, client, ana_tokens, categoria_de_a):
         headers = auth_headers(ana_tokens["access_token"])
         body = {**PRODUCTO_BASE, "codigo": _codigo(), "categoria_id": categoria_de_a["id"]}
         r = client.post("/api/v1/productos", json=body, headers=headers)
@@ -319,7 +340,9 @@ class TestNoEliminarSiEstaEnUso:
             **PRODUCTO_BASE,
             "codigo": _codigo(),
             "categoria_id": categoria_de_a["id"],
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post("/api/v1/productos", json=body, headers=headers)
         assert r.status_code == 201, r.text
@@ -335,7 +358,9 @@ class TestNoEliminarSiEstaEnUso:
             **PRODUCTO_BASE,
             "codigo": _codigo(),
             "categoria_id": categoria_de_a["id"],
-            "atributos": [{"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}],
+            "atributos": [
+                {"atributo_id": atributo_de_a["id"], "atributo_valor_id": valor_de_a["id"]}
+            ],
         }
         r = client.post("/api/v1/productos", json=body, headers=headers)
         assert r.status_code == 201, r.text

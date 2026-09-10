@@ -464,9 +464,7 @@ def crear_nota_credito(
                 f"(esta está {factura.estado.value})"
             )
         if factura.cliente_final_id != cliente_final_id:
-            raise EmisionError(
-                "La nota de crédito va al mismo cliente de la factura que modifica"
-            )
+            raise EmisionError("La nota de crédito va al mismo cliente de la factura que modifica")
 
         pendiente = Decimal(factura.total) - acreditado_sobre(db, factura.id)
         numero_factura = (
@@ -598,9 +596,7 @@ def crear_nota_debito(
                 f"(esta está {factura.estado.value})"
             )
         if factura.cliente_final_id != cliente_final_id:
-            raise EmisionError(
-                "La nota de débito va al mismo cliente de la factura que modifica"
-            )
+            raise EmisionError("La nota de débito va al mismo cliente de la factura que modifica")
         # La factura manda sobre lo que venga tecleado: el XML tiene que citar el
         # número y la fecha que el SRI autorizó, no los que alguien recuerde.
         doc_modificado = {

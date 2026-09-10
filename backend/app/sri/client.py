@@ -31,8 +31,20 @@ _CB_ABIERTO_S = 60
 
 # Mensajes de recepción que significan "el SRI YA tiene este comprobante".
 # No son un rechazo: hay que ir a consultar la autorización, no reemitir.
-IDENTIFICADORES_YA_REGISTRADO = {"43", "45"}
-TEXTOS_YA_REGISTRADO = ("CLAVE ACCESO REGISTRADA", "SECUENCIAL REGISTRADO")
+# SOLO el 43. El 45 estaba aquí y no debía:
+#
+#   43  CLAVE ACCESO REGISTRADA   → el SRI ya tiene ESTE MISMO documento (un
+#       envío anterior llegó y no pudimos confirmarlo). No es rechazo: hay que
+#       consultar la autorización y jamás reemitir, o se duplica la factura.
+#
+#   45  ERROR SECUENCIAL REGISTRADO → OTRO documento ya usó ese secuencial. El
+#       nuestro queda RECHAZADO y no se autorizará nunca. Tratarlo como el 43
+#       dejaba la factura en ENVIADO_SRI para siempre, consultando una
+#       autorización inexistente, y BORRABA el motivo real: quien emitía veía
+#       «enviado al SRI» y nada más. Se descubrió emitiendo de verdad contra el
+#       entorno de pruebas, con un RUC que ya tenía usados los secuenciales.
+IDENTIFICADORES_YA_REGISTRADO = {"43"}
+TEXTOS_YA_REGISTRADO = ("CLAVE ACCESO REGISTRADA",)
 
 
 class SRIError(Exception):

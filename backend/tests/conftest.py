@@ -73,6 +73,23 @@ def _preparar_base_de_tests() -> None:
     os.environ["SMTP_USER"] = ""
     os.environ["SMTP_PASSWORD"] = ""
 
+    # Y NADA DE COMPARTIR REDIS, por la misma razón que la base va aparte.
+    #
+    # Redis es el broker de Celery. Con un worker levantado en desarrollo —que
+    # es lo normal desde que el bot de WhatsApp responde— las tareas que encola
+    # la suite se las llevaba ÉL: las ejecutaba contra la base de desarrollo y
+    # el test se quedaba esperando un comprobante que nadie iba a autorizar.
+    # Fallaban unos tests u otros según quién llegara antes a la cola, que es
+    # justo el síntoma que hace perder una tarde buscando en el sitio
+    # equivocado.
+    #
+    # De paso arregla algo peor y silencioso: `clean_redis` hace flushdb() en
+    # cada test. Sobre la base 0 eso vaciaba la Redis de desarrollo entera
+    # —conversaciones de WhatsApp a medias incluidas— cada vez que alguien
+    # lanzaba la suite.
+    partes = urlsplit(ajustes.redis_url)
+    os.environ["REDIS_URL"] = urlunsplit(partes._replace(path="/15"))
+
 
 _preparar_base_de_tests()
 

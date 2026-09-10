@@ -1334,17 +1334,13 @@ class TestNoBastaConQueLaClaveExista:
 
     def test_un_importe_inflado_no_cuenta(self, buzon_encendido, admin_db):
         clave = clave_de_prueba(7100501)
-        fila = self._verificar(
-            admin_db, self._falsificada(clave, valor_iva=Decimal("9999999.99"))
-        )
+        fila = self._verificar(admin_db, self._falsificada(clave, valor_iva=Decimal("9999999.99")))
         assert fila.verificada is False
         assert "importes" in fila.verificacion["detalle"].lower()
 
     def test_un_agente_inventado_no_cuenta(self, buzon_encendido, admin_db):
         clave = clave_de_prueba(7100502)
-        fila = self._verificar(
-            admin_db, self._falsificada(clave, ruc_agente="1790099999001")
-        )
+        fila = self._verificar(admin_db, self._falsificada(clave, ruc_agente="1790099999001"))
         assert fila.verificada is False
 
     def test_la_clave_de_otro_documento_no_sirve(self, buzon_encendido, admin_db):
@@ -1360,7 +1356,5 @@ class TestNoBastaConQueLaClaveExista:
     def test_la_legitima_si_cuenta(self, buzon_encendido, admin_db):
         """La contraprueba: sin esto, un fallo de lectura daría todo por falso."""
         clave = clave_de_prueba(7100504)
-        fila = self._verificar(
-            admin_db, xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)
-        )
+        fila = self._verificar(admin_db, xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave))
         assert fila.verificada is True, fila.verificacion

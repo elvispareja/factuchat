@@ -50,7 +50,11 @@ def _cortable(texto: str) -> Markup:
         else:
             trozos = [palabra[i : i + _CORTE] for i in range(0, len(palabra), _CORTE)]
             partes.append("<br/>".join(escape(t) for t in trozos))
-    return Markup(" ".join(partes))
+    # noqa justificado: lo único sin escapar que entra aquí es el «<br/>» que
+    # ponemos nosotros. Cada trozo de texto del usuario pasa por escape() en las
+    # dos ramas de arriba, así que no hay forma de inyectar HTML. Ruff no puede
+    # verlo y marca todo Markup() como sospechoso.
+    return Markup(" ".join(partes))  # noqa: S704
 
 
 def _dinero(valor: Any) -> str:

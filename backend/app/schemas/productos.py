@@ -9,6 +9,16 @@ from app.db.models.enums import TipoProducto
 from app.sri.xml_builder import TARIFAS_IVA
 
 
+class ImagenOut(BaseModel):
+    """Una foto de la galería. La ruta en disco NO sale: delataría la
+    estructura del servidor. El archivo se pide por su id."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    orden: int
+
+
 class ProductoAtributoIn(BaseModel):
     atributo_id: uuid.UUID
     atributo_valor_id: uuid.UUID

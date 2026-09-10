@@ -521,3 +521,188 @@
 .fc-dropzone > *:not(input) {
   pointer-events: none;
 }
+
+/* --- Cámara del catálogo -------------------------------------------------
+   La foto del artículo se TOMA, nunca se sube. El marco mantiene la relación
+   4:3 con `aspect-ratio` para que la vista previa no salte de tamaño mientras
+   el navegador negocia la resolución con el sensor. */
+
+.fc-camara__marco {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #0c2318;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.fc-camara__marco video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fc-camara__aviso {
+  position: absolute;
+  font-size: 12.5px;
+  color: var(--texto-sobre-oscuro);
+}
+.fc-camara__botones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.fc-camara__nota {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #8a9a91;
+  margin: 8px 0 0;
+}
+.fc-camara__error {
+  border: 1.5px dashed var(--aviso-borde);
+  background: var(--aviso-bg);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+/* --- Dictado -------------------------------------------------------------
+   Escribe mientras se habla: lo que el reconocedor aún no confirma se pinta en
+   gris y desaparece en cuanto entra el texto definitivo. */
+
+.fc-dictado {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fc-dictado__micro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--borde-campo);
+  color: var(--texto-suave);
+  border-radius: var(--radio-pildora);
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.fc-dictado__micro:hover:not(:disabled) {
+  border-color: var(--verde-marca);
+  color: var(--verde-marca);
+}
+.fc-dictado__micro:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fc-dictado__micro[data-escuchando="1"] {
+  background: var(--error-bg);
+  border-color: var(--error-texto);
+  color: var(--error-texto);
+}
+/* El punto rojo late mientras escucha: sin señal viva, nadie sabe si el
+   micrófono sigue abierto. */
+.fc-dictado__micro[data-escuchando="1"] svg {
+  animation: dbPulse 1.4s ease-in-out infinite;
+}
+.fc-dictado__eco {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--texto-tenue);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fc-dictado__error {
+  font-size: 12px;
+  color: var(--error-texto);
+}
+
+/* --- Galería de fotos del artículo --------------------------------------- */
+
+.fc-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+.fc-galeria:empty {
+  display: none;
+}
+.fc-galeria__foto {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--superficie-tenue);
+}
+.fc-galeria__foto[data-principal="1"] {
+  border-color: var(--verde-acento);
+  box-shadow: 0 0 0 1px var(--verde-acento);
+}
+.fc-galeria__foto[data-pendiente="1"] {
+  border-style: dashed;
+  border-color: var(--aviso-punto);
+}
+.fc-galeria__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fc-galeria__hueco {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--superficie-tenue);
+}
+.fc-galeria__marca {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(18, 61, 47, 0.82);
+  color: var(--fondo);
+  border-radius: var(--radio-pildora);
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+/* Las acciones aparecen al pasar por encima o al enfocar con el teclado: sin
+   la parte del foco, quien no usa ratón no puede borrar una foto. */
+.fc-galeria__acciones {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: linear-gradient(transparent, rgba(12, 35, 24, 0.75));
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.fc-galeria__foto:hover .fc-galeria__acciones,
+.fc-galeria__acciones:focus-within {
+  opacity: 1;
+}
+.fc-galeria__acciones button {
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: var(--radio-pildora);
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--verde-marca);
+  cursor: pointer;
+}
+.fc-galeria__acciones button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -17,12 +17,19 @@ from app.db.models import (
     Categoria,
     Producto,
     ProductoAtributo,
+    ProductoImagen,
     ProductoVariante,
     VarianteAtributo,
 )
 from app.db.models.enums import Rol, TipoProducto
 from app.db.session import get_db
-from app.schemas.productos import ProductoAtributoIn, ProductoIn, ProductoOut, VarianteIn
+from app.schemas.productos import (
+    ImagenOut,
+    ProductoAtributoIn,
+    ProductoIn,
+    ProductoOut,
+    VarianteIn,
+)
 from app.services.planes import (
     LimitePlanError,
     exigir_cupo_productos,
@@ -379,16 +386,26 @@ def _extension_real(contenido: bytes) -> str | None:
     return None
 
 
-@router.post("/{producto_id}/imagen", response_model=ProductoOut)
-def subir_imagen(
-    producto_id: uuid.UUID,
-    archivo: UploadFile = File(...),
-    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
-    db: Session = Depends(get_db),
-):
-    """Sube o reemplaza la imagen del producto."""
-    producto = _producto_o_404(db, producto_id)
+# ------------------------------------------------------------- galería
+#
+# Varias fotos por artículo. La primera (orden 0) es la principal: la que sale
+# en el listado y en la tienda.
+#
+# Se puede SUBIR desde el dispositivo o TOMAR con la cámara; al servidor le
+# llegan igual, bytes de una imagen, y no tiene forma de distinguirlas ni falta
+# que hace.
 
+MAX_IMAGENES = 8
+
+
+def _carpeta_de(tenant_id: uuid.UUID) -> Path:
+    destino = Path(get_settings().storage_dir) / str(tenant_id) / "productos"
+    destino.mkdir(parents=True, exist_ok=True)
+    return destino
+
+
+def _guardar_archivo(tenant_id: uuid.UUID, archivo: UploadFile) -> Path:
+    """Valida y escribe en disco. Devuelve la ruta."""
     # Se mide lo LEÍDO, un byte más del límite: el Content-Length de la
     # petición es un número que manda el cliente y puede mentir.
     contenido = archivo.file.read(MAX_IMAGEN_BYTES + 1)
@@ -397,49 +414,48 @@ def subir_imagen(
     extension = _extension_real(contenido)
     if extension is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sube una imagen JPG, PNG o WEBP")
-
-    destino = Path(get_settings().storage_dir) / str(tenant_de(user)) / "productos"
-    destino.mkdir(parents=True, exist_ok=True)
     # El nombre lo ponemos NOSOTROS. El `archivo.filename` no toca el disco:
     # «../../etc/passwd» es un nombre de archivo válido y escribiría fuera.
-    ruta = destino / f"{uuid.uuid4()}.{extension}"
+    ruta = _carpeta_de(tenant_id) / f"{uuid.uuid4()}.{extension}"
     ruta.write_bytes(contenido)
-
-    anterior = producto.imagen_path
-    producto.imagen_path = str(ruta)
-    db.flush()
-    if anterior:
-        # Después de guardar la nueva: si no, cada reemplazo dejaría el archivo
-        # viejo en disco para siempre.
-        Path(anterior).unlink(missing_ok=True)
-    return producto
+    return ruta
 
 
-@router.get("/{producto_id}/imagen")
-def descargar_imagen(
-    producto_id: uuid.UUID,
-    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
-    db: Session = Depends(get_db),
-):
-    """Devuelve el archivo. Pasa por aquí y no por StaticFiles a propósito:
-    montar var/storage serviría los archivos de todos los inquilinos sin RLS."""
-    producto = _producto_o_404(db, producto_id)
-    ruta = Path(producto.imagen_path) if producto.imagen_path else None
-    if ruta is None or not ruta.exists():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "El producto no tiene imagen")
-    # Defensa en profundidad: hoy esta columna solo la escribe subir_imagen con
-    # un nombre generado aquí, pero si algún día la llenara un import o un
-    # script, esto sería una lectura arbitraria de archivos del servidor.
+def _imagenes_de(db: Session, producto: Producto) -> list[ProductoImagen]:
+    return list(
+        db.scalars(
+            select(ProductoImagen)
+            .where(ProductoImagen.producto_id == producto.id)
+            .order_by(ProductoImagen.orden, ProductoImagen.created_at)
+        ).all()
+    )
+
+
+def _renumerar(imagenes: list[ProductoImagen]) -> None:
+    """Deja el orden en 0,1,2… sin huecos.
+
+    Sin esto, borrar la principal dejaría al producto con su primera foto en
+    orden 1 y ninguna en 0, y «la principal» pasaría a depender de cómo ordene
+    la consulta."""
+    for i, img in enumerate(imagenes):
+        img.orden = i
+
+
+def _leer_archivo(imagen: ProductoImagen) -> Response:
+    ruta = Path(imagen.ruta)
+    # Defensa en profundidad: hoy esta columna solo la escribe el alta con un
+    # nombre generado aquí, pero si algún día la llenara un import o un script,
+    # esto sería una lectura arbitraria de archivos del servidor.
     base = Path(get_settings().storage_dir).resolve()
-    if not ruta.resolve().is_relative_to(base):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "El producto no tiene imagen")
+    if not ruta.exists() or not ruta.resolve().is_relative_to(base):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa foto ya no está")
     return Response(
         content=ruta.read_bytes(),
         media_type=MEDIA_TYPES.get(ruta.suffix.lstrip("."), "application/octet-stream"),
         headers={
-            # El nombre del archivo lleva un uuid4 y solo cambia al reemplazar la
-            # imagen, así que el navegador puede quedárselo. Sin esto, un catálogo
-            # de 200 productos vuelve a descargar 200 archivos en cada visita.
+            # El nombre lleva un uuid4 y no se reutiliza, así que el navegador
+            # puede quedárselo. Sin esto, un catálogo de 200 artículos vuelve a
+            # descargar 200 archivos en cada visita.
             "Cache-Control": "private, max-age=3600",
             # El tipo lo decidimos nosotros por los bytes; que el navegador no
             # husmee el contenido y lo trate como otra cosa.
@@ -448,15 +464,116 @@ def descargar_imagen(
     )
 
 
-@router.delete("/{producto_id}/imagen", status_code=status.HTTP_204_NO_CONTENT)
-def borrar_imagen(
+@router.get("/{producto_id}/imagenes", response_model=list[ImagenOut])
+def listar_imagenes(
     producto_id: uuid.UUID,
     user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
     db: Session = Depends(get_db),
 ):
+    return _imagenes_de(db, _producto_o_404(db, producto_id))
+
+
+@router.post(
+    "/{producto_id}/imagenes",
+    response_model=ImagenOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def agregar_imagen(
+    producto_id: uuid.UUID,
+    archivo: UploadFile = File(...),
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """Añade una foto más. No reemplaza a las que ya están."""
     producto = _producto_o_404(db, producto_id)
-    if producto.imagen_path:
-        Path(producto.imagen_path).unlink(missing_ok=True)
-        producto.imagen_path = None
-        db.flush()
+    actuales = _imagenes_de(db, producto)
+    if len(actuales) >= MAX_IMAGENES:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Un artículo admite hasta {MAX_IMAGENES} fotos. Borra alguna para subir otra.",
+        )
+
+    ruta = _guardar_archivo(tenant_de(user), archivo)
+    imagen = ProductoImagen(
+        tenant_id=tenant_de(user),
+        producto_id=producto.id,
+        ruta=str(ruta),
+        orden=len(actuales),
+    )
+    db.add(imagen)
+    db.flush()
+    return imagen
+
+
+@router.get("/{producto_id}/imagenes/{imagen_id}")
+def descargar_una_imagen(
+    producto_id: uuid.UUID,
+    imagen_id: uuid.UUID,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """El archivo. Pasa por aquí y no por StaticFiles a propósito: montar
+    var/storage serviría los archivos de todos los inquilinos sin RLS."""
+    _producto_o_404(db, producto_id)
+    imagen = db.get(ProductoImagen, imagen_id)  # RLS: solo del propio inquilino
+    if imagen is None or imagen.producto_id != producto_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa foto no es de este artículo")
+    return _leer_archivo(imagen)
+
+
+@router.put("/{producto_id}/imagenes/{imagen_id}/principal", response_model=list[ImagenOut])
+def hacer_principal(
+    producto_id: uuid.UUID,
+    imagen_id: uuid.UUID,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """La pone la primera. Es la que se ve en el listado y en la tienda."""
+    producto = _producto_o_404(db, producto_id)
+    imagenes = _imagenes_de(db, producto)
+    elegida = next((i for i in imagenes if i.id == imagen_id), None)
+    if elegida is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Esa foto no es de este artículo")
+    imagenes.remove(elegida)
+    _renumerar([elegida, *imagenes])
+    db.flush()
+    return _imagenes_de(db, producto)
+
+
+@router.delete("/{producto_id}/imagenes/{imagen_id}", status_code=status.HTTP_204_NO_CONTENT)
+def borrar_una_imagen(
+    producto_id: uuid.UUID,
+    imagen_id: uuid.UUID,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    producto = _producto_o_404(db, producto_id)
+    imagenes = _imagenes_de(db, producto)
+    elegida = next((i for i in imagenes if i.id == imagen_id), None)
+    if elegida is None:
+        return None  # borrar dos veces no es un error
+
+    ruta = elegida.ruta
+    imagenes.remove(elegida)
+    db.delete(elegida)
+    _renumerar(imagenes)
+    db.flush()
+    # El archivo, DESPUÉS de que la fila se vaya: si el borrado falla, no se
+    # queda una fila apuntando a un archivo que ya no está.
+    Path(ruta).unlink(missing_ok=True)
     return None
+
+
+@router.get("/{producto_id}/imagen")
+def descargar_principal(
+    producto_id: uuid.UUID,
+    user: AuthUser = Depends(require_roles(Rol.CLIENTE)),
+    db: Session = Depends(get_db),
+):
+    """La foto principal. Se conserva esta ruta corta porque el listado pide una
+    miniatura por artículo y no necesita saber cuántas fotos hay."""
+    producto = _producto_o_404(db, producto_id)
+    imagenes = _imagenes_de(db, producto)
+    if not imagenes:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "El producto no tiene imagen")
+    return _leer_archivo(imagenes[0])

@@ -68,9 +68,7 @@ class TestCaminoFeliz:
         cliente = siembra.cliente()
         factura = siembra.factura(cliente=cliente)
 
-        r = _nota(
-            client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"]
-        )
+        r = _nota(client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"])
         assert r.status_code == 201, r.text
         nota = r.json()
         assert nota["tipo"] == "NOTA_DEBITO"
@@ -89,16 +87,17 @@ class TestCaminoFeliz:
         # El XML pide los motivos en LISTA, con su valor sin impuestos
         assert fila.payload["motivos"] == [{"razon": MOTIVO, "valor": "17.39"}]
 
-    def test_el_valor_tecleado_es_lo_que_se_cobra_con_iva_dentro(
-        self, client, ana_tokens, siembra
-    ):
+    def test_el_valor_tecleado_es_lo_que_se_cobra_con_iva_dentro(self, client, ana_tokens, siembra):
         """Quien teclea 20.00 quiere cobrar 20.00, no 20.00 + IVA: el servidor
         desglosa 17.39 de base y 2.61 de IVA."""
         cliente = siembra.cliente()
         factura = siembra.factura(cliente=cliente)
 
         nota = _nota(
-            client, ana_tokens, valor="20.00", factura_id=str(factura.id),
+            client,
+            ana_tokens,
+            valor="20.00",
+            factura_id=str(factura.id),
             cliente_final_id=cliente["id"],
         ).json()
         assert (nota["subtotal"], nota["iva"], nota["total"]) == ("17.39", "2.61", "20.00")
@@ -112,7 +111,10 @@ class TestCaminoFeliz:
         factura = siembra.factura(cliente=cliente)
 
         nota = _nota(
-            client, ana_tokens, valor="10.00", factura_id=str(factura.id),
+            client,
+            ana_tokens,
+            valor="10.00",
+            factura_id=str(factura.id),
             cliente_final_id=cliente["id"],
         ).json()
         assert (nota["subtotal"], nota["iva"], nota["total"]) == ("8.70", "1.31", "10.01")
@@ -171,15 +173,16 @@ class TestContraLaFacturaDeOrigen:
         factura = siembra.factura(cliente=cliente, total="115.00")
 
         r = _nota(
-            client, ana_tokens, valor="500.00", factura_id=str(factura.id),
+            client,
+            ana_tokens,
+            valor="500.00",
+            factura_id=str(factura.id),
             cliente_final_id=cliente["id"],
         )
         assert r.status_code == 201, r.text
         assert r.json()["total"] == "500.00"
 
-    def test_una_factura_ya_acreditada_del_todo_admite_recargo(
-        self, client, ana_tokens, siembra
-    ):
+    def test_una_factura_ya_acreditada_del_todo_admite_recargo(self, client, ana_tokens, siembra):
         """Anulada por una nota de crédito no significa intocable: el recargo por
         mora de los meses que estuvo impagada se sigue pudiendo cobrar."""
         cliente = siembra.cliente()
@@ -213,9 +216,7 @@ class TestContraLaFacturaDeOrigen:
         cliente = siembra.cliente()
         factura = siembra.factura(cliente=cliente, estado=EstadoComprobante.PENDIENTE)
 
-        r = _nota(
-            client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"]
-        )
+        r = _nota(client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"])
         assert r.status_code == 422, r.text
         assert "AUTORIZADA" in r.json()["detail"]
 
@@ -232,9 +233,7 @@ class TestContraLaFacturaDeOrigen:
         factura = siembra.factura(cliente=None)
         cliente = siembra.cliente()
 
-        r = _nota(
-            client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"]
-        )
+        r = _nota(client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"])
         assert r.status_code == 422, r.text
 
     def test_la_factura_de_otro_negocio_no_existe(self, client, ana_tokens, siembra):
@@ -258,9 +257,7 @@ class TestContraLaFacturaDeOrigen:
             client, ana_tokens, factura_id=str(factura.id), cliente_final_id=cliente["id"]
         ).json()
 
-        r = _nota(
-            client, ana_tokens, factura_id=nota["id"], cliente_final_id=cliente["id"]
-        )
+        r = _nota(client, ana_tokens, factura_id=nota["id"], cliente_final_id=cliente["id"])
         assert r.status_code == 422, r.text
         assert "no existe" in r.json()["detail"]
 
@@ -368,9 +365,7 @@ class TestFacturasElegibles:
         assert (fila["total"], fila["pendiente"]) == ("57.50", "0.00")
         assert fila["cliente_final_id"] == cliente["id"]  # el modal precarga con él
 
-    def test_sigue_sin_ofrecer_borradores_ni_las_de_otro_negocio(
-        self, client, ana_tokens, siembra
-    ):
+    def test_sigue_sin_ofrecer_borradores_ni_las_de_otro_negocio(self, client, ana_tokens, siembra):
         borrador = siembra.factura(estado=EstadoComprobante.PENDIENTE)
         ajena = siembra.factura(tenant_id=TENANT_B)
         autorizada = siembra.factura()

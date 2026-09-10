@@ -69,6 +69,43 @@ def _extraer_mensajes(payload: dict[str, Any]) -> list[dict]:
     return salida
 
 
+def _extraer_estados(payload: dict[str, Any]) -> list[dict]:
+    """Los acuses de Meta sobre lo que enviamos NOSOTROS: sent, delivered, failed."""
+    salida = []
+    for entry in payload.get("entry", []):
+        for cambio in entry.get("changes", []):
+            for s in (cambio.get("value") or {}).get("statuses", []):
+                salida.append(s)
+    return salida
+
+
+def _registrar_estados(payload: dict[str, Any]) -> None:
+    """Deja constancia de los envíos que Meta NO consiguió entregar.
+
+    IMPORTA MÁS DE LO QUE PARECE. La API responde 200 con un identificador de
+    mensaje en cuanto ACEPTA el envío, no cuando lo entrega. Si el destinatario
+    no tiene WhatsApp, si la cuenta no tiene método de pago o si la plantilla
+    está sin aprobar, el mensaje muere después y el motivo viaja solo por aquí.
+
+    Hasta ahora estos avisos se descartaban sin mirarlos, así que un envío
+    fallido era indistinguible de uno entregado y la única pista era que el
+    cliente dijera «no me llega nada»."""
+    for s in _extraer_estados(payload):
+        estado = s.get("status")
+        destino = s.get("recipient_id", "?")
+        if estado != "failed":
+            logger.info("WhatsApp %s -> %s (%s)", estado, destino, s.get("id"))
+            continue
+        for err in s.get("errors") or [{}]:
+            logger.warning(
+                "WhatsApp NO ENTREGADO a %s: [%s] %s — %s",
+                destino,
+                err.get("code"),
+                err.get("title") or err.get("message") or "sin título",
+                (err.get("error_data") or {}).get("details") or "sin detalle",
+            )
+
+
 def _a_entrante(m: dict) -> Entrante:
     tipo = (m.get("type") or "text").upper()
     texto = ""
@@ -137,6 +174,9 @@ def _despachar(db: Session, tenant_id: uuid.UUID, destino: str, respuesta: Respu
 def procesar_mensaje(payload: dict[str, Any], enviar: bool = True) -> list[Respuesta]:
     """Núcleo testeable: con enviar=False no toca la red."""
     respuestas_totales: list[Respuesta] = []
+
+    # Los acuses de entrega llegan por el mismo webhook que los mensajes.
+    _registrar_estados(payload)
 
     for m in _extraer_mensajes(payload):
         entrante = _a_entrante(m)

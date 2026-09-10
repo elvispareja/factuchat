@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/cliente";
+import { GaleriaFotos, subirPendientes } from "../ui/GaleriaFotos";
 import type { Atributo, AtributoValor, Categoria, Producto } from "../api/tipos";
 import { usePlan } from "../plan/PlanContexto";
 import { ChipSinConteo, FranjaPlan } from "../plan/Bloqueos";
@@ -350,8 +351,6 @@ export function Catalogo({ onVerPlanes, filtroExterno, onFiltro, onConteos }: Pr
    El servidor manda `tiene_imagen` (un booleano), nunca la ruta; los bytes se
    piden aparte a GET /productos/{id}/imagen, que exige Authorization. */
 
-const MAX_IMAGEN = 2 * 1024 * 1024;
-const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 
 const cuadroImagen = (lado: number) =>
   ({
@@ -523,43 +522,18 @@ function FormularioProducto({
   // Imagen: `nueva` es lo elegido en esta sesión del modal y `quitar` marca el
   // borrado de la que ya está. Ninguna de las dos viaja en el JSON del
   // producto; van por su propio endpoint multipart al guardar.
-  const [imagenNueva, setImagenNueva] = useState<File | null>(null);
-  const [quitarImagen, setQuitarImagen] = useState(false);
-  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
-  const [arrastrando, setArrastrando] = useState(false);
+  // Las fotos que esperan a que el artículo exista. Las que YA están en el
+  // servidor las gestiona la propia galería.
+  const [fotosPendientes, setFotosPendientes] = useState<File[]>([]);
 
   // La vista previa es un blob del disco del usuario: hay que devolverlo. Sin
   // el revoke, elegir cinco fotos seguidas deja cinco en memoria.
-  useEffect(() => {
-    if (!imagenNueva) {
-      setVistaPrevia(null);
-      return;
-    }
-    const url = URL.createObjectURL(imagenNueva);
-    setVistaPrevia(url);
-    return () => URL.revokeObjectURL(url);
-  }, [imagenNueva]);
 
   // El servidor vuelve a validar tipo y tamaño (y mira los BYTES, no el
   // content_type: esa es la que manda). Esto es solo para no hacerle esperar
   // una subida de 8 MB que va a acabar en 400.
-  function elegirImagen(archivo: File | undefined | null) {
-    if (!archivo) return;
-    if (!TIPOS_IMAGEN.includes(archivo.type)) {
-      setError("La imagen tiene que ser JPG, PNG o WEBP.");
-      return;
-    }
-    if (archivo.size > MAX_IMAGEN) {
-      setError("La imagen supera los 2 MB permitidos.");
-      return;
-    }
-    setError(null);
-    setQuitarImagen(false);
-    setImagenNueva(archivo);
-  }
 
   const esServicio = tipoProducto === "SERVICIO";
-  const hayImagenGuardada = Boolean(producto?.tiene_imagen) && !quitarImagen;
 
   // Una lista vacía por un fallo de red se lee igual que «no tienes ninguna»,
   // y el usuario acaba creyendo que perdió sus categorías. El error se dice.
@@ -752,17 +726,17 @@ function FormularioProducto({
       idGuardado.current = guardado.id;
 
       try {
-        if (imagenNueva) {
-          await api.subir(`/productos/${guardado.id}/imagen`, imagenNueva);
-        } else if (quitarImagen && guardado.tiene_imagen) {
-          await api.delete(`/productos/${guardado.id}/imagen`);
+        if (fotosPendientes.length) {
+          await subirPendientes(guardado.id, fotosPendientes);
+          // Ya están arriba: si algo falla después, no se vuelven a subir
+          setFotosPendientes([]);
         }
       } catch (e) {
         // El producto sí se guardó: decir «no pudimos guardar el producto»
         // sería mentira y el usuario lo crearía otra vez. El modal se queda
         // abierto para reintentar solo la imagen; al cerrar, la lista recarga.
         setError(
-          `Guardamos el producto, pero la imagen no se subió: ${
+          `Guardamos el producto, pero alguna foto no se subió: ${
             e instanceof Error ? e.message : "error desconocido"
           }`,
         );
@@ -854,76 +828,15 @@ function FormularioProducto({
             </div>
           </div>
 
-          {/* La imagen NO viaja en el JSON del producto: se sube aparte, por
-              multipart, a /productos/{id}/imagen. Ver `guardar()`. */}
+          {/* Las fotos NO viajan en el JSON: se suben aparte, una a una, a
+              /productos/{id}/imagenes. Ver `guardar()`. */}
           <div>
-            <span className="fc-label">Imagen</span>
-            {vistaPrevia || hayImagenGuardada ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {vistaPrevia ? (
-                  <img src={vistaPrevia} alt="" style={cuadroImagen(64)} />
-                ) : (
-                  producto && <Miniatura producto={producto} lado={64} />
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, wordBreak: "break-all" }}>
-                    {imagenNueva ? imagenNueva.name : "Imagen actual"}
-                  </div>
-                  <button
-                    type="button"
-                    className="fc-btn fc-btn--texto"
-                    onClick={() => {
-                      setImagenNueva(null);
-                      // Solo hay que pedirle el borrado al servidor si había una
-                      // guardada; descartar la recién elegida no toca el disco.
-                      setQuitarImagen(Boolean(producto?.tiene_imagen));
-                    }}
-                  >
-                    Quitar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <label
-                className="fc-dropzone"
-                data-arrastrando={arrastrando ? "true" : "false"}
-                onDragOver={(e) => {
-                  // Sin preventDefault el navegador se lleva el archivo a otra
-                  // pestaña en vez de dejarlo soltar aquí.
-                  e.preventDefault();
-                  setArrastrando(true);
-                }}
-                onDragLeave={() => setArrastrando(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setArrastrando(false);
-                  elegirImagen(e.dataTransfer.files?.[0]);
-                }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--verde-medio)"
-                  strokeWidth="1.9"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
-                </svg>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--verde-marca)" }}>
-                  Arrastra la foto o haz clic
-                </span>
-                <span style={{ fontSize: 12, color: "#8A9A91" }}>JPG, PNG o WEBP · hasta 2 MB</span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => elegirImagen(e.target.files?.[0])}
-                />
-              </label>
-            )}
+            <span className="fc-label">Fotos</span>
+            <GaleriaFotos
+              productoId={idGuardado.current}
+              pendientes={fotosPendientes}
+              onPendientes={setFotosPendientes}
+            />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

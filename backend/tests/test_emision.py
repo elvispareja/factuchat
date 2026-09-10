@@ -612,3 +612,29 @@ class TestReglasDeNegocio:
             )
             admin_db.commit()
         admin_db.rollback()
+
+
+class TestSecuencialRegistrado:
+    """El 43 y el 45 del SRI parecen lo mismo y no lo son.
+
+    Se descubrió emitiendo de verdad contra el entorno de pruebas con un RUC
+    que ya tenía usados sus secuenciales: la factura se quedaba en ENVIADO_SRI
+    para siempre, consultando una autorización que no iba a existir, y el motivo
+    real —«ERROR SECUENCIAL REGISTRADO»— no se guardaba en ninguna parte.
+    """
+
+    def test_clave_registrada_no_es_rechazo(self):
+        """43: el SRI ya tiene ESTE documento. Hay que consultar, no reemitir."""
+        from app.sri.client import MensajeSRI, ya_estaba_registrado
+
+        assert ya_estaba_registrado(
+            [MensajeSRI(identificador="43", mensaje="CLAVE ACCESO REGISTRADA", tipo="ERROR")]
+        )
+
+    def test_secuencial_registrado_si_es_rechazo(self):
+        """45: OTRO documento usó ese secuencial. El nuestro está rechazado."""
+        from app.sri.client import MensajeSRI, ya_estaba_registrado
+
+        assert not ya_estaba_registrado(
+            [MensajeSRI(identificador="45", mensaje="ERROR SECUENCIAL REGISTRADO", tipo="ERROR")]
+        )

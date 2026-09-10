@@ -24,7 +24,11 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "127.0.0.1:6380:6379"
+      # 16379 y no 6380: Windows reserva el rango 6326-6425 para su NAT y
+      # Docker no puede publicar ahí («socket no permitido por sus permisos»).
+      # Solo afecta a conectarse desde el host; la API llega a Redis por la red
+      # interna del compose y no usa este puerto.
+      - "127.0.0.1:16379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -52,12 +56,58 @@ services:
     volumes:
       - ../backend:/app
     ports:
-      - "127.0.0.1:8000:8000"
+      # 19000 y no 8000, por lo mismo que Redis usa 16379: Windows reserva
+      # rangos para su NAT al arrancar y el 8000 cayó dentro de 7918-8017.
+      # Nadie escuchaba ahí; simplemente no dejaba enlazar, y el contenedor no
+      # llegaba a levantar. Los rangos cambian en cada reinicio, así que se
+      # elige un puerto alto lejos de donde reserva (el 18000 tambien estaba
+      # dentro de un rango, 17908-18007; el 19000 esta despejado).
+      #
+      # Solo cambia cómo se llega desde el host (el proxy de Vite, y el túnel
+      # de Cloudflare para el webhook de WhatsApp). Dentro del compose la API
+      # sigue en el 8000 de siempre.
+      - "127.0.0.1:19000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+
+  # EL BOT NO CONTESTA SIN ESTO. El webhook responde 200 y encola en Celery
+  # (app/api/routes/whatsapp.py), pero hasta ahora en desarrollo no había nadie
+  # consumiendo la cola: los mensajes se quedaban en Redis para siempre. Se
+  # notaba poco porque las pruebas de emisión llaman a la tarea a mano; con
+  # WhatsApp conectado, un mensaje sin worker es un mensaje sin respuesta.
+  worker:
+    build:
+      context: ../backend
+      target: dev
+    command:
+      - celery
+      - -A
+      - app.worker.celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=2
+    env_file:
+      - ./.env
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://factuchat_app:dev-app-pass@postgres:5432/factuchat
+      DATABASE_URL_ADMIN: postgresql+psycopg://factuchat:dev-admin-pass@postgres:5432/factuchat
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-solo-local-con-largo-suficiente-para-hmac-sha256
+      TOTP_ENC_KEY: "aWt2YWx0ZXN0a2V5MDEyMzQ1Njc4OTAxMjM0NTY3ODk="
+      CERT_ENC_KEY: "Y2VydGtleWRldjAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
+      STORAGE_DIR: /app/var/storage
+      EMAIL_OUTBOX_DIR: /app/var/outbox
+    volumes:
+      - ../backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 volumes:
   pgdata-dev:

@@ -83,9 +83,9 @@ class _Libreta:
 
 @pytest.fixture()
 def libreta(client, admin_db):
-    l = _Libreta(client, admin_db)
-    yield l
-    l.limpiar()
+    lib = _Libreta(client, admin_db)
+    yield lib
+    lib.limpiar()
 
 
 class TestProvinciaYCiudad:

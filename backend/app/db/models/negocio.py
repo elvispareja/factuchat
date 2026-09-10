@@ -4,7 +4,16 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -97,6 +106,28 @@ class AtributoValor(UUIDPk, Timestamps, Base):
     __table_args__ = (UniqueConstraint("atributo_id", "valor"),)
 
 
+class ProductoImagen(UUIDPk, Base):
+    """Una foto del artículo. En disco el archivo, aquí solo su ruta.
+
+    `orden` decide cuál manda: la 0 es la principal. Un booleano
+    «es_principal» habría permitido dos, o ninguna, y cada consulta tendría que
+    defenderse de los dos casos.
+    """
+
+    __tablename__ = "producto_imagenes"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    producto_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("productos.id", ondelete="CASCADE"), index=True
+    )
+    # Nunca sale hacia el navegador: delataría la estructura del servidor.
+    ruta: Mapped[str] = mapped_column(String(500))
+    orden: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 class ProductoAtributo(UUIDPk, Timestamps, Base):
     """Tabla puente: QUÉ VALORES tiene disponibles este producto. Un atributo
     puede repetirse con distinto valor (Talla=38, Talla=39): los que traen dos
@@ -185,10 +216,6 @@ class Producto(UUIDPk, Timestamps, Base):
     stock: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     stock_minimo: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     mostrar_en_tienda: Mapped[bool] = mapped_column(default=False)
-    # Ruta en disco de la imagen, no la imagen: los binarios en Postgres hinchan
-    # la base y complican los backups. Nunca sale hacia el navegador (delataría
-    # la estructura interna del servidor); lo que se expone es `tiene_imagen`.
-    imagen_path: Mapped[str | None] = mapped_column(String(500))
     activo: Mapped[bool] = mapped_column(default=True)
     categoria_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("categorias.id", ondelete="SET NULL")
@@ -196,9 +223,20 @@ class Producto(UUIDPk, Timestamps, Base):
 
     @property
     def tiene_imagen(self) -> bool:
-        """Lo único que el frontend necesita saber: si pedir la miniatura."""
-        return bool(self.imagen_path)
+        """Si hay al menos una foto. Lo que el listado necesita para saber si
+        pedir la miniatura; el detalle pide la galería completa."""
+        return bool(self.imagenes)
 
+    @property
+    def imagenes_total(self) -> int:
+        return len(self.imagenes)
+
+    # La primera (orden 0) es la principal: la del listado y la tienda.
+    imagenes: Mapped[list["ProductoImagen"]] = relationship(
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ProductoImagen.orden",
+    )
     atributos: Mapped[list["ProductoAtributo"]] = relationship(
         cascade="all, delete-orphan", passive_deletes=True
     )
@@ -270,3 +308,25 @@ class Comprobante(UUIDPk, Timestamps, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "tipo", "establecimiento", "punto_emision", "secuencial"),
     )
+
+
+class WhatsappNumero(UUIDPk, Base):
+    """Un teléfono autorizado a emitir por chat en nombre de esta empresa.
+
+    Solo dígitos y con código de país (`593993053670`), que es lo que manda
+    Meta en el webhook. Normalizar aquí y no en cada consulta evita que un
+    olvido deje sin servicio a un cliente legítimo.
+
+    El índice único de `numero` es GLOBAL, no por inquilino: el mismo teléfono
+    en dos empresas dejaría al bot sin forma de decidir a nombre de quién
+    factura. Ver la migración 0028.
+    """
+
+    __tablename__ = "whatsapp_numeros"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    numero: Mapped[str] = mapped_column(String(20), unique=True)
+    etiqueta: Mapped[str] = mapped_column(String(60))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

@@ -21,6 +21,7 @@ from app.api.routes import (
     clientes,
     comprobantes,
     health,
+    numeros_whatsapp,
     panel,
     productos,
     publico,
@@ -103,6 +104,7 @@ def create_app() -> FastAPI:
     app.include_router(categorias.router_valores, prefix=api, dependencies=con_firma)
     app.include_router(clientes.router, prefix=api, dependencies=con_firma)
     app.include_router(comprobantes.router, prefix=api, dependencies=con_firma)
+    app.include_router(numeros_whatsapp.router, prefix=api, dependencies=con_firma)
     app.include_router(productos.router, prefix=api, dependencies=con_firma)
     app.include_router(reportes.router, prefix=api, dependencies=con_firma)
     app.include_router(admin.router, prefix=api)

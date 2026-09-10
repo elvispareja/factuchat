@@ -60,3 +60,9 @@ backend/.cache/
 dist/
 build/
 *.log
+# Respaldos. Un dump lleva RUCs, correos, facturas y el .p12 cifrado de cada
+# cliente: es el archivo más sensible del proyecto y no sube al repositorio
+# ni por accidente.
+respaldo/
+*.sql.gz
+*.dump

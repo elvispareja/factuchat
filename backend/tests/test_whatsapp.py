@@ -18,7 +18,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.db.models import Comprobante, Tenant, WhatsappMsg
+from app.db.models import Comprobante, Tenant, WhatsappMsg, WhatsappNumero
 from app.db.models.enums import CategoriaMsg, DireccionMsg
 from app.whatsapp import consumo
 from app.whatsapp.asistente import Entrante, NumeroNoAutorizado, procesar, tenant_por_telefono
@@ -44,14 +44,16 @@ def wa_configurado(monkeypatch):
 
 @pytest.fixture()
 def tenant_con_telefono(admin_db):
-    """El tenant A responde al número de WhatsApp de las pruebas."""
-    t = admin_db.get(Tenant, TENANT_A)
-    anterior = t.telefono
-    t.telefono = f"+{TELEFONO}"
+    """El tenant A responde al número de WhatsApp de las pruebas.
+
+    Desde la migración 0028 el bot NO resuelve por `tenants.telefono` sino por
+    la tabla de números autorizados, que es lo que el cliente gestiona desde su
+    panel. El fixture escribe donde de verdad se mira."""
+    numero = WhatsappNumero(tenant_id=TENANT_A, numero=TELEFONO, etiqueta="Pruebas")
+    admin_db.add(numero)
     admin_db.commit()
-    yield t
-    t = admin_db.get(Tenant, TENANT_A)
-    t.telefono = anterior
+    yield admin_db.get(Tenant, TENANT_A)
+    admin_db.delete(admin_db.get(WhatsappNumero, numero.id))
     admin_db.commit()
 
 

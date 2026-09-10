@@ -23,6 +23,7 @@ router = APIRouter(prefix="/categorias", tags=["categorias"])
 router_atributos = APIRouter(prefix="/atributos", tags=["atributos"])
 router_valores = APIRouter(prefix="/atributo-valores", tags=["atributo-valores"])
 
+
 # Las bajas son lógicas (activo = False) pero los UNIQUE son de tabla: la fila
 # dada de baja sigue ocupando su hueco aunque los listados, que filtran por
 # activo, ya no la enseñen. Sin esto, borrar la talla «35» y volver a
@@ -59,7 +60,9 @@ def crear(
         _revivir(dada_de_baja, descripcion=body.descripcion)
         db.flush()
         return dada_de_baja
-    categoria = Categoria(tenant_id=tenant_de(user), nombre=body.nombre, descripcion=body.descripcion)
+    categoria = Categoria(
+        tenant_id=tenant_de(user), nombre=body.nombre, descripcion=body.descripcion
+    )
     db.add(categoria)
     db.flush()
     return categoria
@@ -93,10 +96,14 @@ def desactivar(
     # No se borra si sigue en uso: dejaría atributos o productos activos sin
     # categoría de golpe, o "invisibles" (las listas filtran por activo=True).
     tiene_atributos = db.scalar(
-        select(Atributo.id).where(Atributo.categoria_id == categoria_id, Atributo.activo.is_(True)).limit(1)
+        select(Atributo.id)
+        .where(Atributo.categoria_id == categoria_id, Atributo.activo.is_(True))
+        .limit(1)
     )
     tiene_productos = db.scalar(
-        select(Producto.id).where(Producto.categoria_id == categoria_id, Producto.activo.is_(True)).limit(1)
+        select(Producto.id)
+        .where(Producto.categoria_id == categoria_id, Producto.activo.is_(True))
+        .limit(1)
     )
     if tiene_atributos or tiene_productos:
         raise HTTPException(
@@ -139,7 +146,9 @@ def crear_atributo(
         _revivir(dado_de_baja)
         db.flush()
         return dado_de_baja
-    atributo = Atributo(tenant_id=tenant_de(user), categoria_id=body.categoria_id, nombre=body.nombre)
+    atributo = Atributo(
+        tenant_id=tenant_de(user), categoria_id=body.categoria_id, nombre=body.nombre
+    )
     db.add(atributo)
     db.flush()
     return atributo
@@ -261,7 +270,8 @@ def desactivar_valor(
     )
     if tiene_productos:
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "No puedes eliminar este valor: hay productos activos usándolo"
+            status.HTTP_400_BAD_REQUEST,
+            "No puedes eliminar este valor: hay productos activos usándolo",
         )
     valor.activo = False
     db.flush()

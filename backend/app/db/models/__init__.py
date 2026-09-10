@@ -32,8 +32,10 @@ from app.db.models.negocio import (
     Comprobante,
     Producto,
     ProductoAtributo,
+    ProductoImagen,
     ProductoVariante,
     VarianteAtributo,
+    WhatsappNumero,
 )
 from app.db.models.tienda import AceptacionTerminos, Pedido, SolicitudContacto
 
@@ -59,6 +61,7 @@ __all__ = [
     "Plan",
     "Producto",
     "ProductoAtributo",
+    "ProductoImagen",
     "ProductoVariante",
     "PromoCode",
     "PromoUse",
@@ -71,5 +74,6 @@ __all__ = [
     "User",
     "UserSession",
     "VarianteAtributo",
+    "WhatsappNumero",
     "WhatsappMsg",
 ]
