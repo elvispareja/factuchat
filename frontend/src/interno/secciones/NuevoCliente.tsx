@@ -20,7 +20,7 @@ import type { ReactNode } from "react";
 import { sa, type PlanInterno } from "../api";
 import { telefonoLimpio } from "../../util/formato";
 
-const PASOS = ["Datos del contribuyente", "Confirmación"];
+export const PASOS = ["Datos del contribuyente", "Confirmación"];
 
 /** El «origen del alta» de la maqueta, en su mismo orden. */
 const ORIGENES = ["Campaña Meta", "Referido", "Orgánico", "TikTok"];
@@ -313,7 +313,7 @@ export function NuevoCliente({ onCerrar, onCreado }: Props) {
   );
 }
 
-function Campo({
+export function Campo({
   etiqueta,
   valor,
   onCambio,
@@ -321,6 +321,7 @@ function Campo({
   mono,
   placeholder,
   opcional,
+  disabled,
 }: {
   etiqueta: string;
   valor: string;
@@ -329,6 +330,7 @@ function Campo({
   mono?: boolean;
   placeholder?: string;
   opcional?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <label className="fc-alta-campo">
@@ -341,6 +343,7 @@ function Campo({
         placeholder={placeholder}
         autoComplete="off"
         data-mono={mono ? "1" : "0"}
+        disabled={disabled}
         onChange={(e) => onCambio(e.target.value)}
       />
     </label>

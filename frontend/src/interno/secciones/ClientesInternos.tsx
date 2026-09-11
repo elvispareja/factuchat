@@ -17,7 +17,7 @@ import {
   type SesionImpersonacion,
 } from "../api";
 import { Cargando, ErrorSeccion } from "../../ui/Estados";
-import { NuevoCliente } from "./NuevoCliente";
+import { Campo, NuevoCliente, PASOS } from "./NuevoCliente";
 import { dinero, fechaCorta, telefonoLimpio } from "../../util/formato";
 import { sesion } from "../../api/cliente";
 
@@ -408,16 +408,11 @@ function Cupo({ usados, cupo }: { usados: number; cupo: number }) {
   );
 }
 
-/** Edición rápida desde el listado, sin entrar a la ficha.
- *
- *  PRIMERO EL MOTIVO, DESPUÉS LOS CAMPOS, y no al revés. `sa_editar_cliente`
- *  (migración 0019) hace un UPDATE de las cuatro columnas SIEMPRE: lo que se
- *  mande vacío se guarda vacío. El listado (`ClienteInterno`) trae razón
- *  social y correo, pero NO nombre comercial ni teléfono, así que abrir el
- *  formulario con esos dos en blanco sería borrarlos de un guardado. Los
- *  valores actuales solo los da `sa.ficha`, que exige motivo y lo audita
- *  —el mismo motivo que la edición necesita después, así que se pide una vez
- *  y sirve para las dos. */
+/** Edición desde el listado, con los mismos dos pasos que el alta: datos y
+ *  confirmación. El PUT sustituye los cuatro campos, así que el formulario abre
+ *  con todo lo guardado (el listado trae también nombre comercial y teléfono
+ *  desde la migración 0029) y lo que se deje vacío se guarda vacío. El motivo se
+ *  pide al confirmar y queda en auditoría junto al antes y el después. */
 function EdicionRapida({
   cliente,
   onCerrar,
@@ -427,14 +422,14 @@ function EdicionRapida({
   onCerrar: () => void;
   onGuardado: (mensaje: string) => void;
 }) {
+  const [paso, setPaso] = useState(1);
+  const [datos, setDatos] = useState({
+    razon_social: cliente.razon_social,
+    nombre_comercial: cliente.nombre_comercial ?? "",
+    email: cliente.email,
+    telefono: cliente.telefono ?? "",
+  });
   const [motivo, setMotivo] = useState("");
-  const [datos, setDatos] = useState<{
-    razon_social: string;
-    nombre_comercial: string;
-    email: string;
-    telefono: string;
-  } | null>(null);
-  const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -459,28 +454,20 @@ function EdicionRapida({
     return () => document.removeEventListener("keydown", alPulsar);
   }, [onCerrar]);
 
-  async function traerDatos() {
-    setCargando(true);
+  const motivoOk = motivo.trim().length >= 5;
+
+  function seguir() {
     setError(null);
-    try {
-      const f = await sa.ficha(cliente.id, motivo.trim());
-      setDatos({
-        razon_social: f.razon_social,
-        nombre_comercial: f.nombre_comercial ?? "",
-        email: f.email,
-        telefono: f.telefono ?? "",
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No pudimos traer los datos actuales");
-    } finally {
-      setCargando(false);
+    if (paso === 1) {
+      if (datos.razon_social.trim().length < 2) return setError("La razón social es obligatoria");
+      if (!datos.email.trim()) return setError("El correo es obligatorio");
+      return setPaso(2);
     }
+    void guardar();
   }
 
   async function guardar() {
-    if (!datos) return;
     setGuardando(true);
-    setError(null);
     try {
       await sa.editarCliente(cliente.id, {
         razon_social: datos.razon_social.trim(),
@@ -497,9 +484,13 @@ function EdicionRapida({
     }
   }
 
-  const motivoOk = motivo.trim().length >= 5;
-  const puedeGuardar =
-    !!datos && datos.razon_social.trim().length >= 2 && !!datos.email.trim() && motivoOk;
+  const resumen: [string, string][] = [
+    ["RUC", cliente.ruc],
+    ["Razón social", datos.razon_social.trim()],
+    ["Nombre comercial", datos.nombre_comercial.trim() || "—"],
+    ["Correo", datos.email.trim()],
+    ["WhatsApp", datos.telefono.trim() || "—"],
+  ];
 
   return createPortal(
     <div
@@ -516,14 +507,11 @@ function EdicionRapida({
         className="fc-modal__panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Editar datos del cliente"
+        aria-label="Editar cliente"
         tabIndex={-1}
       >
         <div className="fc-modal__cabecera">
-          <div>
-            <p className="fc-kicker">Editar datos</p>
-            <h2 className="fc-modal__titulo">{cliente.razon_social}</h2>
-          </div>
+          <h2 className="fc-modal__titulo">Editar cliente</h2>
           <button type="button" className="fc-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
             <svg
               width="13"
@@ -540,115 +528,114 @@ function EdicionRapida({
           </button>
         </div>
 
-        <div className="fc-modal__cuerpo fc-scroll" style={{ paddingTop: 16 }}>
-          <label className="fc-label" htmlFor="er-motivo">
-            Motivo (mínimo 5 caracteres)
-          </label>
-          <input
-            id="er-motivo"
-            className="fc-campo"
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ej.: el cliente pidió corregir el teléfono de contacto"
-            disabled={guardando}
-          />
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 0" }}>
-            Queda registrado en auditoría con tu nombre y tu motivo. Con él traemos también los
-            datos actuales, para no pisar lo que no cambies.
-          </p>
-
-          {datos && (
-            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
-              <div>
-                <label className="fc-label" htmlFor="er-razon-social">
-                  Razón social
-                </label>
-                <input
-                  id="er-razon-social"
-                  className="fc-campo"
-                  value={datos.razon_social}
-                  onChange={(e) => setDatos((d) => d && { ...d, razon_social: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="fc-label" htmlFor="er-nombre-comercial">
-                  Nombre comercial (opcional)
-                </label>
-                <input
-                  id="er-nombre-comercial"
-                  className="fc-campo"
-                  value={datos.nombre_comercial}
-                  onChange={(e) => setDatos((d) => d && { ...d, nombre_comercial: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="fc-label" htmlFor="er-email">
-                  Correo
-                </label>
-                <input
-                  id="er-email"
-                  type="email"
-                  className="fc-campo"
-                  value={datos.email}
-                  onChange={(e) => setDatos((d) => d && { ...d, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="fc-label" htmlFor="er-telefono">
-                  Teléfono (opcional)
-                </label>
-                <input
-                  id="er-telefono"
-                  className="fc-campo"
-                  value={datos.telefono}
-                  onChange={(e) =>
-                    setDatos((d) => d && { ...d, telefono: telefonoLimpio(e.target.value) })
-                  }
-                />
-              </div>
-              <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: 0 }}>
-                El RUC no se puede cambiar.
-              </p>
+        <div className="fc-pasos">
+          {PASOS.map((titulo, i) => (
+            <div
+              key={titulo}
+              className="fc-pasos__item"
+              data-alcanzado={paso > i ? "1" : "0"}
+              data-actual={paso === i + 1 ? "1" : "0"}
+            >
+              <span className="fc-pasos__num">{i + 1}</span>
+              <span className="fc-pasos__label">{titulo}</span>
             </div>
-          )}
+          ))}
+        </div>
 
+        <div className="fc-modal__cuerpo fc-scroll">
           {error && (
-            <p className="fc-error" role="alert" style={{ marginTop: 12 }}>
+            <p className="fc-error" role="alert" style={{ marginBottom: 12 }}>
               {error}
             </p>
+          )}
+
+          {paso === 1 && (
+            <>
+              <div className="fc-alta-rejilla">
+                <Campo etiqueta="RUC" valor={cliente.ruc} onCambio={() => {}} mono disabled />
+                <Campo
+                  etiqueta="WhatsApp"
+                  valor={datos.telefono}
+                  onCambio={(v) => setDatos((d) => ({ ...d, telefono: telefonoLimpio(v) }))}
+                  placeholder="+593 99 000 0000"
+                />
+              </div>
+              <Campo
+                etiqueta="Razón social"
+                valor={datos.razon_social}
+                onCambio={(v) => setDatos((d) => ({ ...d, razon_social: v }))}
+                placeholder="Como consta en el RUC"
+              />
+              <div className="fc-alta-rejilla">
+                <Campo
+                  etiqueta="Nombre comercial"
+                  opcional
+                  valor={datos.nombre_comercial}
+                  onCambio={(v) => setDatos((d) => ({ ...d, nombre_comercial: v }))}
+                />
+                <Campo
+                  etiqueta="Correo"
+                  valor={datos.email}
+                  onCambio={(v) => setDatos((d) => ({ ...d, email: v }))}
+                  tipo="email"
+                  placeholder="correo@negocio.ec"
+                />
+              </div>
+              <p style={{ fontSize: 12.5, lineHeight: 1.55, color: "#8A9A91", margin: 0 }}>
+                El RUC no se puede cambiar. Lo que dejes vacío se guarda vacío.
+              </p>
+            </>
+          )}
+
+          {paso === 2 && (
+            <>
+              <div className="fc-resumen">
+                {resumen.map(([k, v]) => (
+                  <div key={k} className="fc-resumen__fila">
+                    <div className="fc-resumen__k">{k}</div>
+                    <div className="fc-resumen__v">{v}</div>
+                  </div>
+                ))}
+              </div>
+              <Campo
+                etiqueta="Motivo (mínimo 5 caracteres)"
+                valor={motivo}
+                onCambio={setMotivo}
+                placeholder="Ej.: el cliente pidió corregir el teléfono de contacto"
+                disabled={guardando}
+              />
+              <p style={{ fontSize: 12.5, lineHeight: 1.55, color: "#8A9A91", margin: "8px 0 0" }}>
+                Queda registrado en auditoría con tu nombre y tu motivo, junto a los datos
+                anteriores y los nuevos.
+              </p>
+            </>
           )}
         </div>
 
         <div className="fc-modal__pie">
-          <span style={{ fontSize: 12, color: "var(--texto-tenue)" }}>RUC {cliente.ruc}</span>
+          <span style={{ fontSize: 12, color: "#8A9A91" }}>Paso {paso} de 2</span>
           <div style={{ display: "flex", gap: 9 }}>
-            <button
-              type="button"
-              className="fc-btn fc-btn--contorno"
-              onClick={onCerrar}
-              disabled={guardando}
-            >
-              Cancelar
-            </button>
-            {datos ? (
+            {paso > 1 && (
               <button
                 type="button"
-                className="fc-btn fc-btn--primario"
-                disabled={guardando || !puedeGuardar}
-                onClick={() => void guardar()}
+                className="fc-btn fc-btn--contorno"
+                onClick={() => {
+                  setError(null);
+                  setPaso(1);
+                }}
+                disabled={guardando}
               >
-                {guardando ? "Guardando…" : "Guardar"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="fc-btn fc-btn--primario"
-                disabled={cargando || !motivoOk}
-                onClick={() => void traerDatos()}
-              >
-                {cargando ? "Trayendo datos…" : "Continuar"}
+                Atrás
               </button>
             )}
+            <button
+              type="button"
+              className="fc-btn fc-btn--primario"
+              onClick={seguir}
+              disabled={guardando || (paso === 2 && !motivoOk)}
+            >
+              {guardando ? "Guardando…" : paso === 2 ? "Guardar cambios" : "Continuar"}
+            </button>
           </div>
         </div>
       </div>

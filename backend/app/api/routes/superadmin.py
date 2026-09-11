@@ -138,6 +138,8 @@ def _fila_cliente(f) -> dict:
         "ruc": f["ruc"],
         "razon_social": f["razon_social"],
         "email": f["email"],
+        "nombre_comercial": f["nombre_comercial"],
+        "telefono": f["telefono"],
         "estado": f["estado"],
         # ACTIVO | EN_PRUEBA | SUSPENDIDO | MOROSO | CANCELADO, derivado en la
         # base para que la columna y los filtros digan lo mismo

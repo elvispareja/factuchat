@@ -70,6 +70,8 @@ export interface ClienteInterno {
   ruc: string;
   razon_social: string;
   email: string;
+  nombre_comercial: string | null;
+  telefono: string | null;
   /** Estado del inquilino en la tabla: ACTIVO | SUSPENDIDO | BAJA. */
   estado: string;
   /** El que muestra y filtra la maqueta, derivado en la base cruzando el

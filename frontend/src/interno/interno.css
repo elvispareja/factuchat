@@ -748,6 +748,10 @@
 .fc-alta-campo input:focus {
   border-color: var(--verde-acento);
 }
+.fc-alta-campo input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .fc-alta-campo input[data-mono="1"] {
   font-family: var(--fuente-mono);
   font-size: 13px;
