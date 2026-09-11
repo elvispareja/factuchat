@@ -24,6 +24,8 @@ export interface NumeroAutorizado {
   mostrar: string;
   etiqueta: string;
   principal: boolean;
+  /** Mientras sea false el número NO factura: está esperando su código. */
+  verificado: boolean;
   created_at: string;
 }
 
@@ -56,7 +58,10 @@ interface Props {
 
 export function NumerosQueFacturan({ tope }: Props) {
   const [numeros, setNumeros] = useState<NumeroAutorizado[] | null>(null);
-  const [abierto, setAbierto] = useState(false);
+  // El modal sirve para las dos cosas: dar de alta uno nuevo (empieza por los
+  // datos) y terminar de verificar uno que quedó a medias (empieza por el
+  // código). `abierto` guarda cuál de las dos.
+  const [abierto, setAbierto] = useState<"nuevo" | NumeroAutorizado | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [quitando, setQuitando] = useState<string | null>(null);
 
@@ -132,13 +137,25 @@ export function NumerosQueFacturan({ tope }: Props) {
               style={{
                 fontSize: 11.5,
                 fontWeight: 600,
-                color: "#16794A",
+                // Pendiente NO es un estado decorativo: ese número todavía no
+                // factura, y decirlo en verde junto a los que sí sería mentir.
+                color: n.verificado ? "#16794A" : "#9A6B00",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
             >
-              {n.principal ? "Principal" : "Autorizado"}
+              {!n.verificado ? "Sin verificar" : n.principal ? "Principal" : "Autorizado"}
             </span>
+            {!n.verificado && (
+              <button
+                type="button"
+                className="fc-btn fc-btn--primario"
+                style={{ flexShrink: 0, padding: "8px 15px", fontSize: 13 }}
+                onClick={() => setAbierto(n)}
+              >
+                Verificar
+              </button>
+            )}
             <button
               type="button"
               className="fc-btn fc-btn--contorno"
@@ -164,7 +181,7 @@ export function NumerosQueFacturan({ tope }: Props) {
         style={{ width: "100%" }}
         disabled={!cabenMas}
         title={cabenMas ? undefined : "Un segundo número viene con el plan Empresario"}
-        onClick={() => setAbierto(true)}
+        onClick={() => setAbierto("nuevo")}
       >
         {cabenMas ? "Autorizar otro número" : "Un segundo número viene con Empresario"}
       </button>
@@ -177,11 +194,10 @@ export function NumerosQueFacturan({ tope }: Props) {
 
       {abierto && (
         <ModalAutorizar
-          onCerrar={() => setAbierto(false)}
-          onGuardado={(lista) => {
-            setNumeros(lista);
-            setAbierto(false);
-          }}
+          pendiente={abierto === "nuevo" ? null : abierto}
+          onCerrar={() => setAbierto(null)}
+          onLista={setNumeros}
+          onListo={() => setAbierto(null)}
         />
       )}
     </section>
@@ -189,20 +205,32 @@ export function NumerosQueFacturan({ tope }: Props) {
 }
 
 function ModalAutorizar({
+  pendiente,
   onCerrar,
-  onGuardado,
+  onLista,
+  onListo,
 }: {
+  /** Si viene, el modal abre directamente en el paso del código: es un número
+   *  que ya está dado de alta y solo le falta demostrar que es suyo. */
+  pendiente: NumeroAutorizado | null;
   onCerrar: () => void;
-  onGuardado: (lista: NumeroAutorizado[]) => void;
+  onLista: (lista: NumeroAutorizado[]) => void;
+  onListo: () => void;
 }) {
+  const [porVerificar, setPorVerificar] = useState<NumeroAutorizado | null>(pendiente);
   const [numero, setNumero] = useState("");
   const [etiqueta, setEtiqueta] = useState("");
+  const [codigo, setCodigo] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     panel.current?.focus();
+  }, []);
+
+  useEffect(() => {
     function alPulsar(e: KeyboardEvent) {
       if (e.key === "Escape") onCerrar();
     }
@@ -217,14 +245,57 @@ function ModalAutorizar({
     setGuardando(true);
     setError(null);
     try {
-      onGuardado(
-        await api.post<NumeroAutorizado[]>("/numeros-whatsapp", {
-          numero: numero.trim(),
-          etiqueta: etiqueta.trim(),
-        }),
-      );
+      const lista = await api.post<NumeroAutorizado[]>("/numeros-whatsapp", {
+        numero: numero.trim(),
+        etiqueta: etiqueta.trim(),
+      });
+      onLista(lista);
+      // El alta no autoriza: deja el número esperando su código. Se pasa al
+      // segundo paso en vez de cerrar, que es donde se termina el trabajo.
+      const recien = lista.find((n) => !n.verificado);
+      if (!recien) {
+        onListo();
+        return;
+      }
+      setPorVerificar(recien);
+      setAviso("Te mandamos un código a ese WhatsApp.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "No pudimos autorizar el número");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function verificar() {
+    if (!porVerificar || codigo.trim().length !== 6) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      onLista(
+        await api.post<NumeroAutorizado[]>(
+          `/numeros-whatsapp/${porVerificar.id}/verificar`,
+          { codigo: codigo.trim() },
+        ),
+      );
+      onListo();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos verificar el número");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function reenviar() {
+    if (!porVerificar) return;
+    setGuardando(true);
+    setError(null);
+    setAviso(null);
+    try {
+      onLista(await api.post<NumeroAutorizado[]>(`/numeros-whatsapp/${porVerificar.id}/codigo`));
+      setCodigo("");
+      setAviso("Listo, va otro código. El anterior ya no vale.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos enviar otro código");
     } finally {
       setGuardando(false);
     }
@@ -243,7 +314,7 @@ function ModalAutorizar({
         className="fc-modal__panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Autorizar un número"
+        aria-label={porVerificar ? "Verificar un número" : "Autorizar un número"}
         tabIndex={-1}
       >
         <div className="fc-modal__cabecera">
@@ -259,7 +330,7 @@ function ModalAutorizar({
                 color: "var(--texto)",
               }}
             >
-              Autorizar otro número
+              {porVerificar ? "Verificar el número" : "Autorizar otro número"}
             </h2>
           </div>
           <button type="button" className="fc-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
@@ -279,39 +350,94 @@ function ModalAutorizar({
         </div>
 
         <div className="fc-modal__cuerpo" style={{ paddingTop: 16 }}>
-          <label className="fc-label" htmlFor="na-numero">
-            Número de WhatsApp
-          </label>
-          <input
-            id="na-numero"
-            className="fc-campo"
-            value={numero}
-            inputMode="tel"
-            autoComplete="tel"
-            onChange={(e) => setNumero(e.target.value)}
-            placeholder="0993053670"
-            disabled={guardando}
-          />
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 16px", lineHeight: 1.5 }}>
-            Escríbelo como quieras. Si es de otro país, ponle el signo + y su código.
-          </p>
+          {porVerificar ? (
+            <>
+              <p style={{ fontSize: 13.5, color: "var(--texto-suave)", margin: "0 0 16px", lineHeight: 1.55 }}>
+                Mandamos un código de seis dígitos al{" "}
+                <strong style={{ color: "var(--texto)" }}>{porVerificar.mostrar}</strong>. Escríbelo
+                aquí para que ese teléfono pueda facturar.
+              </p>
 
-          <label className="fc-label" htmlFor="na-etiqueta">
-            De quién es
-          </label>
-          <input
-            id="na-etiqueta"
-            className="fc-campo"
-            value={etiqueta}
-            maxLength={60}
-            onChange={(e) => setEtiqueta(e.target.value)}
-            placeholder="Karina, mostrador"
-            disabled={guardando}
-          />
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 0", lineHeight: 1.5 }}>
-            Solo para que reconozcas la fila. No sale en ninguna factura.
-          </p>
+              <label className="fc-label" htmlFor="na-codigo">
+                Código
+              </label>
+              <input
+                id="na-codigo"
+                className="fc-campo fc-mono"
+                value={codigo}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                style={{ letterSpacing: "0.3em", fontSize: 17 }}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                disabled={guardando}
+              />
 
+              {/* EL CAMINO QUE NO DEPENDE DE META. Escribir al bot desde ese
+                  teléfono vale igual, y es lo que funciona cuando la plantilla
+                  todavía no está aprobada o el mensaje no llega. */}
+              <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "10px 0 0", lineHeight: 1.55 }}>
+                ¿No te llega? Desde ese mismo WhatsApp, escríbele el código al bot de Factuchat y
+                queda verificado igual. Caduca en 10 minutos.
+              </p>
+
+              <button
+                type="button"
+                className="fc-btn fc-btn--texto"
+                style={{ fontSize: 12.5, padding: "6px 0" }}
+                disabled={guardando}
+                onClick={() => void reenviar()}
+              >
+                Enviar otro código
+              </button>
+            </>
+          ) : (
+            <>
+              <label className="fc-label" htmlFor="na-numero">
+                Número de WhatsApp
+              </label>
+              <input
+                id="na-numero"
+                className="fc-campo"
+                value={numero}
+                inputMode="tel"
+                autoComplete="tel"
+                onChange={(e) => setNumero(e.target.value)}
+                placeholder="0993053670"
+                disabled={guardando}
+              />
+              <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 16px", lineHeight: 1.5 }}>
+                Escríbelo como quieras. Si es de otro país, ponle el signo + y su código.
+              </p>
+
+              <label className="fc-label" htmlFor="na-etiqueta">
+                De quién es
+              </label>
+              <input
+                id="na-etiqueta"
+                className="fc-campo"
+                value={etiqueta}
+                maxLength={60}
+                onChange={(e) => setEtiqueta(e.target.value)}
+                placeholder="Karina, mostrador"
+                disabled={guardando}
+              />
+              <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: "6px 0 0", lineHeight: 1.5 }}>
+                Solo para que reconozcas la fila. No sale en ninguna factura. Le mandaremos un
+                código para comprobar que ese teléfono es tuyo.
+              </p>
+            </>
+          )}
+
+          {aviso && !error && (
+            <p
+              role="status"
+              style={{ fontSize: 12.5, color: "var(--exito-texto)", margin: "12px 0 0" }}
+            >
+              {aviso}
+            </p>
+          )}
           {error && (
             <p className="fc-error" role="alert" style={{ marginTop: 12 }}>
               {error}
@@ -321,15 +447,21 @@ function ModalAutorizar({
 
         <div className="fc-modal__pie">
           <button type="button" className="fc-btn fc-btn--contorno" onClick={onCerrar}>
-            Cancelar
+            {porVerificar ? "Ahora no" : "Cancelar"}
           </button>
           <button
             type="button"
             className="fc-btn fc-btn--primario"
-            disabled={!puedeGuardar || guardando}
-            onClick={() => void guardar()}
+            disabled={guardando || (porVerificar ? codigo.length !== 6 : !puedeGuardar)}
+            onClick={() => void (porVerificar ? verificar() : guardar())}
           >
-            {guardando ? "Autorizando…" : "Autorizar"}
+            {guardando
+              ? porVerificar
+                ? "Verificando…"
+                : "Autorizando…"
+              : porVerificar
+                ? "Verificar"
+                : "Continuar"}
           </button>
         </div>
       </div>

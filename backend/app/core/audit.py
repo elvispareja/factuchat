@@ -27,6 +27,10 @@ SENSITIVE_FIELDS = {
     "token_hash",
     "p12_password_enc",
     "p12_data_enc",
+    # El código que verifica un teléfono: es de un solo uso y ya se guarda
+    # hasheado, pero su sha256 en una bitácora que lee el personal interno
+    # permitiría probar candidatos fuera del contador de intentos.
+    "codigo_hash",
     # Buzón SRI (fase 7): lo escribe un tercero desconocido y el contenido del
     # correo se custodia CIFRADO. El mensaje de error del parser llega a citar
     # un trozo del XML ajeno, y el asunto puede traer datos personales; copiarlos

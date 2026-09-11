@@ -317,9 +317,15 @@ class WhatsappNumero(UUIDPk, Base):
     Meta en el webhook. Normalizar aquí y no en cada consulta evita que un
     olvido deje sin servicio a un cliente legítimo.
 
-    El índice único de `numero` es GLOBAL, no por inquilino: el mismo teléfono
-    en dos empresas dejaría al bot sin forma de decidir a nombre de quién
-    factura. Ver la migración 0028.
+    El mismo teléfono en dos empresas dejaría al bot sin forma de decidir a
+    nombre de quién factura, así que el hueco es mundial. Pero desde 0030 lo
+    reserva la POSESIÓN PROBADA, no la intención: el índice único es parcial,
+    solo sobre los verificados. Si no, dejar una verificación a medias sobre el
+    número de otra empresa se lo bloquearía para siempre.
+
+    Nace PENDIENTE y no factura hasta que vuelve el código de seis dígitos, por
+    la plantilla que se le envía o por un mensaje suyo al bot. Quien decide es
+    `sys_tenant_por_telefono`, que exige `verificado_at`.
     """
 
     __tablename__ = "whatsapp_numeros"
@@ -327,6 +333,18 @@ class WhatsappNumero(UUIDPk, Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("tenants.id", ondelete="CASCADE"), index=True
     )
-    numero: Mapped[str] = mapped_column(String(20), unique=True)
+    # Sin `unique`: el índice parcial lo crea la migración 0030 y SQLAlchemy no
+    # sabe expresarlo aquí.
+    numero: Mapped[str] = mapped_column(String(20), index=True)
     etiqueta: Mapped[str] = mapped_column(String(60))
+    verificado_at: Mapped[datetime | None]
+    # Del código solo su sha256; en claro vive el rato que viaja al WhatsApp.
+    codigo_hash: Mapped[str | None] = mapped_column(String(64))
+    codigo_expira: Mapped[datetime | None]
+    codigo_intentos: Mapped[int] = mapped_column(default=0, server_default="0")
+    codigo_enviado_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    @property
+    def verificado(self) -> bool:
+        return self.verificado_at is not None

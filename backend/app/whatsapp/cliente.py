@@ -213,6 +213,40 @@ def enviar_plantilla(
     )
 
 
+def enviar_codigo(destino: str, nombre_plantilla: str, idioma: str, codigo: str) -> Enviado:
+    """Plantilla de categoría AUTHENTICATION: un código de un solo uso.
+
+    Meta la trata aparte del resto y exige que el código viaje DOS VECES, en el
+    cuerpo y en el botón: el botón es el que deja copiarlo de un toque, y sin su
+    componente la plantilla se rechaza en el envío. Por eso no vale
+    `enviar_plantilla`, que solo compone el cuerpo.
+
+    Solo se puede mandar si la plantilla está APROBADA en el Business Manager.
+    Mientras no lo esté, el código sigue llegando por el otro camino: que la
+    persona lo escriba al bot desde ese mismo teléfono.
+    """
+    return _enviar(
+        {
+            "messaging_product": "whatsapp",
+            "to": destino,
+            "type": "template",
+            "template": {
+                "name": nombre_plantilla,
+                "language": {"code": idioma},
+                "components": [
+                    {"type": "body", "parameters": [{"type": "text", "text": codigo}]},
+                    {
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "0",
+                        "parameters": [{"type": "text", "text": codigo}],
+                    },
+                ],
+            },
+        }
+    )
+
+
 def marcar_leido(wa_message_id: str) -> None:
     """Cortesía con el usuario: la doble palomita azul. Un fallo aquí no debe
     tumbar el procesamiento del mensaje."""

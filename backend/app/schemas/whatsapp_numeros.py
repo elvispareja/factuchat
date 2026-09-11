@@ -98,4 +98,12 @@ class NumeroOut(BaseModel):
     # El primero que se dio de alta es «Principal» en la maqueta: es el del
     # dueño, el que se creó con la cuenta.
     principal: bool
+    # Mientras sea false el número NO factura: está esperando su código.
+    verificado: bool
     created_at: datetime
+
+
+class VerificarIn(BaseModel):
+    """El código de seis dígitos que llegó al WhatsApp de ese número."""
+
+    codigo: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")

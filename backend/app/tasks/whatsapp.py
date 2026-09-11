@@ -12,10 +12,12 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.context import RequestContext
 from app.db.models import Tenant
 from app.db.models.enums import CategoriaMsg, DireccionMsg
 from app.db.session import apply_rls_context, get_sessionmaker
+from app.services import verificacion_numero
 from app.whatsapp import cliente as wa
 from app.whatsapp import consumo
 from app.whatsapp.asistente import Entrante, NumeroNoAutorizado, procesar, tenant_por_telefono
@@ -195,6 +197,28 @@ def _despachar(db: Session, tenant_id: uuid.UUID, destino: str, respuesta: Respu
     )
 
 
+def _verificar_por_chat(db: Session, entrante: Entrante) -> uuid.UUID | None:
+    """¿Este mensaje es el código que faltaba? Devuelve el inquilino si sí.
+
+    Se hace en la sesión de SISTEMA, la única que aún no sabe de quién es el
+    número: la comprobación va por función segura (`sys_verificar_numero`), que
+    es la misma que usa el panel, con su caducidad y su contador de intentos.
+    """
+    codigo = verificacion_numero.codigo_en(entrante.texto)
+    if entrante.tipo != "TEXTO" or codigo is None:
+        return None
+    if verificacion_numero.comprobar(db, entrante.wa_phone, codigo) != "ok":
+        return None
+
+    logger.info("Número %s verificado por chat", entrante.wa_phone)
+    try:
+        # Ya verificado, la misma consulta de siempre lo resuelve.
+        return tenant_por_telefono(db, entrante.wa_phone).id
+    except NumeroNoAutorizado:
+        # El inquilino se dio de baja entre el alta y el código.
+        return None
+
+
 def procesar_mensaje(payload: dict[str, Any], enviar: bool = True) -> list[Respuesta]:
     """Núcleo testeable: con enviar=False no toca la red."""
     respuestas_totales: list[Respuesta] = []
@@ -213,10 +237,24 @@ def procesar_mensaje(payload: dict[str, Any], enviar: bool = True) -> list[Respu
                 tenant = tenant_por_telefono(db, entrante.wa_phone)
                 tenant_id = tenant.id
             except NumeroNoAutorizado as e:
-                # No se responde a números desconocidos: contestar confirmaría
-                # que el número existe y abriría una conversación que se cobra.
-                logger.info("Mensaje de número no autorizado %s: %s", entrante.wa_phone, e)
-                continue
+                # SEGUNDO CAMINO DEL CÓDIGO DE VERIFICACIÓN. Un número que
+                # todavía no factura puede estar esperando su código, y
+                # escribirlo desde ese mismo teléfono prueba que es suyo mejor
+                # que recibir nada. Además es gratis: la conversación la abre el
+                # usuario, así que no hace falta plantilla de Meta.
+                #
+                # Esto NO abre la puerta que cierra el comentario de abajo: solo
+                # se sigue adelante si el mensaje trae un código que nosotros
+                # emitimos para ESE número. A quien pruebe suerte no se le
+                # contesta, así que sigue sin poder averiguar si existe.
+                recien_verificado = _verificar_por_chat(db, entrante)
+                if recien_verificado is None:
+                    # No se responde a números desconocidos: contestar
+                    # confirmaría que el número existe y abriría una
+                    # conversación que se cobra.
+                    logger.info("Mensaje de número no autorizado %s: %s", entrante.wa_phone, e)
+                    continue
+                tenant_id = recien_verificado
 
         with _sesion_tenant(tenant_id) as db:
             # Ya con el contexto del inquilino, RLS deja leer su propia ficha
@@ -289,6 +327,48 @@ def enviar_aviso(tenant_id: str, wa_phone: str, aviso: str, datos: dict) -> str:
             categoria=CategoriaMsg.EMPRESA,
             tipo="PLANTILLA",
             contenido={"plantilla": plantilla.nombre, "vista_previa": vista[:1000]},
+            wa_message_id=enviado.wa_message_id or None,
+        )
+    return "enviado"
+
+
+@celery_app.task(name="factuchat.whatsapp.codigo_verificacion", acks_late=True)
+def enviar_codigo_verificacion(tenant_id: str, numero: str, codigo: str) -> str:
+    """Manda por WhatsApp el código que autoriza a un teléfono a facturar.
+
+    Va por PLANTILLA porque ese número, por definición, todavía no nos ha
+    escrito: fuera de la ventana de 24 h Meta no deja texto libre. Y la
+    plantilla tiene que ser de categoría AUTHENTICATION y estar APROBADA.
+
+    SIN PLANTILLA CONFIGURADA NO ES UN FALLO. El código sigue llegando por el
+    otro camino —que la persona lo escriba al bot desde ese teléfono—, que no
+    depende de Meta y no cuesta nada. Por eso esto no reintenta ni propaga: que
+    el envío no salga no puede dejar al cliente sin poder verificar.
+    """
+    s = get_settings()
+    if not s.wa_plantilla_verificacion:
+        logger.info("Sin plantilla de verificación: el código de %s solo vale por el chat", numero)
+        return "sin_plantilla"
+
+    try:
+        enviado = wa.enviar_codigo(
+            numero, s.wa_plantilla_verificacion, s.wa_plantilla_verificacion_idioma, codigo
+        )
+    except (wa.WhatsAppError, wa.WhatsAppTransientError) as e:
+        logger.warning("No se pudo enviar el código de verificación a %s: %s", numero, e)
+        return "fallo"
+
+    with _sesion_tenant(uuid.UUID(tenant_id)) as db:
+        # El CÓDIGO NO SE GUARDA en el contenido: la bitácora de mensajes la lee
+        # el personal interno, y ahí dejaría de ser un secreto.
+        consumo.registrar(
+            db,
+            tenant_id=uuid.UUID(tenant_id),
+            wa_phone=numero,
+            direccion=DireccionMsg.SALIENTE,
+            categoria=CategoriaMsg.EMPRESA,
+            tipo="PLANTILLA",
+            contenido={"plantilla": s.wa_plantilla_verificacion, "motivo": "verificacion"},
             wa_message_id=enviado.wa_message_id or None,
         )
     return "enviado"

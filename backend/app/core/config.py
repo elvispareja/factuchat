@@ -92,6 +92,13 @@ class Settings(BaseSettings):
     wa_access_token: str = ""  # token permanente del número
     wa_phone_number_id: str = ""
     wa_api_version: str = "v21.0"
+    # Plantilla de categoría AUTHENTICATION con la que se manda el código que
+    # verifica un teléfono. VACÍA = no se envía nada y la verificación se hace
+    # solo por el otro camino: que la persona escriba el código al bot desde ese
+    # número. Se deja vacía a propósito hasta que Meta apruebe la plantilla;
+    # enviar una sin aprobar solo gasta un intento fallido.
+    wa_plantilla_verificacion: str = ""
+    wa_plantilla_verificacion_idioma: str = "es"
     wa_timeout_seconds: int = 20
     # Tope mensual de gasto en conversaciones; 0 = sin tope configurado
     wa_presupuesto_mensual: Decimal = Decimal("0")
