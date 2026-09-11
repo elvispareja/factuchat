@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import ClienteFinal, Pedido, Producto, ProductoVariante
 from app.db.models.enums import EstadoPedido, MetodoPago, TipoIdentificacion
@@ -49,10 +49,17 @@ def crear_pedido(
     comprador_telefono: str | None = None,
     nota: str | None = None,
 ) -> Pedido:
-    """Arma el pedido con los precios del catálogo.
+    """Arma el pedido con los precios del catálogo, salvo los que se corrijan.
 
-    Los precios NO vienen del cliente: se leen del producto. Aceptar un precio
-    enviado desde fuera dejaría cobrar lo que quisiera quien llame a la API.
+    Por defecto el precio sale del producto, o de la variante si tiene el suyo.
+    Si la línea trae `precio_unitario`, ese manda en ESTE pedido: es el mismo
+    permiso que ya tiene quien emite una factura desde Comprobantes o por
+    WhatsApp, y quien arma el pedido es el propio dueño del negocio (la tienda
+    exige rol CLIENTE; no hay carrito público que pueda mandar un precio).
+
+    El catálogo NO se modifica: para cambiar el precio de lista está Artículos
+    y servicios. El pedido guarda los dos, el cobrado y el de lista, para que
+    después se pueda ver de qué precio se partió.
     """
     if not lineas:
         raise TiendaError("El pedido necesita al menos un producto")
@@ -77,9 +84,18 @@ def crear_pedido(
                 raise TiendaError("Esa variante ya no está disponible")
 
         codigo = variante.codigo if variante else producto.codigo
-        precio = producto.precio_sin_iva
+        precio_lista = producto.precio_sin_iva
         if variante is not None and variante.precio_sin_iva is not None:
-            precio = variante.precio_sin_iva
+            precio_lista = variante.precio_sin_iva
+
+        # El precio corregido a mano vale solo para esta venta. El de lista se
+        # guarda igual: sin él, un pedido viejo no dice si hubo descuento.
+        precio = precio_lista
+        if linea.get("precio_unitario") is not None:
+            precio = Decimal(str(linea["precio_unitario"]))
+            if precio < 0:
+                raise TiendaError("El precio no puede ser negativo")
+
         disponible = variante.stock if variante is not None else producto.stock
         if producto.maneja_inventario and disponible is not None and cantidad > disponible:
             raise TiendaError(f"Solo quedan {disponible:g} unidades de {producto.nombre}")
@@ -101,6 +117,9 @@ def crear_pedido(
                 "nombre": producto.nombre,
                 "cantidad": str(cantidad),
                 "precio_sin_iva": str(precio),
+                # El de catálogo al momento de la venta. Igual al cobrado
+                # cuando no se corrigió nada.
+                "precio_lista": str(precio_lista),
                 "codigo_iva": producto.codigo_iva,
             }
         )
@@ -254,10 +273,21 @@ def resumen_por_estado(db: Session, tenant_id: uuid.UUID) -> dict[str, int]:
 
 
 def vitrina(db: Session) -> list[Producto]:
-    """Lo que el equipo ve para armar una venta: lo marcado para la tienda."""
+    """Lo que el equipo ve para armar una venta: lo marcado para la tienda.
+
+    Trae de una vez las colecciones que la respuesta recorre entera. Sin esto
+    son cuatro consultas por artículo (imágenes, atributos, variantes y los
+    valores de cada variante) y una vitrina de cien artículos dispara
+    cuatrocientas.
+    """
     return list(
         db.scalars(
             select(Producto)
+            .options(
+                selectinload(Producto.imagenes),
+                selectinload(Producto.atributos),
+                selectinload(Producto.variantes).selectinload(ProductoVariante.valores),
+            )
             .where(Producto.activo.is_(True), Producto.mostrar_en_tienda.is_(True))
             .order_by(Producto.nombre)
         ).all()

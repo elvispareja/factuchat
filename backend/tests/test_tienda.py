@@ -2,8 +2,8 @@
  1. un pedido por transferencia crea registro y notifica;
  2. la aceptación de términos queda auditada CON VERSIÓN.
 
-Además: consumidor final hasta $200, precios que salen del catálogo (no del
-cliente) y la tienda gated por plan.
+Además: consumidor final hasta $200, precios que salen del catálogo salvo que
+el dueño los corrija en la venta, y la tienda gated por plan.
 """
 
 import json
@@ -152,16 +152,35 @@ class TestChecklistPedidoPorTransferencia:
         assert r.status_code == 422
         assert "ya tiene su comprobante" in r.json()["detail"]
 
-    def test_el_precio_no_viene_del_cliente(self, client, ana_tokens, producto_en_vitrina):
-        """Mandar un precio en el cuerpo no cambia lo que se cobra."""
+    def test_sin_precio_manda_el_del_catalogo(self, client, ana_tokens, producto_en_vitrina):
+        """El caso normal: la línea no trae precio y se cobra el de lista."""
+        r = client.post(
+            "/api/v1/tienda/pedidos",
+            json={
+                "items": [{"producto_id": producto_en_vitrina["id"], "cantidad": "1"}],
+                "metodo_pago": "EFECTIVO",
+            },
+            headers=_h(ana_tokens),
+        )
+        assert r.status_code == 201, r.text
+        assert Decimal(r.json()["subtotal"]) == Decimal("40.00")
+
+    def test_el_precio_de_la_linea_manda_sobre_el_catalogo(
+        self, client, ana_tokens, admin_db, producto_en_vitrina
+    ):
+        """El dueño vende a otro precio SOLO en esta venta.
+
+        Es el mismo permiso que tiene al emitir una factura desde Comprobantes
+        o por WhatsApp: la tienda no es pública y quien arma el pedido es él.
+        """
         r = client.post(
             "/api/v1/tienda/pedidos",
             json={
                 "items": [
                     {
                         "producto_id": producto_en_vitrina["id"],
-                        "cantidad": "1",
-                        "precio_unitario": "0.01",  # intento de manipulación
+                        "cantidad": "2",
+                        "precio_unitario": "35.00",  # de rebaja, hoy
                     }
                 ],
                 "metodo_pago": "EFECTIVO",
@@ -169,8 +188,64 @@ class TestChecklistPedidoPorTransferencia:
             headers=_h(ana_tokens),
         )
         assert r.status_code == 201, r.text
-        # Se cobra el precio del catálogo, no el enviado
-        assert Decimal(r.json()["subtotal"]) == Decimal("40.00")
+        pedido = r.json()
+        assert Decimal(pedido["subtotal"]) == Decimal("70.00")  # 2 × 35, no 2 × 40
+        assert Decimal(pedido["total"]) == Decimal("80.50")  # + 15% de IVA
+
+        # El pedido recuerda de qué precio se partió...
+        from app.db.models import Pedido
+
+        guardado = admin_db.get(Pedido, uuid.UUID(pedido["id"]))
+        assert Decimal(guardado.items[0]["precio_sin_iva"]) == Decimal("35.00")
+        assert Decimal(guardado.items[0]["precio_lista"]) == Decimal("40.00")
+
+        # ...y el catálogo NO se toca: para eso está Artículos y servicios
+        admin_db.expire_all()
+        producto = admin_db.get(Producto, uuid.UUID(producto_en_vitrina["id"]))
+        assert Decimal(producto.precio_sin_iva) == Decimal("40.00")
+
+    def test_el_precio_corregido_es_el_que_se_factura(
+        self, client, ana_tokens, admin_db, producto_en_vitrina
+    ):
+        """Lo acordado en el pedido es lo que va al comprobante, no el de lista."""
+        from app.db.models import Comprobante
+
+        pedido = client.post(
+            "/api/v1/tienda/pedidos",
+            json={
+                "items": [
+                    {
+                        "producto_id": producto_en_vitrina["id"],
+                        "cantidad": "1",
+                        "precio_unitario": "25.00",
+                    }
+                ],
+                "metodo_pago": "EFECTIVO",
+            },
+            headers=_h(ana_tokens),
+        ).json()
+        r = client.post(f"/api/v1/tienda/pedidos/{pedido['id']}/facturar", headers=_h(ana_tokens))
+        assert r.status_code == 201, r.text
+
+        comprobante = admin_db.get(Comprobante, uuid.UUID(r.json()["comprobante_id"]))
+        assert Decimal(comprobante.subtotal) == Decimal("25.00")
+
+    def test_un_precio_negativo_se_rechaza(self, client, ana_tokens, producto_en_vitrina):
+        r = client.post(
+            "/api/v1/tienda/pedidos",
+            json={
+                "items": [
+                    {
+                        "producto_id": producto_en_vitrina["id"],
+                        "cantidad": "1",
+                        "precio_unitario": "-5.00",
+                    }
+                ],
+                "metodo_pago": "EFECTIVO",
+            },
+            headers=_h(ana_tokens),
+        )
+        assert r.status_code == 422
 
     def test_no_vende_mas_de_lo_que_hay(self, client, ana_tokens, producto_en_vitrina):
         r = client.post(

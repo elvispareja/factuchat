@@ -67,7 +67,21 @@ def vitrina(user: AuthUser = Depends(SOLO_CLIENTE), db: Session = Depends(get_db
             "nombre": p.nombre,
             "precio_sin_iva": str(p.precio_sin_iva),
             "porcentaje_iva": str(p.porcentaje_iva),
+            # La tarifa por su código de la tabla 17 del SRI: es la clave por la
+            # que el panel agrupa el IVA, igual que `calcular_items`.
+            "codigo_iva": p.codigo_iva,
             "tipo": p.tipo.value,
+            # Para filtrar la vitrina. Un servicio nunca tiene categoría, y un
+            # artículo puede tener atributos (Marca, Color) sin tener variantes,
+            # así que el filtro se lee de aquí y no de las combinaciones.
+            "categoria_id": str(p.categoria_id) if p.categoria_id else None,
+            "atributos": [
+                {
+                    "atributo_id": str(x.atributo_id),
+                    "atributo_valor_id": str(x.atributo_valor_id),
+                }
+                for x in p.atributos
+            ],
             "maneja_inventario": p.maneja_inventario,
             "stock": str(p.stock),
             "agotado": p.maneja_inventario and p.stock <= 0,

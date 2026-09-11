@@ -15,8 +15,15 @@ class LineaPedidoIn(BaseModel):
     # variantes —la mayoría— siguen mandando solo producto_id.
     variante_id: uuid.UUID | None = None
     cantidad: Decimal = Field(gt=0, le=Decimal("99999"))
-    # El PRECIO no se acepta desde fuera: se lee del catálogo. Aceptarlo dejaría
-    # cobrar lo que quisiera quien llame a la API.
+    # PRECIO DE ESTA VENTA. Se acepta por la misma razón que al emitir una
+    # factura desde Comprobantes o por WhatsApp: quien arma el pedido es el
+    # dueño del negocio —la tienda no es pública, los siete endpoints exigen
+    # rol CLIENTE autenticado— y es él quien decide a cuánto le vende hoy a
+    # este comprador. Omitirlo deja el precio del catálogo, que es el caso
+    # normal; enviarlo lo sustituye SOLO en este pedido y no toca el producto.
+    # Si algún día existe un carrito público, este campo NO puede llegar desde
+    # ahí: habría que aceptarlo solo en la ruta interna.
+    precio_unitario: Decimal | None = Field(default=None, ge=0, le=Decimal("999999999"))
 
 
 class PedidoIn(BaseModel):
