@@ -293,3 +293,260 @@ class TestPlan:
             assert "bandeja de retenciones" in r.json()["detail"]["mensaje"]
         finally:
             next(gen, None)
+
+
+def _teclear(client, ana, **campos):
+    """La otra puerta: sin fichero, con los campos escritos a mano."""
+    datos = {k: str(v) for k, v in campos.items() if v is not None}
+    return client.post("/api/v1/retenciones", headers=ana, data=datos)
+
+
+class TestTecleadaAMano:
+    """Sin el XML no hay clave de acceso, y sin clave no hay a quién
+    preguntarle. La decisión tomada a la vista: la fila CUENTA para el crédito
+    —el papel lo tiene el cliente en la mano y esconderla le haría declarar de
+    más— pero va MARCADA, para que en una revisión se sepa cuál defiende el XML
+    y cuál el papel."""
+
+    def test_cuenta_al_saldo_y_queda_marcada(self, client, ana, con_archivos, encolados):
+        r = _teclear(
+            client,
+            ana,
+            quien="Comercial Andrade Cía. Ltda.",
+            ruc="0992745103001",
+            numero="001-001-000004321",
+            fecha="2026-03-12",
+            base="500.00",
+            factura="001-001-000000045",
+            renta="40.00",
+            iva="52.50",
+        )
+        assert r.status_code == 201, r.text
+        fila = r.json()
+        assert fila["origen"] == "MANUAL"
+        assert fila["verificada"] is False
+        assert fila["cuenta"] is True, "lo tecleado tiene que sumar"
+        assert fila["sin_respaldo"] is True, "y tiene que verse que no lo respalda el SRI"
+        assert fila["factura"] == "001-001-000000045"
+        assert fila["retenido"] == "92.50"
+
+        # No se molesta al SRI: no hay clave que preguntarle.
+        assert encolados == []
+
+        datos = client.get("/api/v1/retenciones?anio=2026", headers=ana).json()
+        assert Decimal(datos["saldo"]) == Decimal("92.50")
+        assert Decimal(datos["saldo_renta"]) == Decimal("40.00")
+        assert Decimal(datos["saldo_iva"]) == Decimal("52.50")
+        assert Decimal(datos["sin_respaldo"]) == Decimal("92.50")
+        assert datos["documentos"] == 1
+
+    def test_la_bandeja_solo_enseña_el_año_que_se_le_pide(self, client, ana, con_archivos):
+        for anio, numero in (("2025", "001-001-000000111"), ("2026", "001-001-000000222")):
+            assert (
+                _teclear(
+                    client,
+                    ana,
+                    quien="Distribuidora del Pacífico S.A.",
+                    ruc="1790011111001",
+                    numero=numero,
+                    fecha=f"{anio}-06-30",
+                    base="100.00",
+                    renta="10.00",
+                    iva="0",
+                ).status_code
+                == 201
+            )
+
+        de2025 = client.get("/api/v1/retenciones?anio=2025", headers=ana).json()
+        assert de2025["anio"] == 2025
+        assert [r["numero"] for r in de2025["retenciones"]] == ["001-001-000000111"]
+        assert Decimal(de2025["saldo"]) == Decimal("10.00")
+        # El desplegable ofrece los dos años con datos, y el actual siempre.
+        assert de2025["anios"] == sorted(de2025["anios"], reverse=True)
+        assert {2025, 2026} <= set(de2025["anios"])
+
+        de2026 = client.get("/api/v1/retenciones?anio=2026", headers=ana).json()
+        assert [r["numero"] for r in de2026["retenciones"]] == ["001-001-000000222"]
+
+    def test_una_retencion_en_cero_no_entra(self, client, ana, con_archivos, admin_db):
+        """Sin valor retenido no hay crédito que registrar, y una fila así solo
+        ensucia el conteo de la tarjeta."""
+        r = _teclear(
+            client,
+            ana,
+            quien="Cliente Cualquiera",
+            ruc="0992745103001",
+            numero="001-001-000000999",
+            fecha="2026-05-05",
+            base="100.00",
+            renta="0",
+            iva="0",
+        )
+        assert r.status_code == 422, r.text
+        assert "sin valor retenido" in r.json()["detail"]
+        assert admin_db.execute(text("SELECT count(*) FROM retenciones_recibidas")).scalar() == 0
+
+    def test_sin_fecha_no_entra(self, client, ana, con_archivos, admin_db):
+        """La bandeja filtra por fecha de emisión entre dos días: una fila sin
+        ella no cae en NINGÚN año, o sea que se guardaría para no volver a
+        verse nunca."""
+        r = _teclear(
+            client,
+            ana,
+            quien="Cliente Cualquiera",
+            ruc="0992745103001",
+            numero="001-001-000000998",
+            renta="10.00",
+        )
+        assert r.status_code == 422, r.text
+        assert "la fecha" in r.json()["detail"]
+        assert admin_db.execute(text("SELECT count(*) FROM retenciones_recibidas")).scalar() == 0
+
+    def test_la_misma_tecleada_dos_veces_no_duplica_el_credito(
+        self, client, ana, con_archivos, admin_db
+    ):
+        campos = {
+            "quien": "Comercial Andrade Cía. Ltda.",
+            "ruc": "0992745103001",
+            "numero": "001-001-000004321",
+            "fecha": "2026-03-12",
+            "base": "500.00",
+            "renta": "40.00",
+            "iva": "52.50",
+        }
+        assert _teclear(client, ana, **campos).status_code == 201
+
+        r = _teclear(client, ana, **campos)
+        assert r.status_code == 409, r.text
+        assert "ya estaba registrada" in r.json()["detail"]
+        assert admin_db.execute(text("SELECT count(*) FROM retenciones_recibidas")).scalar() == 1
+
+    def test_lo_rechazado_por_el_sri_sigue_sin_sumar(
+        self, client, ana, con_archivos, encolados, admin_db
+    ):
+        """El cambio que hace contar a la tecleada no puede arrastrar consigo a
+        la que el SRI MIRÓ y dijo que no: eso es un final, no una espera."""
+        clave = clave_de_prueba(7100050)
+        xml = xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)
+        assert _subir(client, ana, xml).status_code == 201
+        admin_db.execute(
+            text(
+                "UPDATE retenciones_recibidas"
+                " SET verificada = false,"
+                "     verificada_at = now(),"
+                '     verificacion = \'{"estado": "no-autorizado"}\'::jsonb'
+                " WHERE clave_acceso = :c"
+            ),
+            {"c": clave},
+        )
+        admin_db.commit()
+
+        datos = client.get("/api/v1/retenciones", headers=ana).json()
+        assert datos["saldo"] == "0", "una retención que el SRI rechazó entró al saldo"
+        assert len(datos["retenciones"]) == 1, "pero se sigue viendo en la bandeja"
+        assert datos["retenciones"][0]["cuenta"] is False
+        assert datos["retenciones"][0]["respondido"] is True
+
+
+class TestLoQueNoPuedeContar:
+    """La tecleada cuenta. Lo que NO puede contar es un XML inventado.
+
+    Las dos cosas se dijeron durante un rato con la MISMA anotación
+    (`sin-clave-valida`), y eso abría el agujero que esta clase vigila:
+    `buzon/verificacion.py` la escribe para CUALQUIER comprobante sin clave de
+    acceso, así que bastaba con escribir un `<comprobanteRetencion>` en un
+    editor, borrarle la `<claveAcceso>` y subirlo para fabricarse crédito
+    tributario. Es justo lo que esa verificación existe para impedir.
+    """
+
+    def test_un_xml_sin_clave_de_acceso_no_suma(
+        self, client, ana, con_archivos, encolados, admin_db
+    ):
+        clave = clave_de_prueba(7100060)
+        assert (
+            _subir(client, ana, xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave)).status_code
+            == 201
+        )
+
+        # Lo que `verificacion.verificar()` anota cuando la clave no sirve
+        admin_db.execute(
+            text(
+                "UPDATE retenciones_recibidas"
+                " SET clave_acceso = NULL,"
+                "     verificada = false,"
+                "     verificada_at = now(),"
+                "     verificacion = CAST(:v AS jsonb)"
+                " WHERE clave_acceso = :c"
+            ),
+            {"c": clave, "v": '{"estado": "sin-clave-valida"}'},
+        )
+        admin_db.commit()
+
+        datos = client.get("/api/v1/retenciones", headers=ana).json()
+        assert datos["saldo"] == "0", "un XML sin clave de acceso entró al saldo"
+        assert datos["retenciones"][0]["cuenta"] is False
+        assert datos["retenciones"][0]["sin_respaldo"] is False
+
+    def test_la_tecleada_lleva_su_propia_marca(self, client, ana, con_archivos, admin_db):
+        """Y por eso se distingue de la de arriba."""
+        r = _teclear(
+            client,
+            ana,
+            quien="Comercial Andrade Cía. Ltda.",
+            ruc="0992745103001",
+            numero="001-001-000007777",
+            fecha="2026-04-01",
+            base="100.00",
+            renta="8.00",
+            iva="0",
+        )
+        assert r.status_code == 201, r.text
+        estado = admin_db.execute(
+            text("SELECT verificacion ->> 'estado' FROM retenciones_recibidas")
+        ).scalar()
+        assert estado == "tecleada-sin-xml"
+
+
+class TestLoQueSeLee:
+    def test_el_porcentaje_no_sale_en_notacion_cientifica(
+        self, client, ana, con_archivos, encolados
+    ):
+        """`Decimal("70.00").normalize()` es `7E+1`, y 70 % es la retención de
+        IVA más común que existe: la pantalla enseñaba «7E+1%»."""
+        r = _subir(
+            client, ana, xml_retencion(ruc_retenido=RUC_A, clave_acceso=clave_de_prueba(7100061))
+        )
+        assert r.status_code == 201, r.text
+        assert r.json()["porcentaje_renta"] == "8"
+        assert r.json()["porcentaje_iva"] == "70"
+
+    def test_un_importe_imposible_da_un_motivo_y_no_un_500(self, client, ana, con_archivos):
+        """Numeric(12, 2): un cero de más tecleado reventaba con un 500."""
+        r = _teclear(
+            client,
+            ana,
+            quien="Cliente Cualquiera",
+            ruc="0992745103001",
+            numero="001-001-000008888",
+            fecha="2026-04-01",
+            base="10000000000",
+            renta="8.00",
+        )
+        assert r.status_code == 422, r.text
+        assert "no cabe" in r.json()["detail"]
+
+    def test_sin_ruc_del_agente_no_entra(self, client, ana, con_archivos, admin_db):
+        """La tecleada se deduplica por (número, RUC). Sin RUC, el
+        «001-001-000000123» de un cliente choca con el de otro y al segundo se le
+        dice que ya la tiene, perdiéndole el crédito."""
+        r = _teclear(
+            client,
+            ana,
+            quien="Cliente Cualquiera",
+            numero="001-001-000000123",
+            fecha="2026-04-01",
+            renta="8.00",
+        )
+        assert r.status_code == 422, r.text
+        assert "su RUC" in r.json()["detail"]
+        assert admin_db.execute(text("SELECT count(*) FROM retenciones_recibidas")).scalar() == 0

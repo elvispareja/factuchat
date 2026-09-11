@@ -1,22 +1,23 @@
 /** Crear comprobante: el selector de tipo (1), el formulario (2), la revisión
  *  (3) y el desenlace del envío (4).
  *
- *  TRES DOCUMENTOS, UN FORMULARIO: la factura y las dos notas comparten el
+ *  DOS DOCUMENTOS, UN FORMULARIO: la factura y la nota de crédito comparten el
  *  buscador de cliente, los totales, el pie, la revisión y todo el envío. Lo
- *  propio de las notas son tres campos —qué factura modifica, de qué fecha y por
- *  qué— y una regla: van SIEMPRE al mismo cliente de esa factura. Entre ellas
- *  cambia QUÉ importe se pide: la de crédito devuelve LÍNEAS de la factura (por
- *  eso trae el catálogo), la de débito cobra UN importe suelto y no vende nada,
- *  así que no tiene líneas que elegir y es el formulario más corto de los tres.
+ *  propio de la nota son tres campos —qué factura modifica, de qué fecha y por
+ *  qué— y una regla: va SIEMPRE al mismo cliente de esa factura. Devuelve
+ *  LÍNEAS de la factura, y por eso trae el catálogo.
  *
- *  LA RETENCIÓN RECIBIDA YA NO ESTÁ EN EL SELECTOR. Era la cuarta tarjeta,
- *  apagada con un «Próximamente», como si fuera un documento que faltaba por
- *  construir. No lo es: el usuario de Factuchat no emite retenciones, se las
- *  hacen. Su cliente le retiene y le manda el comprobante, y ese papel se
- *  REGISTRA —hoy en Retenciones, que sí tiene su ruta— en vez de emitirse. Una
- *  cuarta tarjeta, aunque estuviera gris, seguía enseñando que «retención» es
- *  la cuarta cosa que uno crea desde aquí. Queda una nota al pie que lleva a
- *  donde de verdad va, que está a un clic (ver `PanelSelector`).
+ *  LA TERCERA TARJETA ES LA RETENCIÓN RECIBIDA, Y NO EMITE NADA. El usuario de
+ *  Factuchat no emite retenciones: se las hacen. Su cliente le retiene y le
+ *  manda el comprobante, y ese papel se REGISTRA. Por eso esa tarjeta no abre
+ *  ningún formulario de aquí; lleva a la bandeja de Retenciones recibidas, que
+ *  es la misma sección un chip más allá (ver `PanelSelector` y `onRetenciones`).
+ *
+ *  LA NOTA DE DÉBITO SALIÓ DE LA OFERTA. Su maquinaria sigue en este archivo
+ *  —todo lo que cuelga de `esDebito`, `RUTA.NOTA_DEBITO` y el panel de
+ *  recargo—, pero `tipo` solo se escribe desde `TIPOS`, que ya no la incluye:
+ *  nada de eso se ejecuta. Se dejó en pie a propósito, para no tocar el camino
+ *  de emisión al quitar una tarjeta; si vuelve, vuelve entera.
  *
  *  POR QUÉ HAY UNA REVISIÓN: emitir es irreversible —corregir una factura ya
  *  emitida obliga a una nota de crédito—, así que el formulario ya no emite:
@@ -209,10 +210,19 @@ const TONOS = {
   gris: { fondo: "var(--superficie-tenue)", color: "var(--texto-tenue)" },
 } as const;
 
-/** Lo que este modal SÍ crea: los tres que se emiten. Ni uno más — ver el
- *  encabezado del archivo sobre por qué la retención recibida no está. */
+/** Los tres documentos que el panel ofrece, y solo tres.
+ *
+ *  La RETENCIÓN RECIBIDA es la rara: no se emite, se guarda. Está aquí porque
+ *  es donde la busca quien acaba de recibirla de su cliente —antes vivía en una
+ *  nota al pie y no la encontraba nadie—, y la tarjeta dice lo que la
+ *  distingue. Al elegirla no se abre un formulario de emisión: lleva a su
+ *  bandeja.
+ *
+ *  Fuera quedan la nota de débito, la guía de remisión y la liquidación de
+ *  compra. Lo ya emitido se sigue viendo en el historial: esto es la oferta,
+ *  no el archivo. */
 const TIPOS: Array<{
-  id: Tipo;
+  id: Tipo | "RETENCION_RECIBIDA";
   titulo: string;
   texto: string;
   tono: keyof typeof TONOS;
@@ -233,11 +243,11 @@ const TIPOS: Array<{
     icono: ICONO_MENOS,
   },
   {
-    id: "NOTA_DEBITO",
-    titulo: "Nota de débito",
-    texto: "Cobrarle de más sobre una factura: intereses, un gasto.",
+    id: "RETENCION_RECIBIDA",
+    titulo: "Retención recibida",
+    texto: "Tu cliente te retuvo y te mandó el comprobante.",
     tono: "ambar",
-    icono: ICONO_MAS,
+    icono: ICONO_PORCENTAJE,
   },
 ];
 
@@ -302,7 +312,9 @@ function PanelSelector({
               key={t.id}
               type="button"
               className="fc-tarjeta"
-              onClick={() => onElegir(t.id)}
+              onClick={() =>
+                t.id === "RETENCION_RECIBIDA" ? onRetenciones() : onElegir(t.id)
+              }
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -351,56 +363,6 @@ function PanelSelector({
         })}
       </div>
 
-      {/* Nota al pie, no una cuarta tarjeta: quien abre «Crear comprobante»
-          buscando su retención tiene que encontrar el camino, pero sin que
-          parezca uno de los documentos que se emiten desde aquí. Se dice lo
-          que la distingue —no se emite, se guarda— y se lleva a la bandeja,
-          que está en esta misma sección. */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 11,
-          marginTop: 16,
-          paddingTop: 14,
-          borderTop: "1px solid var(--borde)",
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            flex: "none",
-            width: 28,
-            height: 28,
-            borderRadius: 9,
-            display: "grid",
-            placeItems: "center",
-            background: TONOS.gris.fondo,
-            color: TONOS.gris.color,
-          }}
-        >
-          <Svg d={ICONO_PORCENTAJE} tamano={15} />
-        </span>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12.5,
-            lineHeight: 1.55,
-            color: "var(--texto-tenue)",
-            textWrap: "pretty",
-          }}
-        >
-          ¿Te retuvieron a ti y tu cliente te mandó el comprobante? Eso no lo emites tú: se guarda.{" "}
-          <button
-            type="button"
-            className="fc-btn fc-btn--texto"
-            style={{ fontSize: 12.5 }}
-            onClick={onRetenciones}
-          >
-            Súbelo en Retenciones
-          </button>
-        </p>
-      </div>
     </div>
   );
 }

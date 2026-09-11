@@ -373,6 +373,10 @@
   transform: translateX(-50%);
   background: var(--verde-marca);
   color: var(--fondo);
+  /* Un aviso descartable se marca con <button>, y sin esto el navegador le
+     pone su borde gris y su tipografía por defecto en vez de la de marca. */
+  border: none;
+  font-family: inherit;
   border-radius: var(--radio-pildora);
   padding: 11px 22px;
   font-size: 13.5px;
@@ -387,6 +391,10 @@
 .fc-toast[data-tono="error"] {
   background: var(--error-texto);
   color: #fff;
+}
+/* Solo el descartable invita a pulsarlo: el de aviso simple es un div. */
+button.fc-toast {
+  cursor: pointer;
 }
 
 /* --- Modal genérico -------------------------------------------------------
@@ -479,6 +487,29 @@
   overflow-y: auto;
   min-height: 0;
   flex: 1 1 auto;
+}
+.fc-modal__titulo {
+  font-family: var(--fuente-titulo);
+  font-size: 20px;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin: 0;
+}
+.fc-modal__cerrar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  border-radius: var(--radio-pildora);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--texto-suave);
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+.fc-modal__cerrar:hover {
+  border-color: var(--verde-marca);
 }
 .fc-modal__pie {
   display: flex;

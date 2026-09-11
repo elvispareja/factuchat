@@ -36,8 +36,7 @@ export const SUBMENU_COMPROBANTES: SubitemMenu[] = [
   { id: "todos", label: "Todos" },
   { id: "factura", label: "Facturas" },
   { id: "credito", label: "Notas de crédito" },
-  { id: "debito", label: "Notas de débito" },
-  { id: "retencion", label: "Retenciones" },
+  { id: "retencion", label: "Retenciones recibidas" },
 ];
 
 /** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio.
@@ -102,6 +101,15 @@ export const MENU: ItemMenu[] = [
 ];
 
 /** Kicker y título de la cabecera por sección (maqueta ~línea 3371). */
+/** Encabezados que dependen del sub-filtro, no solo de la sección.
+ *
+ *  Las retenciones recibidas viven dentro de Comprobantes pero NO son
+ *  comprobantes emitidos: son los que te mandaron a ti. Dejar «Tus comprobantes
+ *  emitidos» encima de esa bandeja decía justo lo contrario de lo que se ve. */
+export const ENCABEZADOS_POR_FILTRO: Record<string, { kicker: string; titulo: string }> = {
+  retencion: { kicker: "Tus descuentos", titulo: "Retenciones recibidas" },
+};
+
 export const ENCABEZADOS: Record<IdSeccion, { kicker: string; titulo: string }> = {
   inicio: { kicker: "Tu negocio hoy", titulo: "Todo al día" },
   comprobantes: { kicker: "Historial", titulo: "Tus comprobantes emitidos" },

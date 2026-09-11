@@ -51,7 +51,13 @@ def tenant_con_telefono(admin_db):
     Desde la migración 0028 el bot NO resuelve por `tenants.telefono` sino por
     la tabla de números autorizados, que es lo que el cliente gestiona desde su
     panel. El fixture escribe donde de verdad se mira."""
-    numero = WhatsappNumero(tenant_id=TENANT_A, numero=TELEFONO, etiqueta="Pruebas")
+    # Verificado: desde 0030 un número pendiente no factura.
+    numero = WhatsappNumero(
+        tenant_id=TENANT_A,
+        numero=TELEFONO,
+        etiqueta="Pruebas",
+        verificado_at=datetime.now(UTC),
+    )
     admin_db.add(numero)
     admin_db.commit()
     yield admin_db.get(Tenant, TENANT_A)
@@ -198,7 +204,8 @@ class TestIntents:
             ("hola quiero facturar", Intent.FACTURAR),
             ("necesito una nota de crédito", Intent.NOTA_CREDITO),
             ("el cliente me devolvió la mercadería", Intent.NOTA_CREDITO),
-            ("nota de débito por intereses de mora", Intent.NOTA_DEBITO),
+            ("me retuvieron en la factura de ayer", Intent.RETENCION_RECIBIDA),
+            ("quiero guardar una retención", Intent.RETENCION_RECIBIDA),
             ("cuánto vendí este mes", Intent.REPORTE),
             ("dame los informes", Intent.REPORTE),
             ("mis últimos documentos", Intent.CONSULTAR),
@@ -206,6 +213,17 @@ class TestIntents:
             ("hazme un comprobante para Andrade", Intent.FACTURAR),
             ("si", Intent.CONFIRMAR),
             ("cancelar", Intent.CANCELAR),
+            # `\bretenc` es más ancho de lo que parece: por encima de REPORTE se
+            # llevaba «el reporte de retenciones», que es justo un reporte.
+            ("dame el reporte de retenciones", Intent.REPORTE),
+            ("quiero el resumen de retenciones del mes", Intent.REPORTE),
+            # Lo retirado se reconoce A PROPÓSITO. Sin su patrón, «emitir» y
+            # «factura» lo mandaban a FACTURAR y el bot abría una factura de
+            # verdad: el documento equivocado, emitido, gastando cupo del plan.
+            ("quiero emitir una nota de débito", Intent.RETIRADO),
+            ("necesito una nota de débito sobre la factura 001-001-000000012", Intent.RETIRADO),
+            ("hazme una guía de remisión para la mercadería", Intent.RETIRADO),
+            ("liquidación de compra a un agricultor", Intent.RETIRADO),
         ],
     )
     def test_reconoce(self, texto, esperado):
@@ -222,6 +240,28 @@ class TestIntents:
         assert r.identificacion == "1791234567001"
         # Un RUC NO se confunde con el monto
         assert r.monto is None
+
+    def test_lo_retirado_no_arranca_una_factura(self):
+        """El fallo no era el intent: era lo que venía después. Se comprueba el
+        turno entero, porque lo grave es que el bot pidiera «¿a quién le
+        facturo?» a quien pidió otra cosa."""
+        from app.whatsapp import conversacion as conv
+
+        assert reconocer("quiero emitir una nota de débito").intent == Intent.RETIRADO
+        assert "ya no se emite" in conv.YA_NO_SE_EMITE.texto
+        # Las tres que quedan, y ninguna más
+        assert "factura" in conv.YA_NO_SE_EMITE.texto
+        assert "nota de crédito" in conv.YA_NO_SE_EMITE.texto
+        assert "retención recibida" in conv.YA_NO_SE_EMITE.texto
+
+    def test_la_nota_de_credito_no_promete_buscar_la_factura(self):
+        """El bot no guarda estado tras esa respuesta: contestar el número volvía
+        al menú, y «la factura 12» arrancaba una factura nueva."""
+        from app.whatsapp import conversacion as conv
+
+        entero = " ".join(r.texto for r in conv.NOTA_CREDITO)
+        assert "la busco" not in entero
+        assert "panel" in entero
 
     def test_numero_de_comprobante(self):
         r = reconocer("reenviame la 001-001-000123")
@@ -532,7 +572,11 @@ class TestTextosDelSpec:
     ):
         r = _turno(Entrante(wa_phone=TELEFONO, texto="necesito una nota de crédito"))
         assert r[0].texto.startswith("La nota de crédito sirve para anular")
-        assert r[1].texto.startswith("¿Sobre cuál factura?")
+        # La segunda burbuja preguntaba «¿Sobre cuál factura? … y la busco», pero
+        # el paso se queda en INICIO: no hay nada escuchando esa respuesta. El
+        # número volvía al menú y «la factura 12» arrancaba una factura nueva.
+        assert "la busco" not in r[1].texto
+        assert "panel" in r[1].texto
         assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.INICIO
 
     def test_audio_lleva_dos_burbujas(self, admin_db, tenant_con_telefono, conversacion_limpia):

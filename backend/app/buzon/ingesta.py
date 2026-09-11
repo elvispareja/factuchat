@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -443,3 +443,111 @@ def _concepto(leido: ComprobanteLeido) -> str | None:
 def _pct(valor: Decimal) -> str:
     entero = valor.quantize(Decimal("1")) if valor == valor.to_integral_value() else valor
     return f"{entero}%"
+
+
+# La marca de «esto lo escribió el contribuyente, no un XML». Vive aquí porque
+# la escribe `registrar_tecleada`, y `services/retenciones.py` la importa para
+# decidir qué suma al crédito.
+TECLEADA = "tecleada-sin-xml"
+
+# Numeric(12, 2) en la tabla: 10 dígitos enteros.
+TOPE_IMPORTE = Decimal(10) ** 10
+
+
+def registrar_tecleada(
+    db: Session,
+    tenant: Tenant,
+    *,
+    quien: str,
+    ruc: str | None,
+    numero: str,
+    fecha: date | None,
+    base: Decimal,
+    factura: str | None,
+    renta: Decimal,
+    iva: Decimal,
+) -> RetencionRecibida:
+    """Registra una retención que el cliente TECLEA, sin su XML.
+
+    Ocurre a diario: al contribuyente le entregan el comprobante impreso, o el
+    XML se perdió en un chat. Sin XML no hay clave de acceso, y sin clave no hay
+    a quién preguntarle: no es que el SRI la rechace, es que no se le puede
+    preguntar. Por eso la fila nace con la misma anotación que pone la
+    verificación cuando no encuentra clave, y con ella CUENTA para el crédito
+    pero va marcada como sin respaldo. Dejarla fuera del saldo le haría declarar
+    de más por un papel que sí tiene.
+
+    Se deduplica por número y agente, que es lo único que hay. El índice único
+    de clave de acceso no aplica aquí: no hay clave.
+    """
+    if renta < 0 or iva < 0 or base < 0:
+        raise RetencionRechazada("Los valores de una retención no pueden ser negativos")
+    # Las columnas son Numeric(12, 2): por encima de 10^10 Postgres tira un
+    # `numeric field overflow` que nadie atrapa, y un cero de más tecleado en el
+    # formulario se convertía en un 500 en vez de en una frase que se puede leer.
+    if max(base, renta, iva) >= TOPE_IMPORTE:
+        raise RetencionRechazada("Ese importe no cabe en un comprobante de retención: revísalo")
+    if renta == 0 and iva == 0:
+        raise RetencionRechazada("Una retención sin valor retenido no suma nada: revisa las cifras")
+
+    numero = numero.strip()[:30]
+    ya = db.scalars(
+        select(RetencionRecibida).where(
+            RetencionRecibida.tenant_id == tenant.id,
+            RetencionRecibida.numero == numero,
+            RetencionRecibida.ruc_agente == (ruc or None),
+        )
+    ).first()
+    if ya is not None:
+        raise RetencionDuplicada(f"Esa retención ya estaba registrada ({ya.numero})")
+
+    retencion = RetencionRecibida(
+        tenant_id=tenant.id,
+        buzon_correo_id=None,
+        origen=ORIGEN_MANUAL,
+        clave_acceso=None,
+        numero=numero or "sin-numero",
+        ruc_agente=(ruc or None),
+        razon_social_agente=quien.strip()[:300] or "Sin razón social",
+        fecha_emision=fecha,
+        periodo_fiscal=fecha.strftime("%m/%Y") if fecha else None,
+        concepto="Registrada a mano",
+        base_imponible=base,
+        total_renta=renta,
+        total_iva=iva,
+        detalle={
+            "lineas": [
+                x
+                for x in (
+                    {"codigo": "1", "base": str(base), "valor": str(renta), "doc_sustento": factura}
+                    if renta
+                    else None,
+                    {"codigo": "2", "base": str(base), "valor": str(iva), "doc_sustento": factura}
+                    if iva
+                    else None,
+                )
+                if x
+            ],
+            "tecleada": True,
+        },
+        # MARCA PROPIA, y no la que deja la verificación cuando el XML no trae
+        # clave. Se intentó compartirla —las dos dicen «no se pudo preguntar»—
+        # y era un agujero: `verificacion.py` escribe `sin-clave-valida` para
+        # CUALQUIER XML sin claveAcceso, así que un comprobante inventado a
+        # mano, sin clave y sin autorización, entraba al saldo como crédito. Es
+        # justo lo que esa verificación existe para impedir. Cuenta solo lo que
+        # el propio contribuyente TECLEÓ, que es lo que él mismo respalda.
+        verificada=False,
+        verificada_at=datetime.now(UTC),
+        verificacion={
+            "estado": TECLEADA,
+            "detalle": "Registrada a mano, sin XML que contrastar con el SRI",
+            "consultado_at": datetime.now(UTC).isoformat(),
+        },
+    )
+    db.add(retencion)
+    try:
+        db.flush()
+    except IntegrityError as e:
+        raise RetencionDuplicada("Esa retención ya estaba registrada") from e
+    return retencion

@@ -186,11 +186,14 @@ def _por_texto(
     if en_pregunta:
         return _completar(db, tenant, entrante, estado)
 
+    if reconocido.intent == Intent.RETIRADO:
+        return [conv.YA_NO_SE_EMITE]
+
     if reconocido.intent == Intent.NOTA_CREDITO:
         return list(conv.NOTA_CREDITO)
 
-    if reconocido.intent == Intent.NOTA_DEBITO:
-        return list(conv.NOTA_DEBITO)
+    if reconocido.intent == Intent.RETENCION_RECIBIDA:
+        return list(conv.RETENCION_RECIBIDA)
 
     if reconocido.intent == Intent.REPORTE:
         return [_reporte(db, tenant)]
@@ -383,8 +386,17 @@ def _por_accion(
         conv.guardar(tenant.id, entrante.wa_phone, estado)
         return [conv.pedir("detalle")]
     if accion == "emitir":
+        # Se pregunta QUÉ documento antes de pedir datos: antes esto saltaba
+        # directo a una factura, que es el caso común pero no el único.
+        conv.limpiar(tenant.id, entrante.wa_phone)
+        return [conv.EMITIR]
+    if accion == "factura":
         conv.guardar(tenant.id, entrante.wa_phone, EstadoConversacion(paso=Paso.ESPERA_CLIENTE))
         return [conv.pedir("cliente")]
+    if accion == "nota_credito":
+        return list(conv.NOTA_CREDITO)
+    if accion == "retencion_recibida":
+        return list(conv.RETENCION_RECIBIDA)
     if accion == "reporte":
         return [_reporte(db, tenant)]
     if accion == "consultar":

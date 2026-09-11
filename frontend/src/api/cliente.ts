@@ -241,9 +241,13 @@ export const api = {
   put: <T>(ruta: string, cuerpo: unknown) =>
     peticion<T>(ruta, { method: "PUT", body: JSON.stringify(cuerpo) }),
   delete: <T>(ruta: string) => peticion<T>(ruta, { method: "DELETE" }),
-  subir: <T>(ruta: string, archivo: File, campos: Record<string, string> = {}) => {
+  /** POST multipart. `archivo` va en null cuando la fila se teclea en vez de
+   *  leerse de un fichero: hay endpoints —la retención recibida— que aceptan
+   *  las dos puertas, y mandar un `archivo` vacío no es lo mismo que no
+   *  mandarlo. */
+  subir: <T>(ruta: string, archivo: File | null, campos: Record<string, string> = {}) => {
     const datos = new FormData();
-    datos.append("archivo", archivo);
+    if (archivo) datos.append("archivo", archivo);
     for (const [k, v] of Object.entries(campos)) datos.append(k, v);
     return peticion<T>(ruta, { method: "POST", body: datos });
   },

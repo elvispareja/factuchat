@@ -15,7 +15,8 @@ import base64
 import hmac
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -25,6 +26,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Query,
     Request,
@@ -42,6 +44,7 @@ from app.buzon.ingesta import (
     RetencionRechazada,
     leer_cifrado,
     registrar_manual,
+    registrar_tecleada,
 )
 from app.buzon.parser import MAX_XML_BYTES, BuzonParseError
 from app.core.config import get_settings
@@ -75,10 +78,15 @@ def _exigir_bandeja(db: Session, tenant_id: uuid.UUID) -> None:
 
 @router.get("/retenciones")
 def bandeja(
+    anio: int | None = Query(default=None, ge=2000, le=2100),
     user: AuthUser = Depends(SOLO_CLIENTE),
     db: Session = Depends(get_db),
 ):
     """El crédito acumulado y la lista de comprobantes recibidos.
+
+    EL PERÍODO ES EL AÑO, no el semestre. El contribuyente piensa en «lo que me
+    retuvieron este año», que además es el período de la declaración de renta,
+    donde el crédito de renta se usa. Se puede pedir otro con `?anio=`.
 
     Con el módulo apagado la respuesta es la de un buzón vacío, no un error: el
     cliente no debe enterarse de que existe una función que aún no se ha
@@ -88,18 +96,26 @@ def bandeja(
     _exigir_bandeja(db, tenant_id)
 
     hoy = datetime.now(TZ).date()
-    desde, hasta = retenciones.semestre_de(hoy)
+    elegido = anio or hoy.year
+    desde, hasta = retenciones.anio_de(elegido)
     credito = retenciones.saldo(db, tenant_id, desde, hasta)
     filas = retenciones.listar(db, tenant_id, desde, hasta)
+
+    # El año en curso siempre se ofrece, aunque todavía no haya nada.
+    anios = sorted({*retenciones.anios_con_datos(db, tenant_id), hoy.year, elegido}, reverse=True)
 
     return {
         "activo": retenciones.activo(db),
         "buzon": _direccion_visible(db, tenant_id),
+        "anio": elegido,
+        "anios": anios,
         "periodo": {"desde": desde.isoformat(), "hasta": hasta.isoformat()},
         # «Saldo a tu favor» de la maqueta: renta + IVA juntos, para mostrar
         "saldo": str(credito.total),
         "saldo_renta": str(credito.renta),
         "saldo_iva": str(credito.iva),
+        # De ese total, cuánto todavía no tiene respaldo del SRI.
+        "sin_respaldo": str(credito.sin_respaldo),
         "documentos": credito.documentos,
         "agentes": credito.agentes,
         "retenciones": [retenciones.a_json(r) for r in filas],
@@ -108,7 +124,15 @@ def bandeja(
 
 @router.post("/retenciones", status_code=status.HTTP_201_CREATED)
 def subir_retencion(
-    archivo: UploadFile = File(...),
+    archivo: UploadFile | None = File(default=None),
+    quien: str | None = Form(default=None),
+    ruc: str | None = Form(default=None),
+    numero: str | None = Form(default=None),
+    fecha: date | None = Form(default=None),
+    base: Decimal | None = Form(default=None),
+    factura: str | None = Form(default=None),
+    renta: Decimal | None = Form(default=None),
+    iva: Decimal | None = Form(default=None),
     user: AuthUser = Depends(SOLO_CLIENTE),
     db: Session = Depends(get_db),
 ):
@@ -121,9 +145,14 @@ def subir_retencion(
     le retienen igual: su cliente le manda el XML por WhatsApp o se lo da
     impreso, y hasta ahora no había por dónde meterlo.
 
+    DOS PUERTAS. Con XML se lee todo del comprobante y se le pregunta al SRI.
+    SIN XML se teclea, y entonces no hay clave de acceso a la que preguntar: la
+    fila cuenta igual —el papel lo tiene el cliente en la mano y esconderlo le
+    haría declarar de más— pero queda MARCADA como sin respaldo, para que en una
+    revisión se sepa cuál defiende el XML y cuál el papel.
+
     Lo que NO cambia respecto al correo: el comprobante tiene que retener a ESTE
-    inquilino, no puede estar ya registrada y nace SIN verificar, así que se ve
-    en la bandeja pero no suma al saldo hasta que el SRI conteste.
+    inquilino y no puede estar ya registrado.
     """
     tenant_id = tenant_de(user)
     # Misma puerta que la bandeja, a propósito: registrar una retención que
@@ -138,13 +167,59 @@ def subir_retencion(
     # memoria, y el parser —que ya trae las defensas de XML— lo rechaza con su
     # motivo. Ni la extensión ni el content-type deciden nada: los pone quien
     # sube el fichero.
-    datos = archivo.file.read(MAX_XML_BYTES + 1)
-    try:
-        retencion = registrar_manual(db, tenant, datos)
-    except RetencionDuplicada as e:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
-    except (BuzonParseError, RetencionRechazada) as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e)) from e
+    if archivo is not None:
+        datos = archivo.file.read(MAX_XML_BYTES + 1)
+        try:
+            retencion = registrar_manual(db, tenant, datos)
+        except RetencionDuplicada as e:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+        except (BuzonParseError, RetencionRechazada) as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e)) from e
+    else:
+        # Sin fichero, lo mínimo para que la fila signifique algo: quién, cuál,
+        # de cuándo y con qué RUC. La base y la factura sustento pueden faltar;
+        # los valores los comprueba `registrar_tecleada`.
+        #
+        # La FECHA es obligatoria aunque el modelo la admita nula: la bandeja
+        # filtra por `fecha_emision` entre dos días, así que una fila sin ella no
+        # cae en ningún año y se guardaría para no volver a verse.
+        #
+        # Y el RUC también, porque la tecleada no tiene clave de acceso y se
+        # deduplica por (número, RUC del agente). Sin RUC, el segundo cliente que
+        # entregue su «001-001-000000123» —un número bajo que se repite en
+        # negocios nuevos— chocaría contra el primero y se le diría que ya la
+        # tiene, perdiendo ese crédito. Todo comprobante de retención lleva el
+        # RUC de quien retiene, así que no hay nada que perder pidiéndolo.
+        if (
+            not (quien or "").strip()
+            or not (numero or "").strip()
+            or not (ruc or "").strip()
+            or fecha is None
+        ):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Sin el XML hacen falta quién te retuvo, su RUC, el número del comprobante"
+                " y la fecha.",
+            )
+        try:
+            retencion = registrar_tecleada(
+                db,
+                tenant,
+                quien=quien or "",
+                ruc=(ruc or "").strip() or None,
+                numero=numero or "",
+                fecha=fecha,
+                base=base or Decimal("0"),
+                factura=(factura or "").strip() or None,
+                renta=renta or Decimal("0"),
+                iva=iva or Decimal("0"),
+            )
+        except RetencionDuplicada as e:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+        except RetencionRechazada as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e)) from e
+        # No hay clave que preguntar: se anota y se acabó, sin molestar al SRI.
+        return retenciones.a_json(retencion)
 
     # Se le pregunta al SRI DESPUÉS del commit: encolar antes deja al worker
     # buscando una fila que todavía no existe. Es el mismo camino que usa el

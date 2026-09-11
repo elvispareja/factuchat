@@ -17,8 +17,14 @@ from enum import StrEnum
 
 class Intent(StrEnum):
     FACTURAR = "FACTURAR"
+    # Documentos que el producto dejó de emitir. Se reconocen A PROPÓSITO: sin
+    # su patrón, «quiero emitir una nota de débito» caía en FACTURAR por la
+    # palabra «emitir» y el bot arrancaba una FACTURA de verdad. Tres respuestas
+    # después había un borrador listo para autorizar: el documento equivocado
+    # emitido, el cupo del plan gastado y una nota de crédito para deshacerlo.
+    RETIRADO = "RETIRADO"
     NOTA_CREDITO = "NOTA_CREDITO"
-    NOTA_DEBITO = "NOTA_DEBITO"
+    RETENCION_RECIBIDA = "RETENCION_RECIBIDA"
     CONSULTAR = "CONSULTAR"
     REENVIAR = "REENVIAR"
     REPORTE = "REPORTE"
@@ -37,6 +43,18 @@ def normalizar(texto: str) -> str:
 
 
 PATRONES: list[tuple[Intent, list[str]]] = [
+    # Lo retirado va PRIMERO, antes incluso que las notas: su texto lleva
+    # «emitir», «factura» y «nota», así que en cualquier otro sitio de la lista
+    # se lo comería otro patrón.
+    (
+        Intent.RETIRADO,
+        [
+            r"\bnota de debito\b",
+            r"\bguia de remision\b",
+            r"\bguia de despacho\b",
+            r"\bliquidacion de compra\b",
+        ],
+    ),
     (
         Intent.CONFIRMAR,
         [r"^\s*(si|sí|dale|confirmo|confirmar|ok|okey|listo|correcto|de una|ya)\s*$"],
@@ -57,10 +75,6 @@ PATRONES: list[tuple[Intent, list[str]]] = [
         Intent.NOTA_CREDITO,
         [r"\bnota de credito\b", r"\banul", r"\bdevoluc", r"\bdevolvi", r"\bme devolvieron\b"],
     ),
-    (
-        Intent.NOTA_DEBITO,
-        [r"\bnota de debito\b", r"\brecargo", r"\binteres(es)?\b", r"\bmora\b"],
-    ),
     # REPORTE antes que FACTURAR y CONSULTAR, como en el spec: "cuánto vendí
     # este mes" pide el reporte, aunque lleve "vendí".
     (
@@ -77,6 +91,15 @@ PATRONES: list[tuple[Intent, list[str]]] = [
             r"\bdel mes\b",
             r"\bmensual",
         ],
+    ),
+    # La retención va ANTES que FACTURAR —«me retuvieron en la factura 12» habla
+    # de la retención, no de emitir otra factura— pero DESPUÉS que REPORTE: el
+    # patrón es `\bretenc`, y con él por encima «dame el reporte de retenciones»
+    # dejaba de ser un reporte y pasaba a ser la explicación de qué es una
+    # retención, que es justo lo que ese usuario no está preguntando.
+    (
+        Intent.RETENCION_RECIBIDA,
+        [r"\bretenc", r"\bretuvieron\b", r"\bme retuvo\b", r"\bme retienen\b"],
     ),
     (
         Intent.FACTURAR,

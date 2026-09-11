@@ -14,14 +14,25 @@ import { CrearComprobante } from "./NuevaFactura";
 import { ETIQUETA_ID, dinero, tonoEstado } from "../util/formato";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
 
-export type Filtro = "todos" | "factura" | "credito" | "debito" | "retencion";
+/** Los cuatro filtros del historial, y no hay más: el filtro vive en un
+ *  `useState` de Panel.tsx y solo recibe ids del submenú, así que no existe
+ *  enlace ni marcador que pueda pedir otro. `debito` estuvo aquí por si acaso,
+ *  y ese «por si acaso» era justo lo que obligaba a buscar a ciegas más abajo. */
+export type Filtro = "todos" | "factura" | "credito" | "retencion";
 
+/** Los filtros del historial. Se ofrecen los tres documentos del panel; la
+ *  nota de débito salió de la oferta y ya no tiene chip propio, pero las que se
+ *  emitieron en su día se siguen viendo en «Todos»: esto filtra el archivo, no
+ *  lo recorta.
+ *
+ *  «Retenciones recibidas» no filtra nada de esta tabla —no son comprobantes
+ *  emitidos, son los que te mandaron a ti— y por eso no lleva `tipos`: abre su
+ *  propia bandeja. */
 const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "todos", label: "Todos", tipos: [] },
   { id: "factura", label: "Facturas", tipos: ["FACTURA"] },
   { id: "credito", label: "Notas de crédito", tipos: ["NOTA_CREDITO"] },
-  { id: "debito", label: "Notas de débito", tipos: ["NOTA_DEBITO"] },
-  { id: "retencion", label: "Retenciones", tipos: ["RETENCION"] },
+  { id: "retencion", label: "Retenciones recibidas", tipos: [] },
 ];
 
 interface Props {
@@ -76,7 +87,9 @@ export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }
 
   const visibles = useMemo(() => {
     if (!docs) return [];
-    const cfg = FILTROS.find((f) => f.id === filtro)!;
+    // Sin `!`: si algún día llega un filtro que no está en la lista, se ve todo
+    // el historial en vez de dejar la sección en blanco con un error de consola.
+    const cfg = FILTROS.find((f) => f.id === filtro) ?? FILTROS[0];
     const texto = busqueda.trim().toLowerCase();
     return docs.filter((d) => {
       if (cfg.tipos.length && !cfg.tipos.includes(d.tipo)) return false;
@@ -91,6 +104,10 @@ export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }
   const cuentaPorFiltro = useMemo(() => {
     const cuenta: Record<string, number> = {};
     for (const f of FILTROS) {
+      // Las retenciones recibidas no salen de esta tabla, así que aquí no hay
+      // nada que contar: un número ahí sería el total de lo emitido, que no
+      // tiene nada que ver con lo que abre el chip.
+      if (f.id === "retencion") continue;
       cuenta[f.id] = f.tipos.length
         ? (docs ?? []).filter((d) => f.tipos.includes(d.tipo)).length
         : (docs ?? []).length;

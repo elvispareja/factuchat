@@ -630,33 +630,13 @@
   box-shadow: 0 40px 90px -30px rgba(12, 35, 24, 0.6);
   animation: saIn 0.28s ease-out both;
 }
-/* `.fc-modal__cabecera`, `.fc-modal__cuerpo` y `.fc-modal__pie` salieron de aquí
-   a design/componentes.css: el panel de cliente monta la misma estructura de
-   tres partes en «Revisa tu factura», y tenerlas en las dos hojas es la colisión
-   que corta `npm run lint`. Aquí queda solo lo propio del panel interno. */
-.fc-modal__titulo {
-  font-family: var(--fuente-titulo);
-  font-size: 20px;
-  letter-spacing: -0.025em;
-  font-weight: 700;
-  margin: 0;
-}
-.fc-modal__cerrar {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--borde);
-  background: var(--superficie);
-  border-radius: var(--radio-pildora);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  color: var(--texto-suave);
-  transition: border-color 0.2s;
-  flex-shrink: 0;
-}
-.fc-modal__cerrar:hover {
-  border-color: var(--verde-marca);
-}
+/* `.fc-modal__cabecera`, `.fc-modal__cuerpo`, `.fc-modal__pie`, `__titulo` y
+   `__cerrar` salieron de aquí a design/componentes.css: el panel de cliente
+   monta la misma estructura de tres partes —«Revisa tu factura», «Autorizar
+   otro número», «Registrar retención recibida»— y esta hoja solo se carga con
+   PanelInterno, así que allí esas clases quedaban sin estilo alguno. Tenerlas
+   en las dos hojas es la colisión que corta `npm run lint`. Aquí queda solo lo
+   propio del panel interno. */
 /* La entrada del cuerpo es del asistente interno (sus pasos se sustituyen en
    sitio), no de la estructura: acotada, para no colisionar con la hoja común. */
 .fc-modal--interno .fc-modal__cuerpo {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BarraLateral } from "./shell/BarraLateral";
-import { ENCABEZADOS, type IdSeccion } from "./shell/navegacion";
+import { ENCABEZADOS, ENCABEZADOS_POR_FILTRO, type IdSeccion } from "./shell/navegacion";
 import { usePlan } from "./plan/PlanContexto";
 import { MuroPlan } from "./plan/Bloqueos";
 import { Cargando, ErrorSeccion } from "./ui/Estados";
@@ -59,7 +59,10 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
         ? conteosCatalogo
         : undefined;
 
-  const encabezado = ENCABEZADOS[seccion];
+  // El sub-filtro puede cambiar el encabezado: la bandeja de retenciones
+  // recibidas no es «Tus comprobantes emitidos».
+  const encabezado =
+    (subactiva ? ENCABEZADOS_POR_FILTRO[subactiva] : undefined) ?? ENCABEZADOS[seccion];
   const verPlanes = () => {
     setAvisoPlanes(true);
     window.setTimeout(() => setAvisoPlanes(false), 3200);

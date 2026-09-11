@@ -141,10 +141,11 @@ class Respuesta:
 
 PIE_ESTANDAR = "Mensajes concisos · voz desde Emprendedor"
 
-# Lista principal del spec. La guía de remisión salió del plan, así que la
-# primera fila no la nombra.
+# Lista principal del spec, con la oferta ya reducida a tres documentos: la
+# nota de débito, la guía de remisión y la liquidación de compra salieron del
+# plan, así que la primera fila no las nombra.
 LISTA_PRINCIPAL: list[tuple[str, str, str]] = [
-    ("emitir", "Emitir un documento", "Factura, nota, retención o liquidación"),
+    ("emitir", "Emitir un documento", "Factura, nota de crédito o retención recibida"),
     ("consultar", "Consultar lo emitido", "Buscar, ver estado o reenviar un documento"),
     ("reporte", "Pedir un reporte", "Mensual, semestral, anual o trimestral"),
     ("cuenta", "Mi cuenta", "Clientes, servicios y mi plan"),
@@ -219,8 +220,26 @@ SIN_AUDIO_2 = Respuesta(
     )
 )
 
-# Nodos `notaCredito` y `notaDebito`: explican el documento y piden la factura.
-# Buscar esa factura y emitir la nota por chat llega en una fase posterior.
+# El submenú de emisión: LOS MISMOS TRES que ofrece el panel, ni uno más.
+#
+# Van como BOTONES y no como lista porque son exactamente tres, que es el tope
+# de Meta para botones, y así se eligen de un toque en vez de abrir una hoja.
+# Los rótulos caben en los 20 caracteres que permite la API.
+#
+# La retención recibida es la rara del trío: no se emite, se guarda. Está aquí
+# porque es donde la busca quien acaba de recibirla, y su texto lo aclara.
+EMITIR = Respuesta(
+    texto="¿Qué documento necesitas?",
+    botones=[
+        ("factura", "Factura"),
+        ("nota_credito", "Nota de crédito"),
+        ("retencion_recibida", "Retención recibida"),
+    ],
+    pie=PIE_ESTANDAR,
+)
+
+# Nodos `notaCredito` y `retencion`: explican el documento y dicen qué hace
+# falta. Emitir la nota por chat llega en una fase posterior.
 NOTA_CREDITO = [
     Respuesta(
         texto=(
@@ -228,18 +247,48 @@ NOTA_CREDITO = [
             "autorizó, o cuando el cliente te devuelve algo."
         )
     ),
-    Respuesta(
-        texto="¿Sobre cuál factura? Dime el número, el monto o el nombre del cliente y la busco."
-    ),
-]
-NOTA_DEBITO = [
+    # NO se promete buscarla. El bot no guarda estado después de esta respuesta,
+    # así que lo que el usuario contestara —«001-001-000000012», «450»— volvía al
+    # menú, y «la factura 12» arrancaba una factura nueva. Se dice dónde se hace
+    # de verdad, igual que ya hace la retención recibida.
     Respuesta(
         texto=(
-            "La nota de débito se usa cuando necesitas cobrar más sobre una factura ya "
-            "emitida: intereses por mora, un recargo o un gasto que no incluiste."
+            "Por chat todavía no la puedo emitir. Hazla desde el panel, en "
+            "*Comprobantes → Nueva nota de crédito*: eliges la factura y te la "
+            "deja lista."
+        ),
+        botones=[("menu", "Ver el menú")],
+    ),
+]
+
+# Notas de débito, guías de remisión y liquidaciones de compra salieron del plan.
+# Se contesta que ya no se hacen, en vez de dejar que ese texto caiga en FACTURAR
+# y el bot empiece a armar una factura que nadie pidió.
+YA_NO_SE_EMITE = Respuesta(
+    texto=(
+        "Ese documento ya no se emite en Factuchat. Hoy hay tres: *factura*, "
+        "*nota de crédito* y *retención recibida*."
+    ),
+    botones=[("emitir", "Emitir un documento"), ("menu", "Ver el menú")],
+)
+# La retención recibida NO se emite: te la hizo tu cliente y te mandó el
+# comprobante. Por chat todavía no se puede guardar —hace falta leer el XML—,
+# así que se dice con todas las letras y se manda al sitio donde sí se hace.
+RETENCION_RECIBIDA = [
+    Respuesta(
+        texto=(
+            "La retención te la hace tu cliente: él te retiene una parte y se la "
+            "entrega al SRI a tu nombre. Tú no la emites, la guardas."
         )
     ),
-    Respuesta(texto="Dime sobre qué factura y cuánto quieres agregar."),
+    Respuesta(
+        texto=(
+            "Guárdala desde el panel, en *Comprobantes → Retenciones recibidas*: ahí "
+            "subes el XML que te mandaron y su valor se descuenta solo de lo que "
+            "tienes que pagar."
+        ),
+        botones=[("menu", "Ver el menú")],
+    ),
 ]
 
 CANCELADO = Respuesta(
