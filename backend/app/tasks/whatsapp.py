@@ -69,6 +69,22 @@ def _extraer_mensajes(payload: dict[str, Any]) -> list[dict]:
     return salida
 
 
+def _nombres_de_contacto(payload: dict[str, Any]) -> dict[str, str]:
+    """Meta manda, junto a cada mensaje, el nombre del perfil del remitente
+    (value.contacts). Es lo que usa el saludo de primer contacto."""
+    nombres: dict[str, str] = {}
+    for entry in payload.get("entry", []):
+        for cambio in entry.get("changes", []):
+            for c in (cambio.get("value") or {}).get("contacts", []):
+                wa_id = c.get("wa_id")
+                # Lo escribe el remitente: fuera caracteres de control y largo acotado
+                crudo = str((c.get("profile") or {}).get("name") or "")
+                nombre = "".join(ch for ch in crudo if ch.isprintable()).strip()[:80]
+                if wa_id and nombre:
+                    nombres[wa_id] = nombre
+    return nombres
+
+
 def _extraer_estados(payload: dict[str, Any]) -> list[dict]:
     """Los acuses de Meta sobre lo que enviamos NOSOTROS: sent, delivered, failed."""
     salida = []
@@ -106,7 +122,7 @@ def _registrar_estados(payload: dict[str, Any]) -> None:
             )
 
 
-def _a_entrante(m: dict) -> Entrante:
+def _a_entrante(m: dict, nombres: dict[str, str] | None = None) -> Entrante:
     tipo = (m.get("type") or "text").upper()
     texto = ""
     boton_id = None
@@ -136,6 +152,7 @@ def _a_entrante(m: dict) -> Entrante:
         boton_id=boton_id,
         lista_id=lista_id,
         wa_message_id=m.get("id"),
+        nombre=(nombres or {}).get(m.get("from", "")) or None,
     )
 
 
@@ -143,11 +160,18 @@ def _despachar(db: Session, tenant_id: uuid.UUID, destino: str, respuesta: Respu
     """Envía una respuesta y registra su consumo."""
     try:
         if respuesta.botones:
-            enviado = wa.enviar_botones(destino, respuesta.texto, respuesta.botones)
+            enviado = wa.enviar_botones(
+                destino, respuesta.texto, respuesta.botones, pie=respuesta.pie
+            )
             tipo = "INTERACTIVO"
         elif respuesta.lista:
             enviado = wa.enviar_lista(
-                destino, respuesta.texto, respuesta.boton_lista, respuesta.lista
+                destino,
+                respuesta.texto,
+                respuesta.boton_lista,
+                respuesta.lista,
+                titulo_seccion=respuesta.titulo_lista,
+                pie=respuesta.pie,
             )
             tipo = "INTERACTIVO"
         else:
@@ -178,8 +202,9 @@ def procesar_mensaje(payload: dict[str, Any], enviar: bool = True) -> list[Respu
     # Los acuses de entrega llegan por el mismo webhook que los mensajes.
     _registrar_estados(payload)
 
+    nombres = _nombres_de_contacto(payload)
     for m in _extraer_mensajes(payload):
-        entrante = _a_entrante(m)
+        entrante = _a_entrante(m, nombres)
         if not entrante.wa_phone:
             continue
 

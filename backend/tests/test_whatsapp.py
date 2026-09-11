@@ -20,9 +20,11 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.models import Comprobante, Tenant, WhatsappMsg, WhatsappNumero
 from app.db.models.enums import CategoriaMsg, DireccionMsg
+from app.whatsapp import cliente as wa
 from app.whatsapp import consumo
+from app.whatsapp import conversacion as conv
 from app.whatsapp.asistente import Entrante, NumeroNoAutorizado, procesar, tenant_por_telefono
-from app.whatsapp.conversacion import limpiar
+from app.whatsapp.conversacion import limpiar, marcar_saludado, olvidar_saludo
 from app.whatsapp.intents import Intent, reconocer
 from tests.conftest import TENANT_A, auth_headers
 from tests.sri_utils import RECEPCION_RECIBIDA, generar_p12_prueba
@@ -59,7 +61,10 @@ def tenant_con_telefono(admin_db):
 
 @pytest.fixture()
 def conversacion_limpia():
+    """Conversación sin factura a medias y con el saludo ya dado: la mayoría de
+    los tests prueban a un usuario que ya conoce al asistente."""
     limpiar(TENANT_A, TELEFONO)
+    marcar_saludado(TENANT_A, TELEFONO)
     yield
     limpiar(TENANT_A, TELEFONO)
 
@@ -188,6 +193,17 @@ class TestIntents:
             ("dame el resumen del mes", Intent.REPORTE),
             ("hola", Intent.AYUDA),
             ("ayuda", Intent.AYUDA),
+            ("buenos dias", Intent.AYUDA),
+            ("menú", Intent.AYUDA),
+            ("hola quiero facturar", Intent.FACTURAR),
+            ("necesito una nota de crédito", Intent.NOTA_CREDITO),
+            ("el cliente me devolvió la mercadería", Intent.NOTA_CREDITO),
+            ("nota de débito por intereses de mora", Intent.NOTA_DEBITO),
+            ("cuánto vendí este mes", Intent.REPORTE),
+            ("dame los informes", Intent.REPORTE),
+            ("mis últimos documentos", Intent.CONSULTAR),
+            ("qué emitiste este mes", Intent.CONSULTAR),
+            ("hazme un comprobante para Andrade", Intent.FACTURAR),
             ("si", Intent.CONFIRMAR),
             ("cancelar", Intent.CANCELAR),
         ],
@@ -444,6 +460,108 @@ class TestConversacionCompleta:
             assert tenant.id == TENANT_A
         finally:
             db.close()
+
+
+class TestTextosDelSpec:
+    """Fase 1 del spec de la demo: saludo, menú, fallback, mensaje largo, notas
+    y el pie de los mensajes interactivos."""
+
+    def test_primer_contacto_saluda_con_nombre_y_muestra_el_menu(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        olvidar_saludo(TENANT_A, TELEFONO)
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="hola", nombre="Andrea"))
+        assert len(r) == 2
+        assert r[0].texto.startswith("¡Hola, Andrea! 👋 Soy Factuchat®")
+        assert r[1].texto.startswith("Toca el botón de abajo")
+        assert r[1].pie == conv.PIE_ESTANDAR
+        assert r[1].boton_lista == "Ver opciones"
+        assert [fila[1] for fila in r[1].lista][0] == "Emitir un documento"
+        # La segunda vez ya no se presenta: va directo al menú
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="hola", nombre="Andrea"))
+        assert [x.texto for x in r] == ["¿Qué más hacemos?"]
+
+    def test_primer_contacto_con_una_peticion_saluda_y_sigue(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        olvidar_saludo(TENANT_A, TELEFONO)
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="quiero facturar"))
+        assert r[0].texto.startswith("¡Hola! 👋")  # sin nombre de perfil
+        assert any("¿A quién le facturo?" in x.texto for x in r[1:])
+
+    def test_hola_en_mitad_de_una_factura_vuelve_al_menu(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        _turno(Entrante(wa_phone=TELEFONO, texto="quiero facturar"))
+        assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.ESPERA_CLIENTE
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="Hola"))
+        assert [x.texto for x in r] == ["¿Qué más hacemos?"]
+        assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.INICIO
+
+    def test_una_respuesta_que_menciona_el_menu_no_rompe_la_factura(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        _turno(Entrante(wa_phone=TELEFONO, texto="quiero facturar"))
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="Diseño de menú para restaurante"))
+        # Es la respuesta a "¿a quién le facturo?", no una petición de menú
+        assert not any(x.texto == "¿Qué más hacemos?" for x in r)
+        assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.ESPERA_CLIENTE
+        # Pero "menú" a secas sí vuelve al menú
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="Menú"))
+        assert [x.texto for x in r] == ["¿Qué más hacemos?"]
+
+    def test_texto_sin_intencion_cae_al_fallback(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="asdf qwerty zxcv"))
+        assert len(r) == 1
+        assert r[0].texto.startswith("*Con mensajes concisos te resuelvo más rápido")
+        assert r[0].pie == conv.PIE_ESTANDAR and r[0].lista
+
+    def test_mensaje_muy_largo(self, admin_db, tenant_con_telefono, conversacion_limpia):
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="x" * 221))
+        assert r[0].texto.startswith("*Ese mensaje es muy largo 📝*") and r[0].lista
+        # Contestando una pregunta el tope baja a 150 y la pregunta sigue en pie
+        _turno(Entrante(wa_phone=TELEFONO, texto="quiero facturar"))
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="a" * 151))
+        assert r[0].texto.startswith("*Ese mensaje es muy largo 📝*") and not r[0].lista
+        assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.ESPERA_CLIENTE
+
+    def test_nota_de_credito_no_arranca_una_factura(
+        self, admin_db, tenant_con_telefono, conversacion_limpia
+    ):
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="necesito una nota de crédito"))
+        assert r[0].texto.startswith("La nota de crédito sirve para anular")
+        assert r[1].texto.startswith("¿Sobre cuál factura?")
+        assert conv.cargar(TENANT_A, TELEFONO).paso == conv.Paso.INICIO
+
+    def test_audio_lleva_dos_burbujas(self, admin_db, tenant_con_telefono, conversacion_limpia):
+        r = _turno(Entrante(wa_phone=TELEFONO, texto="", tipo="AUDIO"))
+        assert len(r) == 2 and "doble revisión" in r[1].texto
+
+    def test_el_pie_viaja_a_meta(self, monkeypatch):
+        enviados = []
+        monkeypatch.setattr(
+            wa, "_enviar", lambda payload: enviados.append(payload) or wa.Enviado("id", "x")
+        )
+        wa.enviar_lista("593", "t", "Ver opciones", [("a", "A", "d")], pie="Un pie")
+        wa.enviar_botones("593", "t", [("a", "A")], pie="Otro pie")
+        wa.enviar_botones("593", "t", [("a", "A")])
+        assert enviados[0]["interactive"]["footer"] == {"text": "Un pie"}
+        assert enviados[1]["interactive"]["footer"] == {"text": "Otro pie"}
+        assert "footer" not in enviados[2]["interactive"]
+
+    def test_el_nombre_del_perfil_llega_al_asistente(self):
+        from app.tasks.whatsapp import _a_entrante, _nombres_de_contacto
+
+        payload = _webhook_texto("hola")
+        payload["entry"][0]["changes"][0]["value"]["contacts"] = [
+            {"wa_id": TELEFONO, "profile": {"name": "Andrea"}}
+        ]
+        nombres = _nombres_de_contacto(payload)
+        m = payload["entry"][0]["changes"][0]["value"]["messages"][0]
+        assert _a_entrante(m, nombres).nombre == "Andrea"
+        assert _a_entrante(m).nombre is None
 
 
 class TestConsumo:

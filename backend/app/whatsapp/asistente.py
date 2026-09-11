@@ -23,9 +23,14 @@ from app.services.emision import EmisionError
 from app.services.planes import LimitePlanError, plan_vigente
 from app.whatsapp import conversacion as conv
 from app.whatsapp.conversacion import EstadoConversacion, Paso, Respuesta
-from app.whatsapp.intents import Intent, reconocer
+from app.whatsapp.intents import Intent, Reconocido, es_saludo_completo, reconocer
 
 TZ = ZoneInfo("America/Guayaquil")
+
+# Límites del spec: más largo que esto y se pide resumir (el costo por
+# conversación de Meta es la razón de negocio).
+LIMITE_TEXTO_LIBRE = 220
+LIMITE_TEXTO_BUSQUEDA = 150
 
 
 class NumeroNoAutorizado(Exception):
@@ -40,6 +45,8 @@ class Entrante:
     boton_id: str | None = None
     lista_id: str | None = None
     wa_message_id: str | None = None
+    # Nombre del perfil de WhatsApp, para el saludo de primer contacto
+    nombre: str | None = None
 
 
 def tenant_por_telefono(db: Session, wa_phone: str) -> Tenant:
@@ -112,12 +119,18 @@ def procesar(db: Session, tenant: Tenant, entrante: Entrante) -> list[Respuesta]
     estado = conv.cargar(tenant.id, entrante.wa_phone)
 
     if entrante.tipo in ("AUDIO", "VIDEO"):
-        return [conv.SIN_AUDIO]
+        return [conv.SIN_AUDIO, conv.SIN_AUDIO_2]
 
     # Un botón o un elemento de lista mandan más que el texto libre
     accion = entrante.boton_id or entrante.lista_id
     if accion:
         return _por_accion(db, tenant, entrante, estado, accion)
+
+    # Si el asistente PREGUNTÓ algo, lo que llega es la RESPUESTA a esa pregunta
+    en_pregunta = estado.paso in (Paso.ESPERA_CLIENTE, Paso.ESPERA_DETALLE, Paso.ESPERA_MONTO)
+    limite = LIMITE_TEXTO_BUSQUEDA if en_pregunta else LIMITE_TEXTO_LIBRE
+    if len(entrante.texto) > limite:
+        return [conv.MUY_LARGO_EN_PREGUNTA if en_pregunta else conv.MUY_LARGO]
 
     reconocido = reconocer(entrante.texto)
 
@@ -129,14 +142,55 @@ def procesar(db: Session, tenant: Tenant, entrante: Entrante) -> list[Respuesta]
     if reconocido.intent == Intent.CONFIRMAR and estado.paso == Paso.CONFIRMAR:
         return _autorizar(db, tenant, entrante, estado)
 
-    # Si el asistente PREGUNTÓ algo, lo que llega es la RESPUESTA, no una
-    # intención nueva. Sin esta guarda, un detalle como "Servicio de consultoría"
-    # se leería como el intent CONSULTAR y descarrilaría la factura a medias.
-    if estado.paso in (Paso.ESPERA_CLIENTE, Paso.ESPERA_DETALLE, Paso.ESPERA_MONTO):
+    primera_vez = _primer_contacto(tenant, entrante)
+
+    # Hola, ayuda y menú llevan al menú SIEMPRE, también con una factura a
+    # medias: quien saluda no está contestando la pregunta pendiente. Pero
+    # contestándola solo cuenta el mensaje entero ("Hola", "menú"): "Diseño de
+    # menú para restaurante" es el detalle que se pidió, no una petición.
+    es_menu = reconocido.intent == Intent.AYUDA and (
+        not en_pregunta or es_saludo_completo(entrante.texto)
+    )
+    if es_menu:
+        conv.limpiar(tenant.id, entrante.wa_phone)
+        if primera_vez:
+            return [conv.saludo(entrante.nombre), conv.MENU_INICIAL]
+        return [conv.MENU_PRINCIPAL]
+
+    if reconocido.intent == Intent.DESCONOCIDO and primera_vez and not en_pregunta:
+        return [conv.saludo(entrante.nombre), conv.MENU_INICIAL]
+
+    respuestas = _por_texto(db, tenant, entrante, estado, reconocido, en_pregunta)
+    if primera_vez:
+        # Quien escribe por primera vez pidiendo algo concreto recibe el saludo
+        # y, a continuación, lo que pidió.
+        respuestas = [conv.saludo(entrante.nombre), *respuestas]
+    return respuestas
+
+
+def _primer_contacto(tenant: Tenant, entrante: Entrante) -> bool:
+    """True solo la primera vez que este número escribe (o tras meses callado)."""
+    return conv.marcar_saludado(tenant.id, entrante.wa_phone)
+
+
+def _por_texto(
+    db: Session,
+    tenant: Tenant,
+    entrante: Entrante,
+    estado: EstadoConversacion,
+    reconocido: Reconocido,
+    en_pregunta: bool,
+) -> list[Respuesta]:
+    # Sin esta guarda, un detalle como "Servicio de consultoría" se leería como
+    # el intent CONSULTAR y descarrilaría la factura a medias.
+    if en_pregunta:
         return _completar(db, tenant, entrante, estado)
 
-    if reconocido.intent == Intent.AYUDA:
-        return [conv.AYUDA]
+    if reconocido.intent == Intent.NOTA_CREDITO:
+        return list(conv.NOTA_CREDITO)
+
+    if reconocido.intent == Intent.NOTA_DEBITO:
+        return list(conv.NOTA_DEBITO)
 
     if reconocido.intent == Intent.REPORTE:
         return [_reporte(db, tenant)]
@@ -162,7 +216,7 @@ def procesar(db: Session, tenant: Tenant, entrante: Entrante) -> list[Respuesta]
             return [conv.pedir("cliente")]
         return _siguiente(db, tenant, entrante, estado)
 
-    return [conv.MENU_PRINCIPAL]
+    return [conv.FALLBACK]
 
 
 def _resolver_cliente(

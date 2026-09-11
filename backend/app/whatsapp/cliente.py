@@ -21,6 +21,7 @@ HOSTS_PERMITIDOS_META = {"graph.facebook.com"}
 MAX_BOTONES = 3
 MAX_ITEMS_LISTA = 10
 MAX_TEXTO = 4096
+MAX_PIE = 60
 
 
 class WhatsAppError(Exception):
@@ -91,7 +92,17 @@ def enviar_texto(destino: str, texto: str) -> Enviado:
     )
 
 
-def enviar_botones(destino: str, texto: str, botones: list[tuple[str, str]]) -> Enviado:
+def _con_pie(interactivo: dict[str, Any], pie: str) -> dict[str, Any]:
+    """El pie de Meta (footer) admite 60 caracteres y solo existe en mensajes
+    interactivos: los de texto plano no lo tienen."""
+    if pie:
+        interactivo["footer"] = {"text": pie[:MAX_PIE]}
+    return interactivo
+
+
+def enviar_botones(
+    destino: str, texto: str, botones: list[tuple[str, str]], pie: str = ""
+) -> Enviado:
     """botones: [(id, título)]. WhatsApp permite 3 como máximo y 20 caracteres
     por título — recortar aquí evita un rechazo de Meta en producción."""
     if not botones:
@@ -101,16 +112,19 @@ def enviar_botones(destino: str, texto: str, botones: list[tuple[str, str]]) -> 
             "messaging_product": "whatsapp",
             "to": destino,
             "type": "interactive",
-            "interactive": {
-                "type": "button",
-                "body": {"text": texto[:1024]},
-                "action": {
-                    "buttons": [
-                        {"type": "reply", "reply": {"id": bid, "title": titulo[:20]}}
-                        for bid, titulo in botones[:MAX_BOTONES]
-                    ]
+            "interactive": _con_pie(
+                {
+                    "type": "button",
+                    "body": {"text": texto[:1024]},
+                    "action": {
+                        "buttons": [
+                            {"type": "reply", "reply": {"id": bid, "title": titulo[:20]}}
+                            for bid, titulo in botones[:MAX_BOTONES]
+                        ]
+                    },
                 },
-            },
+                pie,
+            ),
         }
     )
 
@@ -121,6 +135,7 @@ def enviar_lista(
     boton: str,
     items: list[tuple[str, str, str]],
     titulo_seccion: str = "Opciones",
+    pie: str = "",
 ) -> Enviado:
     """items: [(id, título, descripción)]."""
     if not items:
@@ -130,26 +145,29 @@ def enviar_lista(
             "messaging_product": "whatsapp",
             "to": destino,
             "type": "interactive",
-            "interactive": {
-                "type": "list",
-                "body": {"text": texto[:1024]},
-                "action": {
-                    "button": boton[:20],
-                    "sections": [
-                        {
-                            "title": titulo_seccion[:24],
-                            "rows": [
-                                {
-                                    "id": iid,
-                                    "title": t[:24],
-                                    "description": d[:72],
-                                }
-                                for iid, t, d in items[:MAX_ITEMS_LISTA]
-                            ],
-                        }
-                    ],
+            "interactive": _con_pie(
+                {
+                    "type": "list",
+                    "body": {"text": texto[:1024]},
+                    "action": {
+                        "button": boton[:20],
+                        "sections": [
+                            {
+                                "title": titulo_seccion[:24],
+                                "rows": [
+                                    {
+                                        "id": iid,
+                                        "title": t[:24],
+                                        "description": d[:72],
+                                    }
+                                    for iid, t, d in items[:MAX_ITEMS_LISTA]
+                                ],
+                            }
+                        ],
+                    },
                 },
-            },
+                pie,
+            ),
         }
     )
 

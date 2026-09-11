@@ -17,6 +17,8 @@ from enum import StrEnum
 
 class Intent(StrEnum):
     FACTURAR = "FACTURAR"
+    NOTA_CREDITO = "NOTA_CREDITO"
+    NOTA_DEBITO = "NOTA_DEBITO"
     CONSULTAR = "CONSULTAR"
     REENVIAR = "REENVIAR"
     REPORTE = "REPORTE"
@@ -49,14 +51,41 @@ PATRONES: list[tuple[Intent, list[str]]] = [
         Intent.REENVIAR,
         [r"\breenv", r"\bvuelve a enviar", r"\bmanda(me)? (de nuevo|otra vez)"],
     ),
+    # Las notas van ANTES que FACTURAR: "nota de crédito de la factura 12" es
+    # una nota, no una factura nueva. El orden es el del spec.
+    (
+        Intent.NOTA_CREDITO,
+        [r"\bnota de credito\b", r"\banul", r"\bdevoluc", r"\bdevolvi", r"\bme devolvieron\b"],
+    ),
+    (
+        Intent.NOTA_DEBITO,
+        [r"\bnota de debito\b", r"\brecargo", r"\binteres(es)?\b", r"\bmora\b"],
+    ),
+    # REPORTE antes que FACTURAR y CONSULTAR, como en el spec: "cuánto vendí
+    # este mes" pide el reporte, aunque lleve "vendí".
+    (
+        Intent.REPORTE,
+        [
+            # Prefijos, como en el spec: también "informes", "resúmenes", "mensuales"
+            r"\breporte",
+            r"\bresumen",
+            r"\binforme",
+            r"\bcuanto (debo|tengo que) (declarar|pagar)",
+            r"\bcuanto vendi",
+            r"\bdeclaracion\b",
+            r"\bventas\b",
+            r"\bdel mes\b",
+            r"\bmensual",
+        ],
+    ),
     (
         Intent.FACTURAR,
         [
             r"\bfactur",  # facturar, factura, facturale, facturame
             r"\bcobr(ar|ale|arle|o)\b",
-            r"\bvend[ií]\b",
-            r"\bnota de (credito|debito)\b",
-            r"\bemit(ir|e|eme)\b",
+            r"\bvendi",  # vendí, vendimos, vendiste
+            r"\bemit(ir|irle|irme|e|eme)\b",  # "emitiste" es CONSULTAR, como en el spec
+            r"\bcomprobante para\b",
         ],
     ),
     (
@@ -66,24 +95,36 @@ PATRONES: list[tuple[Intent, list[str]]] = [
             r"\bbusca(r|me)?\b",
             r"\bcuanto (le )?(factur|vend)",
             r"\bmis (facturas|comprobantes)\b",
-            r"\bultim[ao]s? (factura|comprobante)",
+            r"\bultim[ao]s?\b",
+            r"\bdocumentos?\b",
+            r"\bemitiste\b",
+            r"\bhistorial\b",
         ],
     ),
-    (
-        Intent.REPORTE,
-        [
-            r"\breporte",
-            r"\bresumen\b",
-            r"\bcuanto (debo|tengo que) (declarar|pagar)",
-            r"\bdeclaracion\b",
-            r"\bmis ventas\b",
-        ],
-    ),
+    # Saludos y peticiones de ayuda o de menú: el nodo `menu` del spec
     (
         Intent.AYUDA,
-        [r"\bayuda\b", r"\bque puedes hacer", r"\bcomo funciona", r"^\s*(hola|buenas|hey)\b"],
+        [
+            r"\bayuda\b",
+            r"\bque puedes hacer",
+            r"\bcomo funciona",
+            r"\bmenu\b",
+            r"^\s*(hola|buenas|hey|buenos dias|buenas tardes|buenas noches)\b",
+        ],
     ),
 ]
+
+
+# El mensaje ENTERO es un saludo o pide el menú. Contestando una pregunta, solo
+# eso cuenta como "volver al menú": "Diseño de menú para restaurante" es un
+# detalle, no una petición.
+_SALUDO_COMPLETO = re.compile(
+    r"^\s*(hola|buenas|hey|buenos dias|buenas tardes|buenas noches|ayuda|menu)[\s!.,]*$"
+)
+
+
+def es_saludo_completo(texto: str) -> bool:
+    return bool(_SALUDO_COMPLETO.match(normalizar(texto)))
 
 
 @dataclass

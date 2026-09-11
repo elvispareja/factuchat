@@ -1,0 +1,1851 @@
+{
+  "meta": {
+    "producto": "Factuchat®",
+    "version": "1.0",
+    "fecha": "2026-09-10",
+    "canal": "WhatsApp Cloud API (Meta)",
+    "origen": "Extraído del demo interactivo de la landing (Facturas IA.dc.html)",
+    "idioma": "es-EC, tuteo",
+    "notas": [
+      "Todos los textos son literales: úsalos tal cual en el motor conversacional.",
+      "Los marcadores {{...}} son variables que se resuelven en tiempo de ejecución.",
+      "'lines' son párrafos dentro de un mismo mensaje de WhatsApp; w:700 = negrita.",
+      "'wait' es el retardo en ms antes de enviar ese mensaje (simula redacción)."
+    ]
+  },
+  "reglas_negocio": {
+    "iva_estandar": 0.15,
+    "iva_exportacion_servicios": 0,
+    "retencion_renta_servicios": 0.08,
+    "retencion_iva_servicios": 0.7,
+    "formato_moneda": "$#,##0.00 (en-US)",
+    "confirmacion_obligatoria": "Ningún comprobante se envía al SRI sin confirmación explícita del usuario.",
+    "limite_texto_libre_caracteres": 220,
+    "limite_texto_busqueda_caracteres": 150,
+    "limite_nombre_servicio_caracteres": 24,
+    "multimedia": {
+      "acepta": [
+        "texto",
+        "imagen (cédula, RUC, comprobante impreso)",
+        "documento (XML o PDF de retención)"
+      ],
+      "rechaza": [
+        "audio",
+        "video",
+        "nota de voz"
+      ]
+    },
+    "no_consume_plan": [
+      "consultas",
+      "reportes",
+      "clientes",
+      "productos y servicios",
+      "reenvío de RIDE"
+    ]
+  },
+  "tiempos_ms": {
+    "respuesta_estandar": 950,
+    "respuesta_busqueda": 900,
+    "entre_mensajes_por_defecto": 900,
+    "tras_respuesta_del_usuario": 520,
+    "inicio_de_nodo": 320
+  },
+  "campos_entrada": {
+    "cliente": {
+      "placeholder": "Ej. andrade",
+      "tipo": "búsqueda",
+      "coleccion": "clientes"
+    },
+    "servicio": {
+      "placeholder": "Ej. consultoría",
+      "tipo": "búsqueda",
+      "coleccion": "servicios"
+    },
+    "precio": {
+      "placeholder": "Ej. 520",
+      "tipo": "número",
+      "accion": "actualiza el precio guardado del servicio"
+    },
+    "precioFactura": {
+      "placeholder": "Ej. 520",
+      "tipo": "número",
+      "accion": "sobrescribe el precio solo en la factura en curso"
+    },
+    "descripcion": {
+      "placeholder": "Escribe el detalle",
+      "tipo": "texto",
+      "accion": "cambia el detalle impreso en el RIDE"
+    },
+    "nombre": {
+      "placeholder": "Nombre corto",
+      "tipo": "texto",
+      "accion": "cambia el alias de búsqueda del servicio (máx. 24)"
+    },
+    "correo": {
+      "placeholder": "Ej. pagos@empresa.ec",
+      "tipo": "email",
+      "accion": "cambia el correo de envío del cliente"
+    },
+    "libre": {
+      "placeholder": "Escribe un mensaje",
+      "tipo": "texto libre con detección de intención"
+    }
+  },
+  "intents": {
+    "descripcion": "Enrutamiento por palabras clave sobre el texto normalizado (minúsculas, sin tildes). Se evalúa en este orden; el primero que coincide gana.",
+    "reglas": [
+      {
+        "orden": 1,
+        "nodo": "muyLargo",
+        "condicion": "longitud > 220 caracteres"
+      },
+      {
+        "orden": 2,
+        "nodo": "asesor",
+        "claves": [
+          "asesor",
+          "humano",
+          "una persona",
+          "hablar con alguien"
+        ]
+      },
+      {
+        "orden": 3,
+        "nodo": "notaCredito",
+        "claves": [
+          "nota de credito",
+          "anular",
+          "devoluc",
+          "devolvio",
+          "me devolvieron"
+        ]
+      },
+      {
+        "orden": 4,
+        "nodo": "notaDebito",
+        "claves": [
+          "nota de debito",
+          "recargo",
+          "interes",
+          "mora"
+        ]
+      },
+      {
+        "orden": 5,
+        "nodo": "retencion",
+        "claves": [
+          "retencion",
+          "retuvieron",
+          "me retienen"
+        ]
+      },
+      {
+        "orden": 6,
+        "nodo": "guia",
+        "claves": [
+          "guia",
+          "remision",
+          "transportar",
+          "mercaderia"
+        ]
+      },
+      {
+        "orden": 7,
+        "nodo": "liquidacion",
+        "claves": [
+          "liquidacion",
+          "sin ruc",
+          "agricultor",
+          "artesano"
+        ]
+      },
+      {
+        "orden": 8,
+        "nodo": "repSem",
+        "claves": [
+          "semestr"
+        ]
+      },
+      {
+        "orden": 9,
+        "nodo": "repTrim",
+        "claves": [
+          "trimestr"
+        ]
+      },
+      {
+        "orden": 10,
+        "nodo": "repAnual",
+        "claves": [
+          "anual",
+          "del ano",
+          "todo el ano"
+        ]
+      },
+      {
+        "orden": 11,
+        "nodo": "repMes",
+        "claves": [
+          "reporte",
+          "resumen",
+          "informe",
+          "ventas",
+          "cuanto vendi",
+          "del mes",
+          "mensual"
+        ]
+      },
+      {
+        "orden": 12,
+        "nodo": "factura",
+        "claves": [
+          "factur",
+          "emitir",
+          "cobrar",
+          "vendi",
+          "comprobante para"
+        ]
+      },
+      {
+        "orden": 13,
+        "nodo": "misClientes",
+        "claves": [
+          "cliente"
+        ]
+      },
+      {
+        "orden": 14,
+        "nodo": "misServicios",
+        "claves": [
+          "servicio",
+          "producto",
+          "precio"
+        ]
+      },
+      {
+        "orden": 15,
+        "nodo": "plan",
+        "claves": [
+          "plan",
+          "cuantos me quedan",
+          "me quedan",
+          "pagar",
+          "cuota"
+        ]
+      },
+      {
+        "orden": 16,
+        "nodo": "docs",
+        "claves": [
+          "documento",
+          "emitiste",
+          "ultimos",
+          "historial"
+        ]
+      },
+      {
+        "orden": 17,
+        "nodo": "menu",
+        "claves": [
+          "hola",
+          "buenas",
+          "buenos dias",
+          "buenas tardes",
+          "que puedes hacer",
+          "ayuda",
+          "menu"
+        ]
+      },
+      {
+        "orden": 99,
+        "nodo": "fallback",
+        "condicion": "ninguna coincidencia"
+      }
+    ]
+  },
+  "menus": {
+    "main": {
+      "titulo": "¿Qué necesitas hacer?",
+      "boton": "Ver opciones",
+      "secciones": [
+        {
+          "filas": [
+            {
+              "id": "emitir",
+              "label": "Emitir un documento",
+              "hint": "Factura, nota, retención, guía o liquidación"
+            },
+            {
+              "id": "docs",
+              "label": "Consultar lo emitido",
+              "hint": "Buscar, ver estado o reenviar un documento"
+            },
+            {
+              "id": "reportes",
+              "label": "Pedir un reporte",
+              "hint": "Mensual, semestral, anual o trimestral"
+            },
+            {
+              "id": "cuenta",
+              "label": "Mi cuenta",
+              "hint": "Clientes, servicios y mi plan"
+            },
+            {
+              "id": "asesor",
+              "label": "Hablar con un asesor",
+              "hint": "Una persona del equipo te atiende"
+            }
+          ]
+        }
+      ]
+    },
+    "emitir": {
+      "titulo": "Emitir un documento",
+      "boton": "Ver documentos",
+      "secciones": [
+        {
+          "titulo": "Lo más usado",
+          "filas": [
+            {
+              "id": "factura",
+              "label": "Factura",
+              "hint": "Para cobrarle a un cliente"
+            },
+            {
+              "id": "notaCredito",
+              "label": "Nota de crédito",
+              "hint": "Anular o corregir una factura ya emitida"
+            },
+            {
+              "id": "retencion",
+              "label": "Retención",
+              "hint": "Emitir una, o guardar la que te hicieron"
+            }
+          ]
+        },
+        {
+          "titulo": "Casos específicos",
+          "filas": [
+            {
+              "id": "notaDebito",
+              "label": "Nota de débito",
+              "hint": "Cobrar intereses o un recargo"
+            },
+            {
+              "id": "guia",
+              "label": "Guía de remisión",
+              "hint": "Si estás trasladando mercadería"
+            },
+            {
+              "id": "liquidacion",
+              "label": "Liquidación de compra",
+              "hint": "Si tu proveedor no puede facturarte"
+            }
+          ]
+        },
+        {
+          "filas": [
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "reportes": {
+      "titulo": "Pedir un reporte",
+      "boton": "Ver períodos",
+      "secciones": [
+        {
+          "titulo": "Períodos que declara el SRI",
+          "filas": [
+            {
+              "id": "repMes",
+              "label": "Mensual",
+              "hint": "IVA del mes en curso"
+            },
+            {
+              "id": "repSem",
+              "label": "Semestral",
+              "hint": "Enero a junio, lo que declaras en julio"
+            },
+            {
+              "id": "repAnual",
+              "label": "Anual",
+              "hint": "Renta y retenciones del año"
+            }
+          ]
+        },
+        {
+          "titulo": "Para tu control",
+          "filas": [
+            {
+              "id": "repTrim",
+              "label": "Trimestral",
+              "hint": "Cómo va el negocio. No es un período fiscal"
+            }
+          ]
+        },
+        {
+          "filas": [
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "cuenta": {
+      "titulo": "Mi cuenta",
+      "boton": "Ver mi cuenta",
+      "secciones": [
+        {
+          "filas": [
+            {
+              "id": "misClientes",
+              "label": "Mis clientes",
+              "hint": "{{n_clientes}} guardados · ver, buscar o agregar"
+            },
+            {
+              "id": "misServicios",
+              "label": "Productos y servicios",
+              "hint": "{{n_servicios}} guardados · ver, buscar o agregar"
+            },
+            {
+              "id": "plan",
+              "label": "Mi plan",
+              "hint": "{{plan.nombre}} · te quedan {{plan.restantes}} comprobantes"
+            }
+          ]
+        },
+        {
+          "filas": [
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "adjuntar": {
+      "titulo": "Adjuntar",
+      "secciones": [
+        {
+          "titulo": "Sí puedo leerlo",
+          "filas": [
+            {
+              "id": "fotoEnviada",
+              "label": "Una foto",
+              "hint": "Cédula, RUC o un comprobante impreso"
+            },
+            {
+              "id": "docEnviado",
+              "label": "Un documento",
+              "hint": "El XML o el PDF de una retención"
+            }
+          ]
+        },
+        {
+          "titulo": "No puedo procesarlo",
+          "filas": [
+            {
+              "id": "audioEnviado",
+              "label": "Un audio",
+              "hint": "Prueba a enviarlo y mira qué pasa"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "pie_estandar": "Mensajes concisos · voz desde Emprendedor",
+  "nodos": {
+    "start": {
+      "descripcion": "Primer contacto",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "¡Hola, {{usuario.nombre}}! 👋 Soy Factuchat®, tu asistente virtual contable.\n\nEscríbeme con texto, así de simple. Mientras más concreto seas, más rápido lo resuelvo."
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Toca el botón de abajo y elige qué necesitas hacer. También puedes escribirme con tus palabras."
+            }
+          ],
+          "footer": "Mensajes concisos · voz desde Emprendedor",
+          "button": "Ver opciones",
+          "list": "main"
+        }
+      ]
+    },
+    "menu": {
+      "descripcion": "Volver al menú",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "¿Qué más hacemos?"
+            }
+          ],
+          "footer": "Mensajes concisos · voz desde Emprendedor",
+          "button": "Ver opciones",
+          "list": "main"
+        }
+      ]
+    },
+    "fallback": {
+      "descripcion": "No se detectó intención",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Con mensajes concisos te resuelvo más rápido 🙂",
+              "w": 700
+            },
+            {
+              "t": "\nDime en pocas palabras qué necesitas: “una factura”, “el reporte del mes”, “mis clientes”. O toca el botón y elige de la lista."
+            }
+          ],
+          "footer": "Mensajes concisos · voz desde Emprendedor",
+          "button": "Ver opciones",
+          "list": "main"
+        }
+      ]
+    },
+    "muyLargo": {
+      "descripcion": "Mensaje sobre el límite de caracteres",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Ese mensaje es muy largo 📝",
+              "w": 700
+            },
+            {
+              "t": "\nResúmelo en unas cuatro líneas: qué necesitas, para quién y por cuánto. Con un mensaje concreto emito el documento exacto, sin idas y vueltas."
+            }
+          ],
+          "footer": "Mensajes concisos · voz desde Emprendedor",
+          "button": "Ver opciones",
+          "list": "main"
+        }
+      ]
+    },
+    "emitir": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "¿Qué documento necesitas emitir?"
+            }
+          ],
+          "footer": "Elige uno de los seis del SRI",
+          "button": "Ver documentos",
+          "list": "emitir"
+        }
+      ]
+    },
+    "reportes": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "¿De qué período lo necesitas?"
+            }
+          ],
+          "footer": "En PDF y Excel, al chat y a tu correo",
+          "button": "Ver períodos",
+          "list": "reportes"
+        }
+      ]
+    },
+    "cuenta": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "¿Qué quieres revisar?"
+            }
+          ],
+          "footer": "Nada de esto consume tu plan",
+          "button": "Ver mi cuenta",
+          "list": "cuenta"
+        }
+      ]
+    },
+    "factura": {
+      "descripcion": "Inicio del flujo de facturación",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Perfecto. ¿Para quién es la factura?"
+            }
+          ]
+        },
+        {
+          "wait": 850,
+          "lines": [
+            {
+              "t": "Escríbeme el nombre del negocio o el RUC. No hace falta que sea exacto, con una parte basta."
+            }
+          ],
+          "footer": "Tienes {{n_clientes}} clientes guardados",
+          "ask": "cliente"
+        }
+      ]
+    },
+    "cliente": {
+      "descripcion": "Cliente seleccionado; varía según tipo de identificación",
+      "variantes": {
+        "RUC": "Verifiqué el RUC {{cliente.id}} en el SRI. {{cliente.nombre}} está activo ✅",
+        "Cédula": "Listo, {{cliente.nombre}} con cédula {{cliente.id}}. Va como consumidor final ✅",
+        "Id. del exterior": "Listo, {{cliente.nombre}} con identificación del exterior {{cliente.id}} ✅",
+        "Pasaporte": "Listo, {{cliente.nombre}} con pasaporte {{cliente.id}}. Así se factura a un extranjero sin cédula ✅"
+      },
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "{{variante_segun_tipo_id}}"
+            }
+          ]
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "¿Qué le vas a facturar? Escríbeme el nombre del producto o servicio."
+            }
+          ],
+          "footer": "Tienes {{n_servicios}} servicios guardados",
+          "ask": "servicio"
+        }
+      ]
+    },
+    "nuevoCliente": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Te abro un formulario para llenar todo en orden, sin escribir de a pedacitos. Toca el botón 👇"
+            }
+          ],
+          "flow": "Llenar datos del cliente"
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "Si prefieres, mándame solo el RUC o la cédula y yo traigo el nombre desde el SRI. También puedes tomarle una foto al documento."
+            }
+          ],
+          "footer": "Guardar clientes no consume tu plan"
+        }
+      ]
+    },
+    "flowCliente": {
+      "descripcion": "Respuesta tras enviar el WhatsApp Flow de alta de cliente",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Verificando {{el RUC | la identificación}} en el SRI…"
+            }
+          ]
+        },
+        {
+          "wait": 1300,
+          "lines": [
+            {
+              "t": "✅ Cliente guardado",
+              "w": 700
+            },
+            {
+              "t": "\n{{flow.nombre}}\n{{flow.tipo}}: {{flow.numero}}\nCorreo: {{flow.correo}}\nTel: {{flow.telefono}}"
+            }
+          ],
+          "footer": "Guardar clientes no consume tu plan"
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "La próxima vez que me digas “factura para {{flow.alias}}”, ya tengo todo listo. ¿Hacemos algo más?"
+            }
+          ],
+          "button": "Ver opciones",
+          "list": "main"
+        }
+      ]
+    },
+    "resumen": {
+      "descripcion": "Previa de la factura antes de autorizar. El segundo mensaje tiene 3 variantes excluyentes.",
+      "calculos": {
+        "subtotal": "override || servicio.precio",
+        "iva": "cliente.exterior ? 0 : subtotal * 0.15",
+        "total": "subtotal + iva",
+        "retencion_renta": "subtotal * 0.08",
+        "retencion_iva": "iva * 0.70",
+        "neto_a_recibir": "total - retencion_renta - retencion_iva"
+      },
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Revisa antes de autorizar",
+              "w": 700
+            },
+            {
+              "t": "\nCliente: {{cliente.nombre}}\n{{cliente.tipoId}}: {{cliente.id}}\nDetalle: {{servicio.detalle}}\nCódigo SRI: {{servicio.codigo}}\n\nSubtotal: {{subtotal}}\n{{IVA 15%: {{iva}} | IVA 0%: $0.00 si es del exterior}}"
+            },
+            {
+              "t": "Total: {{total}}",
+              "w": 700
+            }
+          ]
+        },
+        {
+          "variante": "exterior",
+          "wait": 1150,
+          "lines": [
+            {
+              "t": "🌎 Cliente del exterior",
+              "w": 700
+            },
+            {
+              "t": "\nLa puse con IVA 0% porque el servicio se exporta. Para que aplique, el servicio tiene que usarse fuera del Ecuador.\n\nSi en realidad se presta aquí, dímelo y la corrijo al 15% antes de timbrar."
+            }
+          ]
+        },
+        {
+          "variante": "agente_de_retencion",
+          "wait": 1150,
+          "lines": [
+            {
+              "t": "⚠️ {{cliente.nombre}} es agente de retención.",
+              "w": 700
+            },
+            {
+              "t": "\nTe va a retener 8% de Renta ({{retencion_renta}}) y 70% del IVA ({{retencion_iva}}), así que vas a recibir {{neto}}.\n\nGuarda el comprobante de retención que te envíen: ese valor lo recuperas en tu declaración anual."
+            }
+          ]
+        },
+        {
+          "variante": "sin_retenciones",
+          "wait": 1150,
+          "lines": [
+            {
+              "t": "✅ Sin retenciones",
+              "w": 700
+            },
+            {
+              "t": "\n{{cliente.nombre}} no es agente de retención, así que vas a recibir los {{total}} completos."
+            }
+          ]
+        },
+        {
+          "wait": 1100,
+          "lines": [
+            {
+              "t": "Nada se envía al SRI hasta que tú confirmes."
+            }
+          ],
+          "replies": [
+            {
+              "id": "autorizada",
+              "label": "Autorizar y enviar"
+            },
+            {
+              "id": "precioFactura",
+              "label": "Corregir el precio"
+            },
+            {
+              "id": "cliente",
+              "label": "Cambiar concepto"
+            }
+          ]
+        }
+      ]
+    },
+    "autorizada": {
+      "descripcion": "Firma, envío al SRI y entrega",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Firmando con tu certificado y enviando al SRI…"
+            }
+          ]
+        },
+        {
+          "wait": 1500,
+          "lines": [
+            {
+              "t": "✅ Factura autorizada",
+              "w": 700
+            },
+            {
+              "t": "\nCliente: {{cliente.nombre}}\nNúmero: {{comprobante.numero}}\nAutorización: {{comprobante.autorizacion}}\nTotal: {{total}}"
+            }
+          ]
+        },
+        {
+          "wait": 1050,
+          "adjunto": {
+            "kind": "PDF",
+            "name": "RIDE-{{comprobante.numero}}.pdf",
+            "meta": "1 página · PDF · 86 kB"
+          }
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "También le envié el PDF y el XML a {{cliente.correo}}.\n\nTe quedan {{plan.restantes}} comprobantes este mes."
+            }
+          ]
+        }
+      ]
+    },
+    "notaCredito": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "La nota de crédito sirve para anular o corregir una factura que ya se autorizó, o cuando el cliente te devuelve algo."
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "¿Sobre cuál factura? Dime el número, el monto o el nombre del cliente y la busco."
+            }
+          ]
+        }
+      ]
+    },
+    "notaDebito": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "La nota de débito se usa cuando necesitas cobrar más sobre una factura ya emitida: intereses por mora, un recargo o un gasto que no incluiste."
+            }
+          ]
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "Dime sobre qué factura y cuánto quieres agregar."
+            }
+          ]
+        }
+      ]
+    },
+    "retencion": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Con retenciones hago dos cosas distintas:"
+            }
+          ]
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "1. Emitir una retención tuya a un proveedor, si eres agente de retención.\n\n2. Guardar una retención que te hicieron a ti, para que la uses como crédito en tu declaración."
+            }
+          ],
+          "replies": [
+            {
+              "id": "guardarRet",
+              "label": "Guardar una recibida"
+            },
+            {
+              "id": "emitirRet",
+              "label": "Emitir una retención"
+            }
+          ]
+        }
+      ]
+    },
+    "guardarRet": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Perfecto. Reenvíame aquí el archivo que te llegó por correo y yo leo el XML."
+            }
+          ]
+        },
+        {
+          "wait": 1050,
+          "lines": [
+            {
+              "t": "Retenciones recibidas {{anio}}",
+              "w": 700
+            },
+            {
+              "t": "\nComprobantes guardados: {{ret.cantidad}}\nRetención de Renta: {{ret.renta}}\nRetención de IVA: {{ret.iva}}"
+            }
+          ],
+          "footer": "Este valor baja lo que pagas de Impuesto a la Renta."
+        }
+      ]
+    },
+    "emitirRet": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Dime el proveedor y el valor de la compra. Yo calculo el porcentaje que corresponde según el tipo de servicio y te muestro el resumen antes de emitir."
+            }
+          ]
+        }
+      ]
+    },
+    "guia": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "La guía de remisión respalda el traslado de mercadería. La necesitas si estás moviendo productos físicos de un lugar a otro."
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Necesito: origen, destino, placa del vehículo, transportista y qué se está moviendo."
+            }
+          ]
+        }
+      ]
+    },
+    "liquidacion": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "La liquidación de compra se usa cuando le compras a alguien que no puede darte factura: un agricultor, un artesano sin RUC o un servicio ocasional."
+            }
+          ]
+        },
+        {
+          "wait": 1100,
+          "lines": [
+            {
+              "t": "⚠️ Antes de emitirla",
+              "w": 700
+            },
+            {
+              "t": "\nAl emitir este documento tú retienes el 100% del IVA, y te vuelves responsable de declararlo y pagarlo al SRI.\n\nÚsala solo cuando el proveedor realmente no pueda facturarte."
+            }
+          ]
+        }
+      ]
+    },
+    "docs": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Este mes emitiste {{docs.total}} comprobantes. Los últimos tres:"
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "🧾 Factura {{doc1.numero}}\n{{doc1.cliente}} · {{doc1.total}} · {{doc1.estado}}\n\n🧮 Retención {{doc2.numero}}\n{{doc2.cliente}} · {{doc2.detalle}} · {{doc2.estado}}\n\n🔁 Nota de crédito {{doc3.numero}}\n{{doc3.cliente}} · {{doc3.total}} · {{doc3.estado}}"
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Puedo buscarte cualquiera por monto, cliente o fecha. También puedo reenviar el RIDE a quien lo pida, y eso no consume tu plan."
+            }
+          ]
+        }
+      ]
+    },
+    "repMes": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Un momento, armo tu resumen de {{mes}}…"
+            }
+          ]
+        },
+        {
+          "wait": 1250,
+          "lines": [
+            {
+              "t": "Resumen de {{mes}}",
+              "w": 700
+            },
+            {
+              "t": "\nIngresos facturados: {{rep.ingresos}}\nIVA cobrado: {{rep.iva}}\nComprobantes emitidos: {{rep.comprobantes}}"
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "adjunto": {
+            "kind": "PDF",
+            "name": "Resumen-{{mes}}-{{anio}}.pdf",
+            "meta": "2 páginas · PDF · 141 kB"
+          }
+        }
+      ]
+    },
+    "repSem": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Armando tu resumen de enero a junio…"
+            }
+          ]
+        },
+        {
+          "wait": 1500,
+          "lines": [
+            {
+              "t": "Resumen fiscal · Ene – Jun {{anio}}",
+              "w": 700
+            },
+            {
+              "t": "\nIngresos facturados: {{sem.ingresos}}\nIVA cobrado: {{sem.iva}}\nRetención de Renta recibida: {{sem.retRenta}}\nRetención de IVA recibida: {{sem.retIva}}\nComprobantes emitidos: {{sem.comprobantes}}"
+            }
+          ],
+          "footer": "📅 Tu declaración vence el {{fecha_limite}}, por el noveno dígito {{digito}} de tu RUC."
+        },
+        {
+          "wait": 1100,
+          "adjunto": {
+            "kind": "XLS",
+            "name": "Detalle-semestre-{{anio}}.xlsx",
+            "meta": "{{sem.comprobantes}} filas · Excel · 62 kB"
+          }
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "Te lo mandé también al correo. ¿Quieres que te recuerde unos días antes?"
+            }
+          ],
+          "replies": [
+            {
+              "id": "recordar",
+              "label": "Sí, recuérdame"
+            },
+            {
+              "id": "menu",
+              "label": "No hace falta"
+            }
+          ]
+        }
+      ]
+    },
+    "repTrim": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "El trimestral no es un período que el SRI te pida, pero sirve para ver cómo va el año."
+            }
+          ]
+        },
+        {
+          "wait": 1150,
+          "lines": [
+            {
+              "t": "{{trim.rango}}",
+              "w": 700
+            },
+            {
+              "t": "\nIngresos facturados: {{trim.ingresos}}\nPromedio mensual: {{trim.promedio}}\nMejor mes: {{trim.mejorMes}}\nCliente que más facturó: {{trim.topCliente}}"
+            }
+          ]
+        }
+      ]
+    },
+    "repAnual": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "El anual lo cierro con corte a diciembre: tus ingresos del año, el IVA y todas las retenciones que te hicieron, que es lo que baja tu Impuesto a la Renta."
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "También te aviso si te conviene registrar gastos personales para pagar menos."
+            }
+          ]
+        }
+      ]
+    },
+    "recordar": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Listo 🔔 Te escribo el {{fecha_recordatorio}} por aquí mismo."
+            }
+          ]
+        }
+      ]
+    },
+    "misClientes": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Tienes {{n_clientes}} clientes guardados. ¿Qué hacemos?"
+            }
+          ],
+          "footer": "Nada de esto consume tu plan",
+          "replies": [
+            {
+              "id": "agregarCliente",
+              "label": "Agregar un cliente"
+            },
+            {
+              "id": "buscarCliente",
+              "label": "Buscar un cliente"
+            }
+          ]
+        }
+      ]
+    },
+    "agregarCliente": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Mándame el RUC o la cédula y traigo la razón social y la dirección desde el SRI. Tú solo confirmas el correo al que quiere sus facturas."
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "Si prefieres, mándame una foto del documento y lo leo yo.\n\n¿Estás arrancando? Pásame varios seguidos y los cargo todos de una vez."
+            }
+          ],
+          "replies": [
+            {
+              "id": "buscarCliente",
+              "label": "Ver mis clientes"
+            },
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "buscarCliente": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Escribe el nombre del negocio o el RUC. Con una parte basta."
+            }
+          ],
+          "footer": "Tienes {{n_clientes}} clientes guardados",
+          "ask": "cliente",
+          "askMode": "gestion"
+        }
+      ]
+    },
+    "fichaCliente": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "{{cliente.nombre}}",
+              "w": 700
+            },
+            {
+              "t": "\n{{cliente.tipoId}}: {{cliente.id}}\nCorreo: {{cliente.correo}}\n{{estado_segun_tipo}}\nAgente de retención: {{sí|no}}\n\nLe emitiste {{cliente.usos}} documento(s) este año."
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "¿Qué hacemos con este cliente?"
+            }
+          ],
+          "replies": [
+            {
+              "id": "cliente",
+              "label": "Facturarle ahora"
+            },
+            {
+              "id": "editCorreo",
+              "label": "Cambiar el correo"
+            },
+            {
+              "id": "buscarCliente",
+              "label": "Ver otro cliente"
+            }
+          ]
+        }
+      ],
+      "variantes_estado": {
+        "RUC": "Estado en el SRI: activo ✅",
+        "Cédula": "Tipo: consumidor final",
+        "Id. del exterior": "Tipo: cliente del exterior",
+        "Pasaporte": "Tipo: extranjero con pasaporte"
+      }
+    },
+    "misServicios": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Tienes {{n_servicios}} productos y servicios guardados, cada uno con su precio y su IVA. ¿Qué hacemos?"
+            }
+          ],
+          "footer": "Nada de esto consume tu plan",
+          "replies": [
+            {
+              "id": "agregarServicio",
+              "label": "Agregar uno nuevo"
+            },
+            {
+              "id": "buscarServicio",
+              "label": "Buscar uno"
+            }
+          ]
+        }
+      ]
+    },
+    "agregarServicio": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Dime el nombre y el precio, así: \"Mantenimiento de equipos 320\"."
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "Yo le asigno el código del catálogo del SRI y te pido el detalle que quieres que salga impreso en la factura. Todo lo puedes cambiar después."
+            }
+          ],
+          "replies": [
+            {
+              "id": "buscarServicio",
+              "label": "Ver mis servicios"
+            },
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "buscarServicio": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Escribe el nombre del producto o servicio. Con una parte basta."
+            }
+          ],
+          "footer": "Tienes {{n_servicios}} servicios guardados",
+          "ask": "servicio",
+          "askMode": "gestion"
+        }
+      ]
+    },
+    "fichaServicio": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "{{servicio.nombre}}",
+              "w": 700
+            },
+            {
+              "t": "\nPrecio: {{servicio.precio}}\nIVA: 15%\nCódigo del SRI: {{servicio.codigo}}\n\nDetalle en la factura:\n“{{servicio.detalle}}”\n\nLo usaste en {{servicio.usos}} factura(s) este año."
+            }
+          ]
+        },
+        {
+          "wait": 1100,
+          "lines": [
+            {
+              "t": "El nombre es para que lo encuentres rápido. El detalle es lo que ve tu cliente impreso en el RIDE.\n\n¿Cambiamos algo?"
+            }
+          ],
+          "replies": [
+            {
+              "id": "editPrecio",
+              "label": "Cambiar el precio"
+            },
+            {
+              "id": "editDesc",
+              "label": "Editar el detalle"
+            },
+            {
+              "id": "editNombre",
+              "label": "Cambiar el nombre"
+            }
+          ]
+        }
+      ]
+    },
+    "precioFactura": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "El precio guardado de {{servicio.nombre}} es {{servicio.precio}}. ¿Por cuánto va esta factura?"
+            }
+          ],
+          "footer": "Solo para esta factura, sin IVA",
+          "ask": "precioFactura"
+        }
+      ]
+    },
+    "guardarPrecio": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Precio guardado",
+              "w": 700
+            },
+            {
+              "t": "\n{{servicio.nombre}} queda en {{subtotal}} de aquí en adelante.\n\nLas facturas ya emitidas no cambian."
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Seguimos con la factura."
+            }
+          ],
+          "replies": [
+            {
+              "id": "resumen",
+              "label": "Ver el resumen"
+            }
+          ]
+        }
+      ]
+    },
+    "editPrecio": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "{{servicio.nombre}} está en {{servicio.precio}}. ¿Cuál es el precio nuevo? Escribe solo el número, sin IVA."
+            }
+          ],
+          "footer": "Yo calculo el IVA al facturar",
+          "ask": "precio"
+        }
+      ]
+    },
+    "editDesc": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Este es el detalle actual:\n\n“{{servicio.detalle}}”"
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Escríbeme el nuevo. Es el texto que va impreso en la factura, así que ponlo como quieres que lo lea tu cliente."
+            }
+          ],
+          "ask": "descripcion"
+        }
+      ]
+    },
+    "editNombre": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Ahora se llama “{{servicio.nombre}}”. ¿Cómo lo pongo?"
+            }
+          ],
+          "footer": "Nombre corto: es solo para buscarlo",
+          "ask": "nombre"
+        }
+      ]
+    },
+    "editCorreo": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Hoy le mando las facturas a {{cliente.correo}}. ¿A cuál lo cambio?"
+            }
+          ],
+          "ask": "correo"
+        }
+      ]
+    },
+    "plan": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Plan {{plan.nombre}} · activo",
+              "w": 700
+            },
+            {
+              "t": "\nIncluye: {{plan.cupo}} comprobantes al mes\nUsados en {{mes}}: {{plan.usados}}\nTe quedan: {{plan.restantes}}\nRenueva: {{plan.renovacion}}"
+            }
+          ],
+          "footer": "Consultas, reportes, clientes y productos no consumen tu plan."
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "Lo que no uses este mes se acumula y se suma a los {{plan.cupo}} del mes siguiente. Tu plan también analiza tus PDF y fotos de facturas con IA."
+            }
+          ],
+          "replies": [
+            {
+              "id": "agotado",
+              "label": "¿Y si se me acaba?"
+            },
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "agotado": {
+      "descripcion": "Aviso proactivo de cupo agotado y venta de recarga o upgrade",
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Cuando llegues a tu último comprobante te escribo yo, sin que preguntes. Así se ve el aviso:"
+            }
+          ]
+        },
+        {
+          "wait": 1200,
+          "lines": [
+            {
+              "t": "⚠️ Se acabaron tus comprobantes",
+              "w": 700
+            },
+            {
+              "t": "\nUsaste los {{plan.cupo}} de tu plan {{plan.nombre}}. No puedo emitir más hasta que renueves.\n\nTus facturas anteriores siguen guardadas y puedes consultarlas o reenviarlas normalmente."
+            }
+          ]
+        },
+        {
+          "wait": 1250,
+          "lines": [
+            {
+              "t": "Lo más rápido",
+              "w": 700
+            },
+            {
+              "t": "\nUna recarga de comprobantes para este mismo mes. Sigues facturando en el momento y tu fecha de renovación no cambia."
+            }
+          ],
+          "footer": "Precio con IVA incluido",
+          "cta": {
+            "label": "Recargar comprobantes",
+            "href": "#planes"
+          }
+        },
+        {
+          "wait": 1250,
+          "lines": [
+            {
+              "t": "O cambia de plan",
+              "w": 700
+            },
+            {
+              "t": "\nInicial · $2.99 · 10 comprobantes · 20 días\nIndependiente · $5.99 · 30 al mes\nEmprendedor · $9.99 · 80 al mes\nEmpresario · $24.99 · 250 al mes"
+            }
+          ],
+          "cta": {
+            "label": "Ver los planes",
+            "href": "#planes"
+          }
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "Al tocar el botón se abre el pago con la opción ya seleccionada. Apenas se acredita, te aviso aquí mismo y sigues facturando."
+            }
+          ]
+        }
+      ]
+    },
+    "asesor": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Claro. ¿Sobre qué necesitas hablar?"
+            }
+          ]
+        },
+        {
+          "wait": 900,
+          "lines": [
+            {
+              "t": "Te paso con una persona del equipo. Atendemos de lunes a viernes, de 9h00 a 18h00."
+            }
+          ],
+          "replies": [
+            {
+              "id": "asesorTema",
+              "label": "Un tema tributario"
+            },
+            {
+              "id": "asesorTema",
+              "label": "Mi plan o mi pago"
+            },
+            {
+              "id": "asesorTema",
+              "label": "Un problema técnico"
+            }
+          ]
+        }
+      ]
+    },
+    "asesorTema": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Listo, ya avisé al equipo. En unos minutos te escribe una persona por este mismo chat."
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Mientras tanto sigo disponible: si quieres emitir algo o pedir un reporte, dime nomás."
+            }
+          ],
+          "replies": [
+            {
+              "id": "menu",
+              "label": "Volver al menú"
+            }
+          ]
+        }
+      ]
+    },
+    "audioEnviado": {
+      "descripcion": "El usuario envió una nota de voz o video",
+      "mensajes": [
+        {
+          "wait": 1300,
+          "lines": [
+            {
+              "t": "No puedo procesar audios ni videos 🎤",
+              "w": 700
+            },
+            {
+              "t": "\nEscríbeme lo mismo en texto y lo resuelvo al instante. Con una línea me basta: \"factura a Andrade por consultoría, 450\"."
+            }
+          ]
+        },
+        {
+          "wait": 1000,
+          "lines": [
+            {
+              "t": "El texto te deja revisar el dato antes de enviarlo, y a mí me deja repetírtelo antes de timbrar. En facturación esa doble revisión vale oro."
+            }
+          ]
+        }
+      ]
+    },
+    "fotoEnviada": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Las fotos sí las leo 📷"
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Mándame la foto de una cédula o un RUC y saco los datos del cliente solo. También funciona con un comprobante impreso."
+            }
+          ]
+        }
+      ]
+    },
+    "docEnviado": {
+      "mensajes": [
+        {
+          "lines": [
+            {
+              "t": "Los documentos también 📎"
+            }
+          ]
+        },
+        {
+          "wait": 950,
+          "lines": [
+            {
+              "t": "Reenvíame el XML o el PDF de una retención que te hicieron y lo archivo. En tu declaración te lo entrego consolidado."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "busqueda": {
+    "algoritmo": "Coincidencia por subcadena sobre nombre + hint, normalizado (minúsculas, sin tildes). Ordena primero los que empiezan con el término, luego por posición de la coincidencia.",
+    "respuestas": {
+      "sin_resultados_cliente": {
+        "lines": [
+          {
+            "t": "No encontré ningún cliente con “{{q}}”.\n\nDime el nombre del negocio como está en el SRI, o el RUC completo, y lo busco otra vez. Si es nuevo, mándame solo el RUC y lo creo."
+          }
+        ],
+        "ask": "cliente"
+      },
+      "sin_resultados_servicio": {
+        "lines": [
+          {
+            "t": "No tengo ningún servicio con “{{q}}”.\n\nEscríbeme el nombre como lo guardaste, o dime el concepto y el valor y lo creo ahora."
+          }
+        ],
+        "ask": "servicio"
+      },
+      "uno_a_tres": {
+        "condicion": "1 a 3 coincidencias",
+        "lines_una": [
+          {
+            "t": "Encontré uno que coincide con “{{q}}”."
+          }
+        ],
+        "lines_varias": [
+          {
+            "t": "Encontré {{n}} que coinciden con “{{q}}”. El más cercano está de primero."
+          }
+        ],
+        "button": "Ver coincidencias",
+        "list": "results"
+      },
+      "mas_de_tres": {
+        "condicion": "más de 3 coincidencias",
+        "lines": [
+          {
+            "t": "Encontré {{n}} {{clientes|servicios}} con “{{q}}”.",
+            "w": 700
+          },
+          {
+            "t": "\nEl que más se parece a lo que escribiste es"
+          },
+          {
+            "t": "{{mejor.nombre}}",
+            "w": 700
+          },
+          {
+            "t": "Abre la lista: van con su {{RUC o cédula|detalle}} para que confirmes. Si no aparece, toca “Ver más coincidencias”."
+          }
+        ],
+        "footer": "Mostrando {{min(7,n)}} de {{n}} coincidencias",
+        "button": "Ver coincidencias",
+        "list": "results",
+        "paginacion": {
+          "por_pagina": 7,
+          "siguiente": {
+            "lines": [
+              {
+                "t": "Aquí van los siguientes 👇"
+              }
+            ],
+            "footer": "Mostrando {{mostradas}} de {{n}} coincidencias"
+          }
+        }
+      },
+      "texto_muy_largo": {
+        "condicion": "más de 150 caracteres en un campo de búsqueda",
+        "lines": [
+          {
+            "t": "Ese mensaje es muy largo 📝",
+            "w": 700
+          },
+          {
+            "t": "\nResúmelo en unas cuatro líneas: qué necesitas, para quién y por cuánto. Con un mensaje concreto emito el documento exacto, sin idas y vueltas."
+          }
+        ],
+        "ask": "{{campo_en_curso}}"
+      }
+    }
+  },
+  "ediciones": {
+    "precioFactura": {
+      "error": {
+        "lines": [
+          {
+            "t": "No pude leer un valor ahí. Escríbeme solo el número, por ejemplo 520 o 520.50."
+          }
+        ],
+        "ask": "precioFactura"
+      },
+      "ok": {
+        "lines": [
+          {
+            "t": "Listo, esta factura va con {{valor}}.",
+            "w": 700
+          },
+          {
+            "t": "\nEl precio guardado de {{servicio.nombre}} sigue en {{servicio.precio}}. ¿Lo dejo así o lo actualizo también?"
+          }
+        ],
+        "replies": [
+          {
+            "id": "resumen",
+            "label": "Solo esta factura"
+          },
+          {
+            "id": "guardarPrecio",
+            "label": "Guardar el precio"
+          }
+        ]
+      }
+    },
+    "precio": {
+      "error": {
+        "lines": [
+          {
+            "t": "No pude leer un valor ahí. Escríbeme solo el número, por ejemplo 520 o 520.50."
+          }
+        ],
+        "ask": "precio"
+      },
+      "ok": {
+        "lines": [
+          {
+            "t": "Precio actualizado",
+            "w": 700
+          },
+          {
+            "t": "\n{{servicio.nombre}} pasa de {{precio_anterior}} a {{precio_nuevo}}.\nCon IVA queda en {{precio_con_iva}}.\n\nLas facturas ya emitidas no cambian: esto aplica de la próxima en adelante."
+          }
+        ]
+      }
+    },
+    "descripcion": {
+      "ok": {
+        "lines": [
+          {
+            "t": "Detalle actualizado",
+            "w": 700
+          },
+          {
+            "t": "\nAsí va a salir impreso en la factura:\n\n“{{valor}}”"
+          }
+        ]
+      }
+    },
+    "nombre": {
+      "ok_corto": {
+        "lines": [
+          {
+            "t": "Nombre actualizado",
+            "w": 700
+          },
+          {
+            "t": "\nAhora se llama “{{valor}}”. Es solo para que lo encuentres: en la factura sigue saliendo el detalle completo."
+          }
+        ]
+      },
+      "ok_recortado": {
+        "condicion": "más de 24 caracteres",
+        "lines": [
+          {
+            "t": "Nombre actualizado",
+            "w": 700
+          },
+          {
+            "t": "\nLo guardé como “{{valor_recortado}}”. Lo recorté a 24 caracteres para que se vea completo en la lista del chat.\n\nEl detalle impreso en la factura no cambió, ese sigue igual de largo."
+          }
+        ]
+      }
+    },
+    "correo": {
+      "error": {
+        "lines": [
+          {
+            "t": "Ese correo no parece válido. Revísalo y mándamelo otra vez."
+          }
+        ],
+        "ask": "correo"
+      },
+      "ok": {
+        "lines": [
+          {
+            "t": "Correo actualizado",
+            "w": 700
+          },
+          {
+            "t": "\nDe ahora en adelante las facturas de {{cliente.nombre}} van a {{valor}}."
+          }
+        ]
+      },
+      "validacion": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+    }
+  }
+}
