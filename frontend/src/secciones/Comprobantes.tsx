@@ -1,42 +1,42 @@
-/** Comprobantes: historial con filtros por tipo y bandeja de retenciones
- *  recibidas (maqueta líneas 366-526). La bandeja depende de la bandera
- *  `archivos` del plan; sin ella se muestra el muro.
+/** Comprobantes: el historial de lo que TÚ emitiste, con filtros por tipo
+ *  (maqueta líneas 366-526).
+ *
+ *  Las retenciones recibidas se fueron de aquí a su propia sección: no son
+ *  comprobantes emitidos, son los que te entregaron a ti, y como filtro de esta
+ *  tabla se leían como una cuarta cosa que uno emite. La tarjeta sigue en el
+ *  modal de crear —es donde la gente la busca— y abre ahí mismo el mismo
+ *  formulario que esa sección, sin obligar a salirse a buscarlo.
  *
  *  Desde aquí se crea también un comprobante nuevo (modal en NuevaFactura). */
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/cliente";
 import type { Comprobante as TComprobante } from "../api/tipos";
-import { usePlan } from "../plan/PlanContexto";
-import { MuroPlan } from "../plan/Bloqueos";
-import { Retenciones } from "./Retenciones";
 import { CrearComprobante } from "./NuevaFactura";
 import { ETIQUETA_ID, dinero, tonoEstado } from "../util/formato";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
 
-/** Los cuatro filtros del historial, y no hay más: el filtro vive en un
+/** Los tres filtros del historial, y no hay más: el filtro vive en un
  *  `useState` de Panel.tsx y solo recibe ids del submenú, así que no existe
  *  enlace ni marcador que pueda pedir otro. `debito` estuvo aquí por si acaso,
  *  y ese «por si acaso» era justo lo que obligaba a buscar a ciegas más abajo. */
-export type Filtro = "todos" | "factura" | "credito" | "retencion";
+export type Filtro = "todos" | "factura" | "credito";
 
-/** Los filtros del historial. Se ofrecen los tres documentos del panel; la
+/** Los filtros del historial. Se ofrecen los dos documentos que se emiten; la
  *  nota de débito salió de la oferta y ya no tiene chip propio, pero las que se
  *  emitieron en su día se siguen viendo en «Todos»: esto filtra el archivo, no
- *  lo recorta.
- *
- *  «Retenciones recibidas» no filtra nada de esta tabla —no son comprobantes
- *  emitidos, son los que te mandaron a ti— y por eso no lleva `tipos`: abre su
- *  propia bandeja. */
+ *  lo recorta. */
 const FILTROS: Array<{ id: Filtro; label: string; tipos: string[] }> = [
   { id: "todos", label: "Todos", tipos: [] },
   { id: "factura", label: "Facturas", tipos: ["FACTURA"] },
   { id: "credito", label: "Notas de crédito", tipos: ["NOTA_CREDITO"] },
-  { id: "retencion", label: "Retenciones recibidas", tipos: [] },
 ];
 
 interface Props {
-  onVerPlanes: () => void;
+  /** Lleva a la sección de Retenciones recibidas. La tarjeta del modal de crear
+   *  abre allí mismo el formulario —es donde la gente lo busca—; esto es el
+   *  enlace de «Ver mis retenciones» que aparece cuando ya se guardó. */
+  onRetenciones: () => void;
   /** Filtro pedido desde la barra lateral (al tocar un ítem del submenú). */
   filtroExterno?: Filtro;
   /** Avisa a la barra lateral qué filtro quedó activo, para resaltarlo ahí. */
@@ -46,8 +46,7 @@ interface Props {
   onConteos?: (c: Record<string, number>) => void;
 }
 
-export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }: Props) {
-  const { permite } = usePlan();
+export function Comprobantes({ onRetenciones, filtroExterno, onFiltro, onConteos }: Props) {
   const [filtro, setFiltroInterno] = useState<Filtro>(filtroExterno ?? "todos");
   const [busqueda, setBusqueda] = useState("");
   const [creando, setCreando] = useState(false);
@@ -104,10 +103,6 @@ export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }
   const cuentaPorFiltro = useMemo(() => {
     const cuenta: Record<string, number> = {};
     for (const f of FILTROS) {
-      // Las retenciones recibidas no salen de esta tabla, así que aquí no hay
-      // nada que contar: un número ahí sería el total de lo emitido, que no
-      // tiene nada que ver con lo que abre el chip.
-      if (f.id === "retencion") continue;
       cuenta[f.id] = f.tipos.length
         ? (docs ?? []).filter((d) => f.tipos.includes(d.tipo)).length
         : (docs ?? []).length;
@@ -133,44 +128,17 @@ export function Comprobantes({ onVerPlanes, filtroExterno, onFiltro, onConteos }
         <CrearComprobante
           onCerrar={() => setCreando(false)}
           onRecargar={cargar}
-          // La retención recibida no se emite: el selector solo la señala y
-          // manda aquí, que es la misma sección un chip más allá.
+          // La tarjeta «Retención recibida» abre su formulario DENTRO de ese
+          // modal. Esto es el enlace que sale después de guardar, para ir a
+          // verla en su sección.
           onRetenciones={() => {
             setCreando(false);
-            setFiltro("retencion");
+            onRetenciones();
           }}
         />
       )}
     </>
   );
-
-  // La bandeja de retenciones recibidas exige la bandera `archivos` del plan
-  if (filtro === "retencion" && !permite("archivos")) {
-    return (
-      <div style={{ display: "grid", gap: 18 }}>
-        {cabecera}
-        {/* Texto literal de la maqueta (Dashboard.dc.html, líneas 456-458) */}
-        <MuroPlan
-          titulo="El resumen de retenciones viene con un plan superior"
-          texto="Tus retenciones recibidas siguen sumándose. Al activar el plan que incluye este resumen, verás aquí el crédito acumulado y podrás descargar cada archivo."
-          textoBoton="Ver los planes"
-          onVerPlanes={onVerPlanes}
-        />
-      </div>
-    );
-  }
-
-  // Con el filtro de retenciones, la tabla genérica se APAGA y se sustituye por
-  // su panel propio: son documentos recibidos, no emitidos, y no comparten ni
-  // columnas ni estados con el resto del historial.
-  if (filtro === "retencion") {
-    return (
-      <div style={{ display: "grid", gap: 18 }}>
-        {cabecera}
-        <Retenciones />
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: "grid", gap: 18 }}>

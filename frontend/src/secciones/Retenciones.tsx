@@ -1,28 +1,36 @@
-/** Bandeja de retenciones recibidas.
+/** Retenciones recibidas: sección propia, fuera de Comprobantes.
  *
  * El inquilino NUNCA emite una retención: solo la recibe. Por eso la columna es
- * «Empresa que retuvo» y no «Cliente», y por eso esta pantalla vive dentro de
- * Comprobantes pero no comparte ni columnas ni estados con el historial de lo
- * emitido.
+ * «Empresa que retuvo» y no «Cliente», y por eso esto no vive dentro del
+ * historial de lo emitido.
  *
  * EL PERÍODO ES EL AÑO. El contribuyente piensa en «lo que me retuvieron este
  * año», que además es el período en que se usa el crédito de renta. El
- * desplegable ofrece los años en los que hay algo, y el servidor recalcula
- * saldo, conteo y lista juntos: las tres cifras hablan siempre del mismo
- * período.
+ * desplegable ofrece los años con datos, y el servidor recalcula saldo, conteo
+ * y lista juntos: las tres cifras hablan siempre del mismo período.
  *
- * DOS PUERTAS PARA REGISTRAR. Con el XML se lee todo del comprobante y se le
- * pregunta al SRI. Sin XML se teclea: entonces no hay clave de acceso a la que
- * preguntar, así que la fila SUMA —el papel lo tiene el cliente en la mano y
- * esconderlo le haría declarar de más— pero queda MARCADA como sin respaldo.
- *
- * El cargador no se esconde con `activo` en falso: el interruptor del buzón
- * apaga la automatización por correo, no el archivador del cliente.
+ * DOS PUERTAS PARA REGISTRAR, las dos en el MISMO formulario (`PanelRetencion`).
+ * Se abre desde el botón de esta sección y desde la tarjeta «Retención
+ * recibida» del selector de Comprobantes, que es donde la gente la busca cuando
+ * le entregan el papel. Con el XML se lee todo del comprobante y se le pregunta
+ * al SRI; sin XML se teclea, y entonces no hay clave de acceso a la que
+ * preguntar: la fila SUMA —el papel lo tiene el cliente en la mano y esconderlo
+ * le haría declarar de más— pero queda MARCADA como sin respaldo.
  */
 
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { ErrorApi, api } from "../api/cliente";
+import { usePlan } from "../plan/PlanContexto";
+import { MuroPlan } from "../plan/Bloqueos";
 import { Cargando, ErrorSeccion, Vacio } from "../ui/Estados";
 import { dinero, fechaCorta, hoyEnEcuador } from "../util/formato";
 import { cent, num } from "../util/totales";
@@ -35,7 +43,7 @@ interface LineaRetencion {
   doc_sustento?: string;
 }
 
-interface RetencionFila {
+export interface RetencionFila {
   id: string;
   quien: string;
   ruc: string | null;
@@ -79,19 +87,71 @@ interface Bandeja {
   retenciones: RetencionFila[];
 }
 
+/* --- Iconos --------------------------------------------------------------- */
+
+const ICONO_CALENDARIO =
+  "M7 3v3M17 3v3M3.5 9h17M4 5.5h16a1 1 0 011 1V20a1 1 0 01-1 1H4a1 1 0 01-1-1V6.5a1 1 0 011-1z";
+const ICONO_LUPA = "M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4";
+const ICONO_SUBIR = "M12 16V4M7 9l5-5 5 5M4 20h16";
+const ICONO_SOBRE = "M3.5 6.5h17v11h-17zM3.5 6.5l8.5 6.5 8.5-6.5";
+const ICONO_CHAT = "M20.5 12a8 8 0 11-3.4-6.5M21 4.5l-8 8";
+const ICONO_INFO = "M12 21a9 9 0 100-18 9 9 0 000 18zM12 8.2v.1M11.4 12h.6v4h.6";
+const ICONO_CERRAR = "M5 5l14 14M19 5L5 19";
+const ICONO_CHEVRON = "M6 9l6 6 6-6";
+
+function Svg({
+  d,
+  tamano = 16,
+  color = "currentColor",
+  grosor = 1.9,
+}: {
+  d: string;
+  tamano?: number;
+  color?: string;
+  grosor?: number;
+}) {
+  return (
+    <svg
+      width={tamano}
+      height={tamano}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={grosor}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** De dónde salió cada fila. Es la columna de icono de la maqueta: dice si la
+ *  retención llegó sola o la metió el propio contribuyente. */
+const ORIGEN: Record<string, { icono: string; titulo: string }> = {
+  BUZON: { icono: ICONO_SOBRE, titulo: "Llegó por correo al buzón" },
+  MANUAL: { icono: ICONO_SUBIR, titulo: "La registraste tú" },
+  WHATSAPP: { icono: ICONO_CHAT, titulo: "La mandaste por WhatsApp" },
+};
+
 /** Los cuatro estados de una fila. `verificada: false` vale para TRES cosas
  *  distintas —tecleada sin clave, esperando respuesta y rechazada— y pintarlas
- *  igual dejaba un documento muerto diciendo «comprobando» para siempre. */
-function estadoDe(r: RetencionFila): { clase: string; texto: string } {
+ *  igual dejaba un documento muerto diciendo «comprobando» para siempre.
+ *
+ *  La confirmada devuelve `null`: es el caso normal y en la maqueta la fila va
+ *  limpia. Lo que hay que señalar es justo lo que NO está confirmado. */
+function estadoDe(r: RetencionFila): { clase: string; texto: string } | null {
   if (r.sin_respaldo)
     return { clase: "fc-estado--neutro", texto: "Registrada a mano · suma, sin XML" };
-  if (r.verificada) return { clase: "fc-estado--exito", texto: "Confirmada por el SRI" };
-  if (r.respondido)
-    return { clase: "fc-estado--error", texto: "El SRI no la reconoce · no suma" };
+  if (r.verificada) return null;
+  if (r.respondido) return { clase: "fc-estado--error", texto: "El SRI no la reconoce · no suma" };
   return { clase: "fc-estado--aviso", texto: "Comprobando con el SRI · todavía no suma" };
 }
 
-export function Retenciones() {
+export function Retenciones({ onVerPlanes }: { onVerPlanes: () => void }) {
+  const { permite } = usePlan();
   const [datos, setDatos] = useState<Bandeja | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** `null` hasta que el usuario elige: la primera carga la decide el servidor
@@ -107,6 +167,7 @@ export function Retenciones() {
    *  recarga viaja: si se cambia el año y la primera respuesta llega la última,
    *  pintaría la lista del año anterior debajo de un selector que dice otro. */
   const peticion = useRef(0);
+  const puede = permite("archivos");
 
   const cargar = () => {
     const mia = ++peticion.current;
@@ -124,9 +185,10 @@ export function Retenciones() {
   };
 
   useEffect(() => {
-    void cargar();
+    // Sin la función del plan el servidor contesta 402: no se le pregunta.
+    if (puede) void cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anio]);
+  }, [anio, puede]);
 
   // El toast se va solo: es un acuse, no un estado de la pantalla.
   useEffect(() => {
@@ -145,6 +207,20 @@ export function Retenciones() {
     );
   }, [datos, busqueda]);
 
+  // El muro va DESPUÉS de los hooks, nunca antes: sacarlo arriba cambiaría el
+  // número de hooks que corren entre un render y el siguiente.
+  if (!puede) {
+    return (
+      /* Texto literal de la maqueta (Dashboard.dc.html, líneas 456-458) */
+      <MuroPlan
+        titulo="El resumen de retenciones viene con un plan superior"
+        texto="Tus retenciones recibidas siguen sumándose. Al activar el plan que incluye este resumen, verás aquí el crédito acumulado y podrás descargar cada archivo."
+        textoBoton="Ver los planes"
+        onVerPlanes={onVerPlanes}
+      />
+    );
+  }
+
   if (error) return <ErrorSeccion mensaje={error} onReintentar={() => void cargar()} />;
   if (!datos) return <Cargando />;
 
@@ -152,7 +228,24 @@ export function Retenciones() {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div className="fc-kpi">
+      {/* La bajada de la maqueta. Va aquí y no en la cabecera del panel porque
+          es de ESTA sección: dice en una frase qué es una retención recibida,
+          que es justo lo que no sabe quien entra por primera vez. */}
+      <p
+        style={{
+          margin: "-4px 0 2px",
+          maxWidth: "78ch",
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: "var(--texto-suave)",
+          textWrap: "pretty",
+        }}
+      >
+        Lo que tus clientes retuvieron y entregaron al SRI a tu nombre. Ya está descontado de tus
+        impuestos por pagar.
+      </p>
+
+      <div className="fc-kpi fc-kpi--tres">
         <section className="fc-tarjeta--oscura" style={{ padding: "20px 22px" }}>
           <div className="fc-halo" />
           <div style={{ position: "relative", zIndex: 1 }}>
@@ -166,12 +259,8 @@ export function Retenciones() {
               {dinero(datos.saldo)}
             </div>
             <p style={{ fontSize: 12.5, color: "#A6BFB2", margin: 0, lineHeight: 1.5 }}>
-              Crédito acumulado en {datos.anio}, listo para descontar.{" "}
-              {datos.documentos === 1
-                ? "1 comprobante"
-                : `${datos.documentos} comprobantes`}{" "}
-              de{" "}
-              {datos.agentes === 1 ? "1 empresa" : `${datos.agentes} empresas distintas`}.
+              {datos.documentos === 1 ? "1 documento" : `${datos.documentos} documentos`} de{" "}
+              {datos.agentes === 1 ? "1 empresa" : `${datos.agentes} empresas`} en {datos.anio}.
             </p>
             {/* Lo tecleado a mano suma, y se dice cuánto: en una revisión hay
                 que saber qué parte del crédito la defiende el XML y cuál el
@@ -191,67 +280,67 @@ export function Retenciones() {
           </div>
         </section>
 
-        <section className="fc-tarjeta" style={{ padding: "20px 22px" }}>
-          <p className="fc-kicker" style={{ margin: 0 }}>
-            Retención de renta
-          </p>
-          <div className="fc-cifra" style={{ fontSize: 30, margin: "8px 0 6px" }}>
-            {dinero(datos.saldo_renta)}
-          </div>
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: 0, lineHeight: 1.5 }}>
-            Crédito para tu declaración anual de impuesto a la renta.
-          </p>
-        </section>
-
-        <section className="fc-tarjeta" style={{ padding: "20px 22px" }}>
-          <p className="fc-kicker" style={{ margin: 0 }}>
-            Retención de IVA
-          </p>
-          <div className="fc-cifra" style={{ fontSize: 30, margin: "8px 0 6px" }}>
-            {dinero(datos.saldo_iva)}
-          </div>
-          <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: 0, lineHeight: 1.5 }}>
-            {/* Renta e IVA son impuestos distintos: sumarlos y restarlos juntos
-                de un solo impuesto daría un número fiscalmente falso. */}
-            Baja el IVA que declaras. No se mezcla con el de renta.
-          </p>
-        </section>
+        <TarjetaCifra
+          titulo="Retención de renta"
+          cifra={datos.saldo_renta}
+          pie="Acumulada, se descuenta en tu renta anual."
+        />
+        {/* Renta e IVA son impuestos distintos: sumarlos y restarlos juntos de
+            uno solo daría un número que el SRI no acepta. */}
+        <TarjetaCifra
+          titulo="Retención de IVA"
+          cifra={datos.saldo_iva}
+          pie="Acumulada, baja tu IVA mensual a pagar."
+        />
       </div>
 
       <section
         className="fc-tarjeta"
-        style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          padding: "14px 16px",
+        }}
       >
-        <label className="fc-label" htmlFor="ret-anio" style={{ margin: 0 }}>
-          Año
-        </label>
-        <select
-          id="ret-anio"
-          className="fc-campo"
-          style={{ width: "auto", minWidth: 110 }}
-          value={datos.anio}
-          onChange={(e) => {
+        <SelectorAnio
+          anio={datos.anio}
+          anios={datos.anios}
+          onCambio={(a) => {
             setDatos(null);
             setDetalle(null);
-            setAnio(Number(e.target.value));
+            setAnio(a);
           }}
-        >
-          {datos.anios.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-
-        <input
-          className="fc-campo"
-          style={{ flex: 1, minWidth: 200, maxWidth: 360 }}
-          type="search"
-          value={busqueda}
-          placeholder="Busca por empresa, RUC, número o factura"
-          aria-label="Buscar en tus retenciones"
-          onChange={(e) => setBusqueda(e.target.value)}
         />
+
+        <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 520 }}>
+          {/* Lo mismo que el calendario: sin esto, pulsar la lupa no enfoca el
+              buscador. */}
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: 13,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--texto-tenue)",
+              display: "grid",
+              pointerEvents: "none",
+            }}
+          >
+            <Svg d={ICONO_LUPA} tamano={15} />
+          </span>
+          <input
+            className="fc-campo"
+            style={{ paddingLeft: 36 }}
+            type="search"
+            value={busqueda}
+            placeholder="Buscar por empresa, RUC o número de documento"
+            aria-label="Buscar en tus retenciones"
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
 
         <div style={{ display: "flex", gap: 10, marginLeft: "auto", flexWrap: "wrap" }}>
           <button
@@ -262,42 +351,19 @@ export function Retenciones() {
           >
             Descargar todo
           </button>
+          {/* `.fc-btn--primario` y no un verde en línea: `.fc-btn` a secas no
+              trae fondo ni `:hover` —cada variante pone el suyo—, así que el
+              botón principal de la sección era el único del panel que no
+              respondía al pasar por encima. */}
           <button
             type="button"
-            className="fc-btn fc-btn--oscuro"
+            className="fc-btn fc-btn--primario"
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
             onClick={() => setRegistrando(true)}
           >
+            <Svg d={ICONO_SUBIR} tamano={14} grosor={2.1} />
             Subir una retención
           </button>
-        </div>
-      </section>
-
-      <section
-        className="fc-tarjeta"
-        style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}
-      >
-        <div
-          style={{
-            flex: 1,
-            minWidth: 260,
-            fontSize: 13.5,
-            lineHeight: 1.55,
-            color: "var(--texto-suave)",
-            textWrap: "pretty",
-          }}
-        >
-          Guardamos el XML de cada comprobante de retención, con su detalle de renta y de IVA, por
-          siete años.
-          {datos.buzon && (
-            <>
-              {" "}
-              También puedes reenviarlos a{" "}
-              <span className="fc-mono" style={{ fontSize: 12.5 }}>
-                {datos.buzon}
-              </span>{" "}
-              y entran solos.
-            </>
-          )}
         </div>
       </section>
 
@@ -317,23 +383,26 @@ export function Retenciones() {
           />
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="fc-tabla" style={{ minWidth: 980 }}>
+            <table className="fc-tabla" style={{ minWidth: 1000 }}>
               <thead>
                 <tr>
-                  <th scope="col">Emisión</th>
+                  {/* Dos rótulos en una sola columna, como la maqueta: debajo
+                      del día va el botón que abre el desglose. */}
+                  <th scope="col">
+                    Emisión
+                    <span style={{ display: "block", marginTop: 4 }}>Detalle</span>
+                  </th>
+                  <th scope="col">
+                    <span title="De dónde salió cada retención">Origen</span>
+                  </th>
                   <th scope="col">Empresa que retuvo</th>
                   <th scope="col">Factura relacionada</th>
                   <th scope="col" className="fc-num">
                     Base imponible
                   </th>
-                  <th scope="col" className="fc-num">
-                    Renta · IVA
-                  </th>
+                  <th scope="col">Renta · IVA</th>
                   <th scope="col" className="fc-num">
                     Valor retenido
-                  </th>
-                  <th scope="col" className="fc-num">
-                    Detalle
                   </th>
                 </tr>
               </thead>
@@ -341,11 +410,39 @@ export function Retenciones() {
                 {filas.map((r) => {
                   const estado = estadoDe(r);
                   const abierta = detalle === r.id;
+                  const origen = ORIGEN[r.origen] ?? ORIGEN.MANUAL;
                   return (
                     <Fragment key={r.id}>
                       <tr>
-                        <td style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                          {r.fecha ? fechaCorta(r.fecha) : "—"}
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <div style={{ fontSize: 13 }}>{r.fecha ? fechaCorta(r.fecha) : "—"}</div>
+                          <button
+                            type="button"
+                            className="fc-btn fc-btn--contorno"
+                            style={{ marginTop: 8, padding: "5px 13px", fontSize: 12 }}
+                            aria-expanded={abierta}
+                            onClick={() => setDetalle(abierta ? null : r.id)}
+                          >
+                            {abierta ? "Ocultar" : "Ver detalle"}
+                          </button>
+                        </td>
+                        <td>
+                          <span
+                            title={origen.titulo}
+                            aria-label={origen.titulo}
+                            role="img"
+                            style={{
+                              display: "grid",
+                              placeItems: "center",
+                              width: 30,
+                              height: 30,
+                              borderRadius: 9,
+                              border: "1px solid var(--borde)",
+                              color: "var(--texto-tenue)",
+                            }}
+                          >
+                            <Svg d={origen.icono} tamano={14} />
+                          </span>
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{r.quien}</div>
@@ -355,41 +452,34 @@ export function Retenciones() {
                           >
                             {r.ruc ?? "sin RUC"} · {r.numero}
                           </div>
-                          <div
-                            className={`fc-estado ${estado.clase}`}
-                            style={{ marginTop: 6, fontSize: 11 }}
-                            title={r.verificacion ?? undefined}
-                          >
-                            <span className="fc-estado__punto" />
-                            {estado.texto}
-                          </div>
+                          {/* Solo lo que NO está confirmado lleva marca: la fila
+                              normal es la de la maqueta, limpia. */}
+                          {estado && (
+                            <div
+                              className={`fc-estado ${estado.clase}`}
+                              style={{ marginTop: 6, fontSize: 11 }}
+                              title={r.verificacion ?? undefined}
+                            >
+                              <span className="fc-estado__punto" />
+                              {estado.texto}
+                            </div>
+                          )}
                         </td>
                         <td className="fc-mono" style={{ fontSize: 12.5 }}>
                           {r.factura ?? "—"}
                         </td>
-                        <td className="fc-num">{dinero(r.base)}</td>
-                        <td className="fc-num">
-                          <div style={{ fontSize: 13 }}>
-                            {r.porcentaje_renta ? `${r.porcentaje_renta}%` : "—"} ·{" "}
-                            {r.porcentaje_iva ? `${r.porcentaje_iva}%` : "—"}
-                          </div>
-                          <div style={{ fontSize: 11.5, color: "var(--texto-tenue)" }}>
-                            {dinero(r.renta)} · {dinero(r.iva)}
-                          </div>
+                        <td className="fc-num" style={{ fontSize: 13.5 }}>
+                          {dinero(r.base)}
                         </td>
-                        <td className="fc-num" style={{ fontWeight: 700 }}>
+                        <td style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                          {r.porcentaje_renta ? `${r.porcentaje_renta}%` : "—"} ·{" "}
+                          {r.porcentaje_iva ? `${r.porcentaje_iva}%` : "—"}
+                        </td>
+                        <td
+                          className="fc-num"
+                          style={{ fontWeight: 700, color: "var(--verde-medio)" }}
+                        >
                           {dinero(r.retenido)}
-                        </td>
-                        <td className="fc-num">
-                          <button
-                            type="button"
-                            className="fc-btn fc-btn--texto"
-                            style={{ padding: "4px 0", fontSize: 12.5 }}
-                            aria-expanded={abierta}
-                            onClick={() => setDetalle(abierta ? null : r.id)}
-                          >
-                            {abierta ? "Ocultar" : "Ver detalle"}
-                          </button>
                         </td>
                       </tr>
                       {abierta && (
@@ -409,7 +499,7 @@ export function Retenciones() {
       </section>
 
       {registrando && (
-        <RegistrarRetencion
+        <ModalRetencion
           anio={datos.anio}
           onCerrar={() => setRegistrando(false)}
           onGuardada={async (fila, mensaje) => {
@@ -442,7 +532,91 @@ export function Retenciones() {
   );
 }
 
-/* --- Detalle de una fila ---------------------------------------------------- */
+function TarjetaCifra({ titulo, cifra, pie }: { titulo: string; cifra: string; pie: string }) {
+  return (
+    <section className="fc-tarjeta" style={{ padding: "20px 22px" }}>
+      <p className="fc-kicker" style={{ margin: 0 }}>
+        {titulo}
+      </p>
+      <div className="fc-cifra" style={{ fontSize: 30, margin: "8px 0 6px" }}>
+        {dinero(cifra)}
+      </div>
+      <p style={{ fontSize: 12.5, color: "var(--texto-tenue)", margin: 0, lineHeight: 1.5 }}>
+        {pie}
+      </p>
+    </section>
+  );
+}
+
+/** El desplegable de año con forma de píldora, como la maqueta. El `<select>`
+ *  es el de verdad —teclado y lector de pantalla salen gratis—; lo que se pinta
+ *  encima es el icono y la flecha, con la del navegador apagada. */
+function SelectorAnio({
+  anio,
+  anios,
+  onCambio,
+}: {
+  anio: number;
+  anios: number[];
+  onCambio: (a: number) => void;
+}) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+      {/* Sin `pointerEvents: none` el icono se come el clic: pulsar el
+          calendario —que es justo donde se pincha— no desplegaba el año. */}
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 13,
+          color: "var(--texto-tenue)",
+          display: "grid",
+          pointerEvents: "none",
+        }}
+      >
+        <Svg d={ICONO_CALENDARIO} tamano={14} />
+      </span>
+      <select
+        className="fc-campo"
+        aria-label="Año de las retenciones"
+        value={anio}
+        onChange={(e) => onCambio(Number(e.target.value))}
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          width: "auto",
+          paddingLeft: 36,
+          paddingRight: 34,
+          borderRadius: "var(--radio-pildora)",
+          fontWeight: 600,
+          fontSize: 13.5,
+          cursor: "pointer",
+        }}
+      >
+        {anios.map((a) => (
+          <option key={a} value={a}>
+            Año {a}
+          </option>
+        ))}
+      </select>
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          right: 13,
+          color: "var(--texto-tenue)",
+          display: "grid",
+          pointerEvents: "none",
+        }}
+      >
+        <Svg d={ICONO_CHEVRON} tamano={13} grosor={2.1} />
+      </span>
+    </div>
+  );
+}
+
+/* --- Detalle de una fila -------------------------------------------------- */
 
 function Detalle({ fila }: { fila: RetencionFila }) {
   const [bajando, setBajando] = useState(false);
@@ -467,10 +641,10 @@ function Detalle({ fila }: { fila: RetencionFila }) {
     <div style={{ display: "grid", gap: 12, padding: "4px 0 8px" }}>
       <div style={{ display: "flex", gap: 26, flexWrap: "wrap", fontSize: 13 }}>
         <Dato titulo="Concepto" valor={fila.concepto ?? "—"} />
-        <Dato titulo="Origen" valor={ORIGEN[fila.origen] ?? fila.origen} />
-        <Dato titulo="Base imponible" valor={dinero(fila.base)} />
+        <Dato titulo="Cómo entró" valor={(ORIGEN[fila.origen] ?? ORIGEN.MANUAL).titulo} />
         <Dato titulo="Retención de renta" valor={dinero(fila.renta)} />
         <Dato titulo="Retención de IVA" valor={dinero(fila.iva)} />
+        <Dato titulo="Total retenido" valor={dinero(fila.retenido)} />
       </div>
 
       {/* El motivo del rechazo, escrito. En el `title` de la fila no existe en
@@ -548,12 +722,6 @@ function Detalle({ fila }: { fila: RetencionFila }) {
   );
 }
 
-const ORIGEN: Record<string, string> = {
-  BUZON: "Llegó por correo",
-  MANUAL: "La registraste tú",
-  WHATSAPP: "La mandaste por WhatsApp",
-};
-
 function Dato({ titulo, valor }: { titulo: string; valor: string }) {
   return (
     <div>
@@ -577,24 +745,63 @@ function Dato({ titulo, valor }: { titulo: string; valor: string }) {
  *  el texto: leer el mensaje para decidir se rompe en cuanto alguien le cambie
  *  una coma. */
 const QUE_HACER: Record<number, string> = {
+  402: "Entra en Retenciones recibidas desde el menú: ahí se ve qué plan la incluye.",
   409: "No hace falta registrarla otra vez: ya la tienes en la lista, con su crédito.",
   422:
     "Si subes un archivo, tiene que ser el XML del comprobante de retención, tal cual te lo mandó" +
     " tu cliente y a tu nombre. Si prefieres escribirla, revisa que los valores no estén en cero.",
 };
 
-const ICONO_SUBIR = "M12 16V4M7 9l5-5 5 5M4 20h16";
-
-function RegistrarRetencion({
+/** El formulario dentro de su propia capa de modal. Lo usa esta sección; el
+ *  selector de Comprobantes monta `PanelRetencion` dentro de la capa que ya
+ *  tiene abierta. */
+function ModalRetencion({
   anio,
   onCerrar,
   onGuardada,
 }: {
-  /** El año que la lista enseña: lo de fuera se guarda igual, pero no aparece
-   *  ahí, y hay que decirlo en vez de dejar que parezca que se perdió. */
   anio: number;
   onCerrar: () => void;
   onGuardada: (fila: RetencionFila, mensaje: string) => Promise<void> | void;
+}) {
+  return createPortal(
+    /* Sin cierre por clic en el fondo. Lo tenía, pero desde aquí no se ve si
+       hay una subida en vuelo, y cerrar a media subida dejaba la respuesta del
+       servidor —incluido el motivo del rechazo— cayendo sobre un componente ya
+       desmontado: ni se veía el fallo ni aparecía la fila. La tecla Escape sí
+       mira `guardando`, y desde Comprobantes esta puerta tampoco cierra así. */
+    <div className="fc-modal" role="presentation">
+      <PanelRetencion anio={anio} onCerrar={onCerrar} onGuardada={onGuardada} />
+    </div>,
+    document.body,
+  );
+}
+
+/** El formulario de «Registrar retención recibida», sin la capa del modal.
+ *
+ *  Vive suelto para que el selector de Comprobantes abra EXACTAMENTE el mismo:
+ *  allí el pie lleva «‹ Otro documento» en vez de «Cancelar», que es la única
+ *  diferencia entre las dos entradas.
+ */
+export function PanelRetencion({
+  anio,
+  onCerrar,
+  onGuardada,
+  onVolver,
+  onVerTodas,
+}: {
+  /** El año que la lista enseña: lo de fuera se guarda igual, pero no aparece
+   *  ahí, y hay que decirlo en vez de dejar que parezca que se perdió. Desde el
+   *  selector de Comprobantes no hay lista detrás, y no se avisa de nada. */
+  anio?: number;
+  onCerrar: () => void;
+  onGuardada: (fila: RetencionFila, mensaje: string) => Promise<void> | void;
+  /** Si viene, el pie ofrece volver al selector de documentos en vez de
+   *  cancelar: es la entrada desde Comprobantes. */
+  onVolver?: () => void;
+  /** Desde Comprobantes no hay lista detrás, así que tras guardar se ofrece ir
+   *  a verla. Desde la propia sección sobra: ya está a la vista. */
+  onVerTodas?: () => void;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const entrada = useRef<HTMLInputElement>(null);
@@ -602,13 +809,14 @@ function RegistrarRetencion({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [queHacer, setQueHacer] = useState<string | null>(null);
+  const [listo, setListo] = useState<string | null>(null);
 
   const [quien, setQuien] = useState("");
   const [ruc, setRuc] = useState("");
   const [numero, setNumero] = useState("");
   // Sin fecha la fila no cae en NINGÚN año: la bandeja filtra por
-  // `fecha_emision` entre dos días, así que una retención sin ella se
-  // guardaría y no se volvería a ver. Se pide, y viene puesta la de hoy.
+  // `fecha_emision` entre dos días, así que una retención sin ella se guardaría
+  // y no se volvería a ver. Se pide, y viene puesta la de hoy.
   const [fecha, setFecha] = useState(hoyEnEcuador);
   const [base, setBase] = useState("");
   const [factura, setFactura] = useState("");
@@ -621,7 +829,7 @@ function RegistrarRetencion({
 
   // Cerrar a media subida deja la respuesta —incluido el motivo del rechazo—
   // cayendo sobre un componente desmontado: ni se ve el fallo ni aparece la
-  // fila. «Cancelar» ya estaba bloqueado mientras sube; estas dos salidas no.
+  // fila. El pie ya está bloqueado mientras sube; la tecla Escape no lo estaba.
   useEffect(() => {
     function alPulsar(e: KeyboardEvent) {
       if (e.key === "Escape" && !guardando) onCerrar();
@@ -633,10 +841,10 @@ function RegistrarRetencion({
   // En centavos: sumar dos decimales con coma flotante deja 0.30000000000000004
   // en la cifra que el cliente compara con su papel.
   const credito = (cent(num(renta)) + cent(num(iva))) / 100;
-  // El RUC entra en la lista: sin XML no hay clave de acceso, así que la fila
-  // se distingue de otra por (número, RUC de quien retuvo). Sin él, el
-  // «001-001-000000123» de un cliente choca con el de otro y al segundo se le
-  // dice que ya la tiene.
+  // El RUC entra en la lista de obligatorios: sin XML no hay clave de acceso,
+  // así que la fila se distingue de otra por (número, RUC de quien retuvo). Sin
+  // él, el «001-001-000000123» de un cliente choca con el de otro y al segundo
+  // se le dice que ya la tiene.
   const puedeGuardar =
     quien.trim().length >= 2 &&
     ruc.trim().length === 13 &&
@@ -649,11 +857,11 @@ function RegistrarRetencion({
    *  Las fechas son ISO, así que basta el prefijo: `new Date` en Ecuador cambia
    *  el día. */
   const mensajeDe = (fila: RetencionFila) => {
-    const cabecera = `Guardada la ${fila.numero}${fila.quien ? ` de ${fila.quien}` : ""}.`;
-    if (fila.fecha && !fila.fecha.startsWith(String(anio))) {
-      return `${cabecera} Es de ${fila.fecha.slice(0, 4)}: cámbiale el año a la lista para verla.`;
+    const cabeza = `Guardada la ${fila.numero}${fila.quien ? ` de ${fila.quien}` : ""}.`;
+    if (anio !== undefined && fila.fecha && !fila.fecha.startsWith(String(anio))) {
+      return `${cabeza} Es de ${fila.fecha.slice(0, 4)}: cámbiale el año a la lista para verla.`;
     }
-    return `${cabecera} Ya está en tu lista.`;
+    return `${cabeza} Ya está en tus retenciones.`;
   };
 
   async function enviar(archivo: File | null) {
@@ -661,6 +869,7 @@ function RegistrarRetencion({
     setGuardando(true);
     setError(null);
     setQueHacer(null);
+    setListo(null);
     try {
       // Los campos vacíos NO se mandan: el servidor los tipa (fecha, decimales)
       // y una cadena vacía es un 422, no un «no lo sé».
@@ -676,7 +885,21 @@ function RegistrarRetencion({
         if (iva.trim()) campos.iva = String(num(iva));
       }
       const fila = await api.subir<RetencionFila>("/retenciones", archivo, campos);
-      await onGuardada(fila, mensajeDe(fila));
+      const mensaje = mensajeDe(fila);
+      setListo(mensaje);
+      // Se vacía. Desde Comprobantes el modal NO se cierra al guardar, y con los
+      // campos puestos el botón seguía activo: el segundo clic borraba el acuse
+      // —con su único enlace a la lista— para contestar «ya la tienes». Vacío
+      // queda además listo para la siguiente, que ahí es lo normal.
+      setQuien("");
+      setRuc("");
+      setNumero("");
+      setFecha(hoyEnEcuador());
+      setBase("");
+      setFactura("");
+      setRenta("");
+      setIva("");
+      await onGuardada(fila, mensaje);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No pudimos registrar la retención");
       setQueHacer(e instanceof ErrorApi ? (QUE_HACER[e.status] ?? null) : null);
@@ -688,302 +911,321 @@ function RegistrarRetencion({
     }
   }
 
-  return createPortal(
+  return (
     <div
-      className="fc-modal"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !guardando) onCerrar();
-      }}
+      ref={panel}
+      className="fc-modal__panel fc-modal__panel--fijo"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Registrar retención recibida"
+      tabIndex={-1}
+      style={{ maxWidth: 620 }}
     >
       <div
-        ref={panel}
-        className="fc-modal__panel fc-modal__panel--fijo"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Registrar retención recibida"
-        tabIndex={-1}
+        className="fc-modal__cabecera"
+        style={{ alignItems: "flex-start", padding: "28px 32px 0" }}
       >
-        <div className="fc-modal__cabecera">
-          <div>
-            <p className="fc-kicker">Te retuvieron</p>
-            <h2 className="fc-modal__titulo" style={{ fontSize: 19, margin: "2px 0 0" }}>
-              Registrar retención recibida
-            </h2>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 className="fc-modal__titulo" style={{ fontSize: 20 }}>
+            Registrar retención recibida
+          </h2>
+          <p style={{ fontSize: 13, color: "var(--texto-tenue)", margin: "5px 0 0" }}>
+            Guarda el comprobante que te entregó tu cliente.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="fc-btn-icono"
+          aria-label="Cerrar"
+          disabled={guardando}
+          onClick={onCerrar}
+        >
+          <Svg d={ICONO_CERRAR} tamano={14} grosor={2.4} />
+        </button>
+      </div>
+
+      <div className="fc-modal__cuerpo" style={{ padding: "24px 32px 24px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 11,
+            background: "rgba(34,197,94,.06)",
+            border: "1px solid rgba(22,121,74,.2)",
+            borderRadius: 14,
+            padding: "14px 16px",
+            marginBottom: 22,
+          }}
+        >
+          <span style={{ marginTop: 1, color: "var(--verde-medio)", display: "grid" }}>
+            <Svg d={ICONO_INFO} tamano={16} grosor={2} />
+          </span>
+          <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "#255C46", textWrap: "pretty" }}>
+            Tú no emites retenciones: las recibes, y su valor se descuenta de lo que declaras. Lo
+            más rápido es subir el XML y dejar que el asistente lo lea.
           </div>
-          <button type="button" className="fc-modal__cerrar" aria-label="Cerrar" onClick={onCerrar}>
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M5 5l14 14M19 5L5 19" />
-            </svg>
-          </button>
         </div>
 
-        <div className="fc-modal__cuerpo" style={{ paddingTop: 16 }}>
-          <p
-            style={{
-              fontSize: 13,
-              lineHeight: 1.55,
-              color: "var(--texto-suave)",
-              margin: "0 0 16px",
-              textWrap: "pretty",
-            }}
-          >
-            Tú no emites retenciones: las recibes. Aquí guardas la que te entregó tu cliente, y su
-            valor se descuenta de lo que declaras. Lo más rápido es subir el XML.
-          </p>
-
-          <label
-            className="fc-dropzone"
-            role="button"
-            tabIndex={guardando ? -1 : 0}
-            aria-busy={guardando}
-            data-arrastrando={arrastrando ? "true" : "false"}
-            style={guardando ? { cursor: "progress", opacity: 0.6 } : undefined}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                entrada.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              // Sin preventDefault el navegador se lleva el archivo a otra
-              // pestaña en vez de dejarlo soltar aquí.
+        {/* Mismo molde que la firma .p12 y la imagen del catálogo: `.fc-dropzone`
+            y su `data-arrastrando`. El teclado sí es de aquí: el `<input
+            type=file>` va oculto, así que sin esto la zona solo se usa con
+            ratón. */}
+        <label
+          className="fc-dropzone"
+          role="button"
+          tabIndex={guardando ? -1 : 0}
+          aria-busy={guardando}
+          data-arrastrando={arrastrando ? "true" : "false"}
+          style={{ marginBottom: 18, ...(guardando ? { cursor: "progress", opacity: 0.6 } : null) }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setArrastrando(true);
-            }}
-            onDragLeave={() => setArrastrando(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setArrastrando(false);
-              const archivo = e.dataTransfer.files?.[0];
+              entrada.current?.click();
+            }
+          }}
+          onDragOver={(e) => {
+            // Sin preventDefault el navegador se lleva el archivo a otra
+            // pestaña en vez de dejarlo soltar aquí.
+            e.preventDefault();
+            setArrastrando(true);
+          }}
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setArrastrando(false);
+            const archivo = e.dataTransfer.files?.[0];
+            if (archivo) void enviar(archivo);
+          }}
+        >
+          <Svg d={ICONO_SUBIR} tamano={17} color="var(--verde-medio)" />
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--verde-marca)" }}>
+            {guardando ? "Comprobando…" : "Subir el XML de la retención"}
+          </span>
+          {!guardando && (
+            <span style={{ fontSize: 12, color: "#8A9A91" }}>
+              Arrástralo o haz clic. Lo leemos, lo consultamos al SRI y lo sumamos solo.
+            </span>
+          )}
+          <input
+            ref={entrada}
+            type="file"
+            accept=".xml,text/xml,application/xml"
+            disabled={guardando}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0];
               if (archivo) void enviar(archivo);
             }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--verde-medio)"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d={ICONO_SUBIR} />
-            </svg>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--verde-marca)" }}>
-              {guardando ? "Comprobando…" : "Arrastra el XML de la retención o haz clic"}
-            </span>
-            {!guardando && (
-              <span style={{ fontSize: 12, color: "#8A9A91" }}>
-                Lo leemos, lo consultamos al SRI y lo sumamos solo
-              </span>
-            )}
-            <input
-              ref={entrada}
-              type="file"
-              accept=".xml,text/xml,application/xml"
-              disabled={guardando}
-              onChange={(e) => {
-                const archivo = e.target.files?.[0];
-                if (archivo) void enviar(archivo);
-              }}
-            />
-          </label>
+          />
+        </label>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              margin: "18px 0 14px",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "var(--texto-tenue)",
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: "var(--borde)" }} />
-            O escríbela a mano
-            <span style={{ flex: 1, height: 1, background: "var(--borde)" }} />
-          </div>
+        {/* El puente entre las dos puertas. Estaba metido en el aviso verde y lo
+            estiraba al doble de líneas; aquí además está donde se elige. */}
+        <p
+          style={{
+            margin: "-8px 0 20px",
+            fontSize: 12,
+            lineHeight: 1.55,
+            color: "var(--texto-tenue)",
+            textWrap: "pretty",
+          }}
+        >
+          Si solo tienes el papel, escríbela abajo: suma igual, pero queda marcada como «sin XML».
+        </p>
 
-          {/* SIN XML NO HAY CLAVE DE ACCESO, y sin clave no hay a quién
-              preguntarle. La fila cuenta igual —el papel lo tiene el cliente en
-              la mano— pero queda marcada, y eso se dice antes de escribirla. */}
+        <Rejilla columnas="1.5fr 1fr">
+          <Campo
+            id="ret-quien"
+            etiqueta="Quién te retuvo"
+            valor={quien}
+            onCambio={setQuien}
+            placeholder="Nombre o razón social"
+            deshabilitado={guardando}
+          />
+          <Campo
+            id="ret-ruc"
+            etiqueta="Su RUC"
+            valor={ruc}
+            onCambio={(v) => setRuc(v.replace(/\D/g, "").slice(0, 13))}
+            placeholder="13 dígitos"
+            modo="numeric"
+            deshabilitado={guardando}
+          />
+        </Rejilla>
+
+        <Rejilla columnas="1.2fr 1fr 1fr">
+          <Campo
+            id="ret-numero"
+            etiqueta="Número del comprobante"
+            valor={numero}
+            onCambio={setNumero}
+            placeholder="001-001-000001234"
+            deshabilitado={guardando}
+          />
+          <Campo
+            id="ret-fecha"
+            etiqueta="Fecha"
+            valor={fecha}
+            onCambio={setFecha}
+            tipo="date"
+            deshabilitado={guardando}
+          />
+          <Campo
+            id="ret-base"
+            etiqueta="Base imponible"
+            valor={base}
+            onCambio={setBase}
+            tipo="number"
+            paso="0.01"
+            placeholder="0.00"
+            deshabilitado={guardando}
+          />
+        </Rejilla>
+
+        <Rejilla columnas="1fr">
+          <Campo
+            id="ret-factura"
+            etiqueta="¿Sobre cuál de tus facturas te retuvieron?"
+            valor={factura}
+            onCambio={setFactura}
+            placeholder="001-001-000001234"
+            ayuda="Si la dejas vacía, la retención se guarda igual y queda sin factura vinculada."
+            deshabilitado={guardando}
+          />
+        </Rejilla>
+
+        <Rejilla columnas="1fr 1fr">
+          <Campo
+            id="ret-renta"
+            etiqueta="Retención de renta"
+            valor={renta}
+            onCambio={setRenta}
+            tipo="number"
+            paso="0.01"
+            placeholder="0.00"
+            deshabilitado={guardando}
+          />
+          <Campo
+            id="ret-iva"
+            etiqueta="Retención de IVA"
+            valor={iva}
+            onCambio={setIva}
+            tipo="number"
+            paso="0.01"
+            placeholder="0.00"
+            deshabilitado={guardando}
+          />
+        </Rejilla>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            background: "var(--superficie-tenue)",
+            border: "1px solid var(--borde)",
+            borderRadius: 14,
+            padding: "16px 18px",
+            marginTop: 4,
+          }}
+        >
+          <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--texto-suave)" }}>
+            Crédito que suma a tu favor
+          </span>
+          <span className="fc-cifra" style={{ fontSize: 19, color: "var(--verde-medio)" }}>
+            {dinero(credito)}
+          </span>
+        </div>
+
+        {/* Desde Comprobantes no hay lista detrás que recargar, así que el acuse
+            se queda aquí: sin esto, guardar desde ahí no enseñaba nada. */}
+        {listo && (
           <p
+            role="status"
             style={{
-              fontSize: 12.5,
+              margin: "16px 0 0",
+              padding: "12px 14px",
+              borderRadius: "var(--radio-campo)",
+              background: "var(--exito-bg)",
+              border: "1px solid var(--exito-borde)",
+              color: "var(--exito-texto)",
+              fontSize: 13,
               lineHeight: 1.55,
-              color: "var(--texto-tenue)",
-              margin: "0 0 14px",
               textWrap: "pretty",
             }}
           >
-            Si solo tienes el papel, escríbela. Suma a tu crédito igual, pero queda marcada como
-            «sin XML»: no hay clave de acceso con la que preguntarle al SRI. Guarda el comprobante.
+            {listo}
+            {onVerTodas && (
+              <button
+                type="button"
+                className="fc-btn fc-btn--texto"
+                style={{ display: "block", marginTop: 4, padding: 0, fontSize: 12.5 }}
+                onClick={onVerTodas}
+              >
+                Ver mis retenciones ›
+              </button>
+            )}
           </p>
+        )}
 
-          <Rejilla columnas="1.5fr 1fr">
-            <Campo
-              id="ret-quien"
-              etiqueta="Quién te retuvo"
-              valor={quien}
-              onCambio={setQuien}
-              placeholder="Nombre o razón social"
-              deshabilitado={guardando}
-            />
-            <Campo
-              id="ret-ruc"
-              etiqueta="Su RUC"
-              valor={ruc}
-              onCambio={(v) => setRuc(v.replace(/\D/g, "").slice(0, 13))}
-              placeholder="13 dígitos"
-              modo="numeric"
-              deshabilitado={guardando}
-            />
-          </Rejilla>
-
-          <Rejilla columnas="1.2fr 1fr 1fr">
-            <Campo
-              id="ret-numero"
-              etiqueta="Número del comprobante"
-              valor={numero}
-              onCambio={setNumero}
-              placeholder="001-001-000001234"
-              deshabilitado={guardando}
-            />
-            <Campo
-              id="ret-fecha"
-              etiqueta="Fecha"
-              valor={fecha}
-              onCambio={setFecha}
-              tipo="date"
-              deshabilitado={guardando}
-            />
-            <Campo
-              id="ret-base"
-              etiqueta="Base imponible"
-              valor={base}
-              onCambio={setBase}
-              tipo="number"
-              paso="0.01"
-              placeholder="0.00"
-              deshabilitado={guardando}
-            />
-          </Rejilla>
-
-          <Rejilla columnas="1fr 1fr 1fr">
-            <Campo
-              id="ret-factura"
-              etiqueta="Sobre cuál de tus facturas"
-              valor={factura}
-              onCambio={setFactura}
-              placeholder="001-001-000000045"
-              deshabilitado={guardando}
-            />
-            <Campo
-              id="ret-renta"
-              etiqueta="Retención de renta"
-              valor={renta}
-              onCambio={setRenta}
-              tipo="number"
-              paso="0.01"
-              placeholder="0.00"
-              deshabilitado={guardando}
-            />
-            <Campo
-              id="ret-iva"
-              etiqueta="Retención de IVA"
-              valor={iva}
-              onCambio={setIva}
-              tipo="number"
-              paso="0.01"
-              placeholder="0.00"
-              deshabilitado={guardando}
-            />
-          </Rejilla>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              background: "var(--superficie-tenue)",
-              border: "1px solid var(--borde)",
-              borderRadius: "var(--radio-tarjeta)",
-              padding: "13px 16px",
-            }}
+        {error && (
+          <p
+            className="fc-error"
+            role="alert"
+            style={{ marginTop: 16, fontSize: 12.5, lineHeight: 1.55, textWrap: "pretty" }}
           >
-            <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--texto-suave)" }}>
-              Crédito que suma a tu favor
-            </span>
-            <span className="fc-cifra" style={{ fontSize: 19, color: "var(--verde-medio)" }}>
-              {dinero(credito)}
-            </span>
-          </div>
+            {error}
+            {queHacer && <span style={{ display: "block", marginTop: 6 }}>{queHacer}</span>}
+          </p>
+        )}
+      </div>
 
-          {error && (
-            <p
-              className="fc-error"
-              role="alert"
-              style={{ marginTop: 14, fontSize: 12.5, lineHeight: 1.55, textWrap: "pretty" }}
-            >
-              {error}
-              {queHacer && <span style={{ display: "block", marginTop: 6 }}>{queHacer}</span>}
-            </p>
-          )}
-        </div>
-
-        <div className="fc-modal__pie">
+      {/* El cuerpo desplaza por dentro y el pie se queda clavado: sin el borde
+          el contenido pasaba por debajo sin nada que los separase. Es lo mismo
+          que hacen los otros tres modales de tres partes del panel. */}
+      <div
+        className="fc-modal__pie"
+        style={{ padding: "22px 32px 28px", borderTop: "1px solid var(--borde)" }}
+      >
+        {onVolver ? (
+          <button
+            type="button"
+            className="fc-btn fc-btn--contorno"
+            disabled={guardando}
+            onClick={onVolver}
+          >
+            ‹ Otro documento
+          </button>
+        ) : (
           <button
             type="button"
             className="fc-btn fc-btn--texto"
-            onClick={onCerrar}
             disabled={guardando}
+            onClick={onCerrar}
           >
             Cancelar
           </button>
-          <button
-            type="button"
-            className="fc-btn fc-btn--primario"
-            disabled={!puedeGuardar}
-            title={
-              credito > 0
-                ? undefined
-                : "Escribe cuánto te retuvieron de renta o de IVA."
-            }
-            onClick={() => void enviar(null)}
-          >
-            {guardando ? "Guardando…" : "Guardar la retención"}
-          </button>
-        </div>
+        )}
+        <button
+          type="button"
+          className="fc-btn fc-btn--primario"
+          disabled={!puedeGuardar}
+          title={credito > 0 ? undefined : "Escribe cuánto te retuvieron de renta o de IVA."}
+          onClick={() => void enviar(null)}
+        >
+          {guardando ? "Guardando…" : "Guardar retención"}
+        </button>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 
 function Rejilla({ columnas, children }: { columnas: string; children: ReactNode }) {
+  // El reparto va por variable CSS y no por `gridTemplateColumns` en línea: la
+  // clase necesita poder apilarlo todo en un teléfono, y una consulta de medios
+  // no se puede escribir en un estilo en línea.
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: columnas,
-        gap: 12,
-        marginBottom: 14,
-      }}
-    >
+    <div className="fc-rejilla" style={{ "--columnas": columnas } as CSSProperties}>
       {children}
     </div>
   );
@@ -998,6 +1240,7 @@ function Campo({
   tipo = "text",
   modo,
   paso,
+  ayuda,
   deshabilitado,
 }: {
   id: string;
@@ -1010,6 +1253,8 @@ function Campo({
   /** Salto de la flechita en un campo de dinero. Sin él vale 1, y corregir un
    *  dígito con el cursor encima convierte 8.40 en 9 sin avisar. */
   paso?: string;
+  /** Línea bajo el campo, para lo que cambia si se deja vacío. */
+  ayuda?: string;
   deshabilitado?: boolean;
 }) {
   return (
@@ -1027,8 +1272,23 @@ function Campo({
         value={valor}
         placeholder={placeholder}
         disabled={deshabilitado}
+        aria-describedby={ayuda ? `${id}-ayuda` : undefined}
         onChange={(e) => onCambio(e.target.value)}
       />
+      {ayuda && (
+        <p
+          id={`${id}-ayuda`}
+          style={{
+            margin: "6px 0 0",
+            fontSize: 12,
+            lineHeight: 1.5,
+            color: "var(--texto-tenue)",
+            textWrap: "pretty",
+          }}
+        >
+          {ayuda}
+        </p>
+      )}
     </div>
   );
 }

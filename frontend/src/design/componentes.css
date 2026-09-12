@@ -521,6 +521,30 @@ button.fc-toast {
   flex-shrink: 0;
 }
 
+/* --- Rejilla de campos dentro de un modal ---------------------------------
+   Las columnas se declaran desde el componente con `--columnas`. Por debajo de
+   560 px se apilan a una sola: una pista `1fr` tiene `min-width: auto` y ni un
+   `<input type="date">` (~140 px) ni un `<input type="text">` (size=20, ~170 px)
+   bajan de ahí, así que una fila de tres columnas pedía más de 400 px y se
+   salía del panel por la derecha, con barra horizontal dentro del modal.
+
+   `min-width: 0` en los hijos por lo mismo: sin él, un campo largo vuelve a
+   empujar su pista por encima del reparto. */
+.fc-rejilla {
+  display: grid;
+  grid-template-columns: var(--columnas, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.fc-rejilla > * {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .fc-rejilla {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* --- Zona de carga de archivo (clic o arrastrar y soltar) -----------------
    La comparten la firma .p12 y la imagen del producto. Vive aquí, y no en
    interno.css de donde salió, porque el panel de CLIENTE no puede depender de

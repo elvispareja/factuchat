@@ -9,9 +9,11 @@
  *
  *  LA TERCERA TARJETA ES LA RETENCIÓN RECIBIDA, Y NO EMITE NADA. El usuario de
  *  Factuchat no emite retenciones: se las hacen. Su cliente le retiene y le
- *  manda el comprobante, y ese papel se REGISTRA. Por eso esa tarjeta no abre
- *  ningún formulario de aquí; lleva a la bandeja de Retenciones recibidas, que
- *  es la misma sección un chip más allá (ver `PanelSelector` y `onRetenciones`).
+ *  manda el comprobante, y ese papel se REGISTRA. Esa tarjeta abre el MISMO
+ *  formulario que la sección de Retenciones recibidas —`PanelRetencion`, que
+ *  vive allí— dentro de este modal, con «‹ Otro documento» en el pie para
+ *  volver al selector. Se queda aquí porque es donde la gente la busca cuando
+ *  le entregan el papel, aunque la sección esté fuera de Comprobantes.
  *
  *  LA NOTA DE DÉBITO SALIÓ DE LA OFERTA. Su maquinaria sigue en este archivo
  *  —todo lo que cuelga de `esDebito`, `RUTA.NOTA_DEBITO` y el panel de
@@ -49,6 +51,7 @@ import type {
 } from "../api/tipos";
 import type { Emisor } from "../plan/PlanContexto";
 import { usePlan } from "../plan/PlanContexto";
+import { PanelRetencion } from "./Retenciones";
 import { ETIQUETA_TIPO, dinero, fechaCorta, fechaLarga, hoyEnEcuador, inicial } from "../util/formato";
 import type { LineaCalculable } from "../util/totales";
 import {
@@ -215,8 +218,10 @@ const TONOS = {
  *  La RETENCIÓN RECIBIDA es la rara: no se emite, se guarda. Está aquí porque
  *  es donde la busca quien acaba de recibirla de su cliente —antes vivía en una
  *  nota al pie y no la encontraba nadie—, y la tarjeta dice lo que la
- *  distingue. Al elegirla no se abre un formulario de emisión: lleva a su
- *  bandeja.
+ *  distingue. Al elegirla no se abre un formulario de EMISIÓN: se monta aquí
+ *  mismo el de REGISTRO, que es el de su sección (`PanelRetencion`). Su sección
+ *  vive fuera de Comprobantes; a ella solo se va si el plan no incluye la
+ *  función, para enseñar el muro, o desde el enlace que sale tras guardar.
  *
  *  Fuera quedan la nota de débito, la guía de remisión y la liquidación de
  *  compra. Lo ya emitido se sigue viendo en el historial: esto es la oferta,
@@ -288,13 +293,13 @@ function Cabecera({
 
 function PanelSelector({
   onElegir,
-  onRetenciones,
+  onRetencion,
   onCerrar,
 }: {
   onElegir: (tipo: Tipo) => void;
-  /** Cierra este modal y abre la bandeja de retenciones recibidas, que está en
-   *  la misma sección (Comprobantes → Retenciones). */
-  onRetenciones: () => void;
+  /** Abre el formulario de registrar una retención recibida, que es el mismo
+   *  que el de su sección y se monta dentro de este modal. */
+  onRetencion: () => void;
   onCerrar: () => void;
 }) {
   return (
@@ -312,9 +317,7 @@ function PanelSelector({
               key={t.id}
               type="button"
               className="fc-tarjeta"
-              onClick={() =>
-                t.id === "RETENCION_RECIBIDA" ? onRetenciones() : onElegir(t.id)
-              }
+              onClick={() => (t.id === "RETENCION_RECIBIDA" ? onRetencion() : onElegir(t.id))}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1436,8 +1439,9 @@ interface Props {
    *  emisión falla con el borrador ya creado: ese borrador existe y tiene que
    *  verse. */
   onRecargar: () => Promise<unknown> | void;
-  /** Cierra el modal y lleva a la bandeja de retenciones recibidas. Solo lo usa
-   *  la nota al pie del selector: la retención no se emite desde aquí. */
+  /** Cierra el modal y lleva a la sección de Retenciones recibidas. No lo usa
+   *  la tarjeta —esa abre el formulario aquí mismo— sino el enlace que aparece
+   *  después de guardar, para ir a verla en su lista. */
   onRetenciones: () => void;
 }
 
@@ -1480,7 +1484,7 @@ const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function CrearComprobante({ onCerrar, onRecargar, onRetenciones }: Props) {
   const [pantalla, setPantalla] = useState<
-    "selector" | "factura" | "revision" | "enviando" | "hecho"
+    "selector" | "retencion" | "factura" | "revision" | "enviando" | "hecho"
   >("selector");
   /** Qué documento se está creando. La pantalla «factura» sirve para los tres. */
   const [tipo, setTipo] = useState<Tipo>("FACTURA");
@@ -1493,7 +1497,7 @@ export function CrearComprobante({ onCerrar, onRecargar, onRetenciones }: Props)
   const doc = DOC[tipo];
   // Cabecera del negocio para la revisión. Ya viene con /panel/estado, que el
   // panel pide al montar: no hay viaje nuevo ni espera.
-  const { emisor } = usePlan();
+  const { emisor, permite } = usePlan();
 
   // Catálogos: se piden al ENTRAR en la factura, no al abrir el selector, y una
   // sola vez — volver con «Otro documento» no los vuelve a pedir.
@@ -2130,8 +2134,33 @@ export function CrearComprobante({ onCerrar, onRecargar, onRetenciones }: Props)
       <div className="fc-modal" role="dialog" aria-modal="true" aria-label="Crear comprobante">
         <PanelSelector
           onElegir={elegirTipo}
-          onRetenciones={onRetenciones}
+          // Con el plan SIN «archivos» esto no puede abrir el formulario: el
+          // servidor contesta 402 al guardar, y el usuario se enteraría después
+          // de teclear nueve campos. Se le lleva a la sección, que es donde
+          // está el muro con su botón de ver los planes.
+          onRetencion={() =>
+            permite("archivos") ? setPantalla("retencion") : onRetenciones()
+          }
           onCerrar={onCerrar}
+        />
+      </div>
+    );
+  }
+
+  // La retención recibida NO se emite: se registra. Es el mismo formulario que
+  // el de su sección, montado aquí para no obligar a salirse a buscarlo.
+  if (pantalla === "retencion") {
+    return (
+      <div className="fc-modal" role="presentation">
+        <PanelRetencion
+          onVolver={() => setPantalla("selector")}
+          onCerrar={onCerrar}
+          onVerTodas={onRetenciones}
+          onGuardada={() => {
+            /* No hay historial que recargar: una retención recibida no es un
+               comprobante emitido y no sale en esa tabla. El acuse lo enseña el
+               propio formulario. */
+          }}
         />
       </div>
     );

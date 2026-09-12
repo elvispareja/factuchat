@@ -1,11 +1,14 @@
-/** Las 8 secciones del panel, con los rótulos exactos de la maqueta
- *  (Dashboard.dc.html líneas 3315-3322). */
+/** Las 9 secciones del panel. Los rótulos salen de la maqueta
+ *  (Dashboard.dc.html líneas 3315-3322), que trae ocho: «Retenciones» se añadió
+ *  después, cuando dejó de ser un filtro dentro de Comprobantes, y por eso no
+ *  aparece allí. */
 
 import type { FuncionPlan } from "../api/tipos";
 
 export type IdSeccion =
   | "inicio"
   | "comprobantes"
+  | "retenciones"
   | "clientes"
   | "catalogo"
   | "tienda"
@@ -36,7 +39,6 @@ export const SUBMENU_COMPROBANTES: SubitemMenu[] = [
   { id: "todos", label: "Todos" },
   { id: "factura", label: "Facturas" },
   { id: "credito", label: "Notas de crédito" },
-  { id: "retencion", label: "Retenciones recibidas" },
 ];
 
 /** Los filtros de Artículos/Servicios (Catalogo.tsx), mismo criterio.
@@ -65,6 +67,16 @@ export const MENU: ItemMenu[] = [
     label: "Comprobantes",
     icono: "M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1zM14 3v5h5M9 13h6M9 17h4",
     submenu: SUBMENU_COMPROBANTES,
+  },
+  {
+    // FUERA de Comprobantes, y justo detrás. Una retención recibida no es un
+    // comprobante que tú emites: es el que te entregaron a ti, con su propio
+    // saldo y su propio archivo. Estuvo un tiempo como filtro dentro de
+    // Comprobantes y eso la enseñaba como una cuarta cosa que uno emite.
+    id: "retenciones",
+    label: "Retenciones recibidas",
+    requiere: "archivos",
+    icono: "M5 4h14v17l-2.3-1.6L14.4 21l-2.4-1.6L9.6 21l-2.3-1.6L5 21zM9 15l6-6M9.2 9.2h.01M14.8 14.8h.01",
   },
   {
     id: "clientes",
@@ -101,18 +113,10 @@ export const MENU: ItemMenu[] = [
 ];
 
 /** Kicker y título de la cabecera por sección (maqueta ~línea 3371). */
-/** Encabezados que dependen del sub-filtro, no solo de la sección.
- *
- *  Las retenciones recibidas viven dentro de Comprobantes pero NO son
- *  comprobantes emitidos: son los que te mandaron a ti. Dejar «Tus comprobantes
- *  emitidos» encima de esa bandeja decía justo lo contrario de lo que se ve. */
-export const ENCABEZADOS_POR_FILTRO: Record<string, { kicker: string; titulo: string }> = {
-  retencion: { kicker: "Tus descuentos", titulo: "Retenciones recibidas" },
-};
-
 export const ENCABEZADOS: Record<IdSeccion, { kicker: string; titulo: string }> = {
   inicio: { kicker: "Tu negocio hoy", titulo: "Todo al día" },
   comprobantes: { kicker: "Historial", titulo: "Tus comprobantes emitidos" },
+  retenciones: { kicker: "Tus descuentos", titulo: "Retenciones recibidas" },
   clientes: { kicker: "Tu libreta", titulo: "Clientes guardados" },
   catalogo: { kicker: "Lo que vendes", titulo: "Artículos y servicios" },
   tienda: { kicker: "Tu vitrina", titulo: "Tienda en línea" },

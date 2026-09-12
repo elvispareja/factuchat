@@ -1,13 +1,14 @@
-/** Panel de clientes: armazón + las 8 secciones (fase 3). */
+/** Panel de clientes: armazón + las 9 secciones (fase 3). */
 
 import { useState } from "react";
 import { BarraLateral } from "./shell/BarraLateral";
-import { ENCABEZADOS, ENCABEZADOS_POR_FILTRO, type IdSeccion } from "./shell/navegacion";
+import { ENCABEZADOS, type IdSeccion } from "./shell/navegacion";
 import { usePlan } from "./plan/PlanContexto";
 import { MuroPlan } from "./plan/Bloqueos";
 import { Cargando, ErrorSeccion } from "./ui/Estados";
 import { Inicio } from "./secciones/Inicio";
 import { Comprobantes, type Filtro as FiltroComprobantes } from "./secciones/Comprobantes";
+import { Retenciones } from "./secciones/Retenciones";
 import { Clientes } from "./secciones/Clientes";
 import { Catalogo, type FiltroTipo as FiltroCatalogo } from "./secciones/Catalogo";
 import { Tienda } from "./secciones/Tienda";
@@ -59,10 +60,7 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
         ? conteosCatalogo
         : undefined;
 
-  // El sub-filtro puede cambiar el encabezado: la bandeja de retenciones
-  // recibidas no es «Tus comprobantes emitidos».
-  const encabezado =
-    (subactiva ? ENCABEZADOS_POR_FILTRO[subactiva] : undefined) ?? ENCABEZADOS[seccion];
+  const encabezado = ENCABEZADOS[seccion];
   const verPlanes = () => {
     setAvisoPlanes(true);
     window.setTimeout(() => setAvisoPlanes(false), 3200);
@@ -129,12 +127,17 @@ export function Panel({ onSalir }: { onSalir: () => void }) {
             {seccion === "inicio" && <Inicio onIr={ir} />}
             {seccion === "comprobantes" && (
               <Comprobantes
-                onVerPlanes={verPlanes}
                 filtroExterno={filtroComprobantes}
                 onFiltro={setFiltroComprobantes}
                 onConteos={setConteosComprobantes}
+                // La tarjeta «Retención recibida» del selector abre su
+                // formulario DENTRO de ese modal. Esto es el enlace «Ver mis
+                // retenciones» que sale después de guardar, y el desvío al muro
+                // cuando el plan no incluye la función.
+                onRetenciones={() => ir("retenciones")}
               />
             )}
+            {seccion === "retenciones" && <Retenciones onVerPlanes={verPlanes} />}
             {seccion === "clientes" && <Clientes onVerPlanes={verPlanes} />}
             {seccion === "catalogo" && (
               <Catalogo

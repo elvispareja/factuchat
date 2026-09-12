@@ -283,7 +283,7 @@ RETENCION_RECIBIDA = [
     ),
     Respuesta(
         texto=(
-            "Guárdala desde el panel, en *Comprobantes → Retenciones recibidas*: ahí "
+            "Guárdala desde el panel, en *Retenciones recibidas*: ahí "
             "subes el XML que te mandaron y su valor se descuenta solo de lo que "
             "tienes que pagar."
         ),

@@ -200,13 +200,19 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
+/* Tres tarjetas, no cuatro. Sin esto la fila terminaba a tres cuartos del
+   ancho, con la barra y la tabla de debajo llegando al borde. */
+.fc-kpi--tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .fc-split {
   display: grid;
   grid-template-columns: 1.25fr 1fr;
   gap: 18px;
 }
 @media (max-width: 900px) {
-  .fc-kpi {
+  .fc-kpi,
+  .fc-kpi--tres {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fc-split {
@@ -214,7 +220,8 @@
   }
 }
 @media (max-width: 620px) {
-  .fc-kpi {
+  .fc-kpi,
+  .fc-kpi--tres {
     grid-template-columns: minmax(0, 1fr);
   }
   .fc-cabecera {
